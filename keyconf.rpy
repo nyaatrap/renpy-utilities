@@ -5,6 +5,8 @@
 
 ################################################################################
 # 次の init python ブロックは、デフォルトで用意されていない機能を定義しています。
+# 必要な機能のみアンコメントしてください。割り当てに使う名前を定義した場合は
+# 後で必ず何らかのキーを割り振る必要があります。
 
 init python:
     
@@ -12,7 +14,7 @@ init python:
     config.underlay.append(renpy.Keymap(toggle_afm = Preference("auto-forward", "toggle")))
     
     # ヒストリー機能が使えるように、割り当てに使う名前 'history' を追加します。
-    config.underlay.append(renpy.Keymap(history = ShowMenu("history")))
+    # config.underlay.append(renpy.Keymap(history = ShowMenu("history")))
     
     
     # 独自の新しい機能を追加したい場合には、まず関数を定義してから割り当てに使う名前を追加します。    
@@ -90,6 +92,6 @@ init 1 python:
     config.pad_bindings["pad_y_press"] = [ "hide_windows" ]
     config.pad_bindings["pad_leftshoulder_press"] =[ "rollback", "viewport_up" ] #or [ "history", "viewport_up" ]
     config.pad_bindings["pad_rightshoulder_press"] = [ "rollforward","viewport_down"]
-    config.pad_bindings["pad_lefttrigger_pos"] = [ "toggle_skip" ] #pressing skip doesn't work on gampad 
-    config.pad_bindings["pad_righttrigger_pos"] = [ "dismiss"]
+    config.pad_bindings["pad_lefttrigger_pos"] = [ "toggle_skip" ] #or [ "skip" ] バグのため、通常の skip はゲームパッドでは使えません。
+    config.pad_bindings["pad_righttrigger_pos"] = [ "dismiss" ]
     
