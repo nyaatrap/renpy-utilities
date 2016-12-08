@@ -92,6 +92,7 @@ init 1 python:
     config.pad_bindings["pad_y_press"] = [ "hide_windows" ]
     config.pad_bindings["pad_leftshoulder_press"] =[ "rollback", "viewport_up" ] #or [ "history", "viewport_up" ]
     config.pad_bindings["pad_rightshoulder_press"] = [ "rollforward","viewport_down"]
-    config.pad_bindings["pad_lefttrigger_pos"] = [ "toggle_skip" ] #or [ "skip" ] バグのため、通常の skip はゲームパッドでは使えません。
+    config.pad_bindings["pad_lefttrigger_pos"] = [ "skip" ]
+    config.pad_bindings["pad_lefttrigger_zero"] = [ "stop_skipping" ]
     config.pad_bindings["pad_righttrigger_pos"] = [ "dismiss" ]
     
