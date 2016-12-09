@@ -38,7 +38,6 @@ init python:
 
 ## 中央に下揃えで表示する。
 transform center(t=base_time):
-    subpixel True
     on show:
         anchor (.5, 1.0) pos (.5, 1.0)
     on replace:
@@ -47,7 +46,6 @@ transform center(t=base_time):
 
 ## 左に下揃えで表示する。
 transform left(t=base_time):
-    subpixel True
     on show:
         anchor (.0, 1.0) pos (.0, 1.0)
     on replace:
@@ -56,7 +54,6 @@ transform left(t=base_time):
 
 ## 右に下揃えで表示する。
 transform right(t=base_time):
-    subpixel True
     on show:
         anchor (1.0, 1.0) pos (1.0, 1.0)
     on replace:
@@ -65,7 +62,6 @@ transform right(t=base_time):
 
 ## 中央左寄りに下揃えで表示する。
 transform centerL(t=base_time):
-    subpixel True
     on show:
         anchor (.25, 1.0) pos (.25, 1.0)
     on replace:
@@ -74,7 +70,6 @@ transform centerL(t=base_time):
 
 ## 中央右寄りに下揃えで表示する。
 transform centerR(t=base_time):
-    subpixel True
     on show:
         anchor (.75, 1.0) pos (.75, 1.0)
     on replace:
@@ -83,7 +78,6 @@ transform centerR(t=base_time):
 
 ## 画面の左外に下揃えで表示する。
 transform offscreenleft(t=base_time):
-    subpixel True
     on show:
         anchor (1.0, 1.0) pos (.0, 1.0)
     on replace:
@@ -92,7 +86,6 @@ transform offscreenleft(t=base_time):
 
 ## 画面の右外に下揃えで表示する。
 transform offscreenright(t=base_time):
-    subpixel True
     on show:
         anchor (.0, 1.0) pos (1.0, 1.0)
     on replace:
@@ -101,7 +94,6 @@ transform offscreenright(t=base_time):
 
 ## 中央に表示する。
 transform truecenter(t=base_time):
-    subpixel True
     on show:
         anchor (.5, .5) pos (.5, .5)
     on replace:
@@ -110,7 +102,6 @@ transform truecenter(t=base_time):
 
 ## 左に表示する。
 transform trueleft(t=base_time):
-    subpixel True
     on show:
         anchor (.0, .5) pos (.0, .5)
     on replace:
@@ -119,7 +110,6 @@ transform trueleft(t=base_time):
 
 ## 右に表示する。
 transform trueright(t=base_time):
-    subpixel True
     on show:
         anchor (1.0, .5) pos (1.0, .5)
     on replace:
@@ -128,7 +118,6 @@ transform trueright(t=base_time):
 
 ## x, y に表示する。
 transform position(x=.5, y=.5, t=base_time):
-    subpixel True
     on show:
         anchor (.5, .5) pos (x, y)
     on replace:
@@ -157,7 +146,7 @@ transform zoom(z=1.0, t=base_time):
 
 init python:
     ## アニメーションの動きの大きさを整数で定義します。
-    ## 全身の立ち絵のサイズの30分の１くらいが目安です。
+    ## 全身の立ち絵のサイズの20分の１くらいが目安です。
     base_offset =32
 
 ##  左から現れるアニメーション。
@@ -174,10 +163,12 @@ transform inR(t=base_time/2, d=base_offset):
 ## hide は at 節を使えないため show 画像 を使います。
 transform outL(t=base_time/2, d=base_offset):
     easeout t alpha .0 xoffset -d
+    xoffset 0
 
 ## 右に消えるアニメーション。
 transform outR(t=base_time/2, d=base_offset):
     easeout t alpha .0 xoffset d
+    xoffset 0
 
 ## 軽くホップするアニメーション。
 transform hop(t=base_time/2, d=base_offset):
