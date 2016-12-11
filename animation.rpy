@@ -1,9 +1,18 @@
-﻿## This file defines transforms.
-## このファイルは transform（変形・変換）を定義します。
+﻿## This file defines transforms and transitions.
+## このファイルは transform（画像変換）とtransition（画像遷移）を定義します。
+
+## このファイルは gui や画像定義に使えるように、それらのどのファイルよりも先に実行しなければなりません。
+
+init offset = -3
+
+##############################################################################
+# Transforms
+##############################################################################
+
 ## https://www.renpy.org/doc/html/transforms.html
 ## https://www.renpy.org/doc/html/atl.html#atl
 
-## transform とは画像を変換して表示する関数のことです。
+## transform（画像変換）は画像を変換して表示する関数のことです。
 ## 一番簡単な使い方は画像の表示位置を指定する方法です。
 ## その他にもアニメーションや画像自体の変更も行えます。
 
@@ -19,11 +28,6 @@
 ## どちらもグローバルスコープの変数になるため、他の変数との衝突に注意してください。
 
 
-## このファイルは gui や画像定義に使えるように、それらのどのファイルよりも先に実行しなければなりません。
-
-init offset = -3
-
-
 ##############################################################################
 ## Positions
 ## 以下の transform は画像を表示する位置を定義します。ほとんどはデフォルトで定義されていますが、
@@ -31,9 +35,8 @@ init offset = -3
 ## on show は画像を初めて表示する時、on replace は表示してある画像を動かす時に使われます。
 
 
-init python:
-    ## 座標の移動にかかる時間を小数で定義します。
-    base_time = .5
+## 座標の移動にかかる時間を小数で定義します。
+define base_time = .5
 
 
 ## 中央に下揃えで表示する。
@@ -144,10 +147,9 @@ transform zoom(z=1.0, t=base_time):
 ## アニメーションと同時に位置を指定する場合は show 画像 at animation, position の順で指定します。
 
 
-init python:
-    ## アニメーションの動きの大きさを整数で定義します。
-    ## 全身の立ち絵のサイズの20分の１くらいが目安です。
-    base_offset =32
+## アニメーションの動きの大きさを整数で定義します。
+## 全身の立ち絵のサイズの20分の１くらいが目安です。
+define base_offset =32
 
 ##  左から現れるアニメーション。
 transform inL(t=base_time/2, d=base_offset):
@@ -229,4 +231,64 @@ transform shake(t=base_time, d=base_offset):
     alpha 1.0
     function renpy.curry(_shake_function)(dt=t, dist=d*2)
     xoffset 0 yoffset 0
-    
+
+
+
+##############################################################################
+# Transitions
+##############################################################################
+
+## https://www.renpy.org/doc/html/transitions.html
+
+## transition（画面遷移）は二つの画面の移り変わりを表示する関数です。
+## 基本的な使い方は show 画像 with transform の形ですが、 with の代わりに
+## $renpy.transition(transition, layer="master") を show 画像の前に使う方法で、
+## 効果終了までの待ち時間がなくなりレイヤーも指定できるようになります。
+
+
+## 基本的なトランジション。
+## デフォルトで定義されているものはコメントアウトしてあるので、
+## 変更したい場合のみアンコメントしてください。
+
+define flash = Fade(.15, 0, .3, color="#fff")
+#define fade = Fade(.5, 0, .5)
+#define dissolve = Dissolve(0.5)
+#define pixellate = Pixellate(1.0, 5)
+
+#define vpunch = Move((0, 10), (0, -10), .10, bounce=True, repeat=True, delay=.275)
+#define hpunch = Move((15, 0), (-15, 0), .10, bounce=True, repeat=True, delay=.275)
+
+#define blinds = ImageDissolve(im.Tile("blindstile.png"), 1.0, 8)
+#define squares = ImageDissolve(im.Tile("squarestile.png"), 1.0, 256)
+
+
+## 以下はデフォルトで定義されている CropMove を ImageDissolve で再定義します。
+## ワイプする二つの画像の間がディゾルブで混じり合うようになります。
+## ImageDissolve を使用するには白から黒に移り変わる画像が必要です。
+
+#define wipedown = ImageDissolve("transitions/wipedown.png", .5, ramplen=32)
+#define wipeup = ImageDissolve("transitions/wipedown.png", .5,  ramplen=32, reverse=True)
+#define wiperight = ImageDissolve("transitions/wiperight.png", .5, ramplen=32)
+#define wipeleft = ImageDissolve("transitions/wiperight.png", .5,  ramplen=32, reverse=True)
+
+#define irisout = ImageDissolve("transitions/irisout.png", .5,  ramplen=32)
+#define irisin = ImageDissolve("transitions/irisout.png", .5,  ramplen=32,reverse=True)
+
+
+## 新しい transition は通常 transition クラスのインスタンスとして定義しますが、transform
+## ステートメントでも定義することができます。transform で定義する場合は、引数に
+## old_widget（変化前の画面）と new_widget（変化後の画面）が必要になります。
+
+## 新しい画面が上から落ちてきてバウンドするトランジション。
+transform fallin(old_widget, new_widget, t=1.0):
+    delay t
+
+    contains:
+        old_widget
+
+    contains:
+        new_widget
+        yanchor 1.0 ypos 0
+        easein_bounce t yalign 1.0
+
+
