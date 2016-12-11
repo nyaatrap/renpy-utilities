@@ -280,7 +280,7 @@ define flash = Fade(.15, 0, .3, color="#fff")
 ## old_widget（変化前の画面）と new_widget（変化後の画面）が必要になります。
 
 ## 新しい画面が上から落ちてきてバウンドするトランジション。
-transform fallin(old_widget, new_widget, t=1.0):
+transform fallin(t=1.0, old_widget, new_widget):
     delay t
 
     contains:
