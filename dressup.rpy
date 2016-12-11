@@ -38,11 +38,11 @@ image erin = LayeredDisplayable("Erin")
 ################################################################################
 ## 定義
 
-init -1 python:
+init -3 python:
 
     class Actor(object):
 
-        # class that stores layer infomation
+        '''class that stores layer infomation'''
 
         # デフォルトのレイヤーを下から順番に定義します。
         _layers = ["base", "feet", "bottom", "top", "face"]
@@ -57,7 +57,7 @@ init -1 python:
                 else:
                     setattr(self, i, None)
                     
-            # dictionary whose keys are layer names and values are lists of images            
+            # dictionary whose keys are layer names and values are lists of images
             self.images = {}            
             for i in self.layers:
                 self.images.setdefault(i, [])                
@@ -69,7 +69,7 @@ init -1 python:
 
     def _draw_actor(st, at, actor):
 
-        # function that is used for dynamic displayable.
+        '''Function that is used for dynamic displayable.'''
 
         layers=[]
         if actor in dir(store) :
