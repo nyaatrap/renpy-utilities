@@ -16,3 +16,6 @@
 
 ## tilemap.rpy
 小さな画像を並べて一枚の画像にする Tilemap を追加するファイルです。
+
+## _statements.rpy
+Ren'Py に新たなステートメント（命令文）を追加します。
