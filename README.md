@@ -8,8 +8,8 @@
 ## keyconf.rpy
 マウス・キーボード・ゲームパッドの割り当てを追加・変更するファイルです。
 
-## transform.rpy
-様々な transform（画像変換）を追加・変更するファイルです。
+## animation.rpy
+様々な transform（画像変換）や transition（画像遷移）を追加・変更するファイルです。
 
 ## dressup.rpy
 ドレスアップゲームなどに使える LayerdDisplayable を追加するファイルです。
