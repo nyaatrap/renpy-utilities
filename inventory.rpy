@@ -2,49 +2,86 @@
 ## このファイルはアイテムの管理や売買を行う機能を追加します。
 
 ##############################################################################
-## 使い方
+## How to Use
+##############################################################################
 
-## まずアイテムを Item(名前、カテゴリー、価格）で定義します。
+## まずアイテム画面に表示されるアイテムのタイプを定義します。
+define gui.item_types = ["supply", "food", "outfit"]
+
+## 次にアイテムオブジェクトを Item(name, type, price, amount, info) で定義します。
+## name は表示される名前、type はカテゴリー、price は価格です。
+## amount はアイテムを追加時のデフォルトの個数で、省略すると１になります。
+## info はマウスフォーカスした時に表示される情報です。
 ## 他の変数と衝突しないように item の名前空間を使うといいでしょう。
 
-define item.apple = Item("Apple", "food", 10)
-define item.orange = Item("Orange", "food", 20)
-define item.knife = Item("Knife", "supply", 50)
+define item.apple = Item("Apple", type="food", price=10, info="This is an apple")
+define item.orange = Item("Orange", type="food", price=20)
+define item.knife = Item("Knife", type="supply", price=50)
+define item.dress = Item("Dress", type="outfit", price=100)
 
-## 次に管理者を Inventory(所持金) で定義します。
-## tradein はその管理者が下取りする時の価格比です。
+## 最後に所持者を Inventory(currency, tradein, infinite, items) で定義します。
+## currency は所持金、tradein はその所持者が下取りする時の価格比です。
 ## infinite を True にすると所持金と在庫が無限になります。
+## items は所持アイテムの配列で [[アイテム, 個数], [アイテム, 個数],,,] の形になります。
 
 default player = Inventory(currency=1000)
 default merchant = Inventory(tradein=.25, infinite=True)
 
 
-label start:
+## ゲームがスタートしたら、jump exapme でここに飛んでください。
+
+label example: 
     
-    ## add_item でアイテムを追加します。個数を指定する場合は引数 amount を使います。
-    $player.add_item(item.apple, amount=2)    
+    ## add_item(item, amount) でアイテムを追加します。個数を指定する場合は引数 amount を使います。
+    $ player.add_item(item.apple, amount=2)    
     
-    ## 他に has_item、count_item、remove_item、score_item、buy_item などがあります。
+    ## get_all_items(namespace) で名前空間で定義したすべてのアイテムを自動的に追加します。
+    $ merchant.get_all_items(store.item)
     
-    ## get_all_items(store.名前空間)ですべてのアイテムを自動的に追加します。
-    $merchant.get_all_items(store.item)
+    ## 他に以下のメソッド（）があります。
+    ## has_item(item) - 所持していれば True を返します。
+    ## count_item(item) - 所持している合計の個数を返します。
+    ## remove_item(item) - 所持していれば、そのアイテムを奪います。
+    ## score_item(item, amount) - 所持している個数を変更します。
+    ## buy_item(item, amoount) - 所持金が足りていれば、それを消費してアイテムを追加します。    
     
-    while True:
+    
+    while True:        
+        
         menu:
             
+            ## call screen inventory(inv, buyer, title) でアイテムの一覧を表示します。
+            
             "show inventory":
-                ## アイテムを見たり整理したい時は inventory(表示する管理者) を表示します
+                ## アイテムを見たり整理したい時は inventory(表示する所持者) を使います。
                 ## この状態でアイテムをクリックすると、スロットの入替えモードになります。
+                $ block()
                 call screen inventory(player)
                 
             "buy items":
-                ## アイテム買いたい時は inventory(売り手の管理者、買い手の管理者) を表示します
+                ## アイテム買いたい時は inventory(売り手の所持者、買い手の所持者) を使います。
+                $ block()
                 call screen inventory(merchant, buyer=player, title="Buy")
                 
             "sell items":
-                ## アイテム売りたい時も inventory(売り手の管理者、買い手の管理者) を表示します
+                ## アイテム売りたい時も inventory(売り手の所持者、買い手の所持者) を使います。
                 ## 売買の相手が逆転するだけですが、スクリーンタイトルを変えています。
-                call screen inventory(player, buyer=merchant, title="Sell")
+                $ block()
+                call screen inventory(player, buyer=merchant, title="Sell")        
+            
+                
+##############################################################################
+## Definitions
+##############################################################################
+                
+init python:
+    
+    ## ロールバックをブロックして、ゲームの全ての変化をセーブできるようにする。
+    ## （Ren'Py はデフォルトでは現在の入力待ちの開始時点のみをセーブするので必要）
+    
+    def block():
+        renpy.block_rollback()
+        renpy.retain_after_load()
         
                 
 ##############################################################################
@@ -53,22 +90,22 @@ label start:
 ## screen that shows inventory
 ## inv is an inventory object that has items on the screen
 ## if buyer is given, it's trade mode.
-## otherwise, it's stock mode that can reorder items slots  
+## otherwise, it's stock mode that can reorder item slots  
 
 screen inventory(inv, buyer=None, title="Inventory"):
     
     # screen variables
     default tab = "all"
-    default info = ""
+    default tt = Tooltip("")
     
     # unselect item on show
     on "show" action SetField(inv, "selected", None)
     
     vbox:
         # screen title
-        label title text_size gui.title_text_size             
+        label title text_size gui.title_text_size
         
-        # currency. when seller (inv) is not player, show buyer's (player's) currency
+        # currency. when seller (inv) is an infinite inventory, show buyer's (player's) currency
         $ currency = inv.currency if not inv.infinite else buyer.currency
         text "currency: [currency:>6]" xalign .5
     
@@ -77,12 +114,12 @@ screen inventory(inv, buyer=None, title="Inventory"):
         # category tabs
         hbox style_prefix "radio":
             
-            for i in ["all"] + Item.types:
+            for i in ["all"] + gui.item_types:
                 textbutton i.capitalize():
                     action SetScreenVariable("tab", i)
                 
         # item slots
-        frame xysize 800, 500:
+        frame xysize 800, 400:
                         
             vpgrid style_prefix "item":
                 cols 4 mousewheel True draggable True scrollbars "vertical" 
@@ -97,6 +134,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
                     if tab in [item.type, "all"]:
                         textbutton "[item.name] x[amount] ([price])":                                      
                             selected inv.selected == slot
+                            hovered tt.Action(item.info)
                             
                             # sell/buy
                             if buyer:
@@ -110,6 +148,10 @@ screen inventory(inv, buyer=None, title="Inventory"):
                             else:
                                 action SetField(inv, "selected", slot)
                                 
+        # information window
+        frame xysize 800, 150:
+            text tt.value
+                                
     textbutton "Return" action Return() yalign 1.0
             
     key "game_menu" action [SetField(inv, "selected", None) if inv.selected else Return()]
@@ -122,7 +164,7 @@ style item_button:
 ##############################################################################
 ## Item class.
 
-init -1 python:
+init -3 python:
 
     class Item(object):
         
@@ -134,8 +176,6 @@ init -1 python:
         amount - default amount of item when it's added into inventory
         info - description that is shown when an item is focused
         """
-        
-        types = ["supply", "food"]
         
         
         def __init__(self, name="", type=None, price=0, amount=1, info=""):
@@ -199,7 +239,7 @@ init -1 python:
             
         def add_item(self, item, amount = None, merge = True):
             # add an item
-            # if amount is given, this amount is used insted of iten't default
+            # if amount is given, this amount is used insted of item's default value.
             # if merge is True, amount is summed when inventory has same item
                         
             slot = self.get_slot(item)
@@ -212,12 +252,10 @@ init -1 python:
             
         def remove_item(self, item):
             # remove an item
-            # return true if remove is succeeded
                 
             slot = self.get_slot(item)
             if slot:
                 self.items.remove(slot)
-                return True
                 
                                     
         def score_item(self, item, amount, remove = True, add = True):
@@ -250,7 +288,6 @@ init -1 python:
                         
         def sell_item(self, slot, buyer, merge=True):
             # remove an item slot then add this item to buyer
-            # return True if trade is succeeded
             
             amount = slot[0].amount if self.infinite else slot[1]
             rv = buyer.buy_item(slot[0], amount = amount, merge=merge)
@@ -258,10 +295,11 @@ init -1 python:
                 price = slot[0].price*amount
                 self.currency += int(price*buyer.tradein)
                 self.items.remove(slot)
+            return
                                                     
                 
         def replace_items(self, first, second):
-            #swap order of two slots
+            # swap order of two slots
             
             i1 = self.items.index(first)
             i2 = self.items.index(second)            
