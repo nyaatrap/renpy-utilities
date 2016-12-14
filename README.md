@@ -11,14 +11,17 @@
 ## animation.rpy
 様々な transform（画像変換）や transition（画像遷移）を追加・変更するファイルです。
 
+## _statements.rpy
+Ren'Py に新たなステートメント（命令文）を追加します。
+
 ## dressup.rpy
 ドレスアップゲームなどに使える LayerdDisplayable を追加するファイルです。
 
 ## tilemap.rpy
 小さな画像を並べて一枚の画像にする Tilemap を追加するファイルです。
 
-## _statements.rpy
-Ren'Py に新たなステートメント（命令文）を追加します。
-
 ## inventory.rpy
 アイテムの売買や管理を行う機能を追加するファイルです。
+
+## exploration.rpy
+２Dマップにイベントを配置する探索型ゲームのフレームワークです。
