@@ -28,14 +28,14 @@ default housewife = Inventory(currency=1000)
 default merchant = Inventory(tradein=.25, infinite=True)
 
 
-## ゲームがスタートしたら、jump exapme でここに飛んでください。
+## ゲームがスタートしたら、jump inventory でここに飛んでください。
 
-label example:
+label inventory:
 
     ## add_item(item, amount) でアイテムを追加します。個数を指定する場合は引数 amount を使います。
     $ housewife.add_item(item.apple, amount=2)
     ## ""で囲んだ文字列でも追加できます。その場合は item. を外すことができます。
-    $ housewife.add_item("orange", amount=1)
+    $ housewife.add_item("orange")
 
     ## get_all_items(namespace) で名前空間で定義したすべてのアイテムを自動的に追加します。
     $ merchant.get_all_items(store.item)
@@ -45,7 +45,7 @@ label example:
     ## count_item(item) - 所持している合計の個数を返します。
     ## remove_item(item) - 所持していれば、そのアイテムを奪います。
     ## score_item(item, amount) - 所持している個数を変更します。
-    ## buy_item(item, amoount) - 所持金が足りていれば、それを消費してアイテムを追加します。
+    ## buy_item(item, amount) - 所持金が足りていれば、それを消費してアイテムを追加します。
 
 
     while True:
@@ -113,6 +113,14 @@ screen inventory(inv, buyer=None, title="Inventory"):
         # currency. when seller (inv) is an infinite inventory, show buyer's currency
         $ currency = inv.currency if not inv.infinite else buyer.currency
         text "currency: [currency:>6]" xalign .5
+        
+        null height 20
+        
+        # sort buttons
+        text "Sort by"
+        for i in ["name", "type", "price", "amount"]:
+            textbutton i.capitalize():
+                action Function(inv.sort_items, order=i)
 
     vbox align .5,.5:
 
@@ -175,6 +183,7 @@ init -3 python:
 
         """
         Class that represents item that is stored by party object. It has follwing fields:
+        
         name - item name that is shown on the screen
         type - item category
         price - amount of currency for trading
@@ -210,11 +219,12 @@ init -3 python:
     class Inventory(object):
 
         """
-        class that stores items. It has follwing fields:
+        Class that stores items. It has follwing fields:
+        
         currency - amount of money this object has
         tradein - when someone buyoff items to this inventory, price is reduced by this value
-        infinite - if true, its currency and amont of items arer infinite, like NPC merchant.
-        items - list of item slots. items slot is a pair of [item, amount]. items are stored as slot, not item.
+        infinite - if true, its currency and amont of items are infinite, like NPC merchant.
+        items - list of item slots. item slot is a pair of [item, amount]. items are stored as slot, not item.
         selected - selected slot in a current screen.
         """
 
@@ -231,7 +241,7 @@ init -3 python:
 
 
         def has_item(self, item):
-            #returns True if inventory has this item
+            # returns True if inventory has this item
 
             item = Item.get(item)
             return item in [i[0] for i in self.items]
@@ -335,7 +345,7 @@ init -3 python:
             if order == "name":
                 self.items.sort(key = lambda item: item[0].name)
             elif order == "type":
-                self.items.sort(key = lambda item: item[0].type)
+                self.items.sort(key = lambda item: gui.item_types.index(item[0].type))
             elif order == "price":
                 self.items.sort(key = lambda item: item[0].price, reverse=True)
             elif order == "amount":
