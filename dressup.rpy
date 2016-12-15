@@ -12,13 +12,13 @@
 
 ## name
 ##  ├base
-##  │ └base.png    
+##  │ └base.png
 ##  └face
 ##      └happy.png
 ##      └angry.png
 
 
-## それからドールオブジェクトを Doll(フォルダー名、各レイヤーのフォルダー名のリスト、デフォルトの画像) 
+## それからドールオブジェクトを Doll(フォルダー名、各レイヤーのフォルダー名のリスト、デフォルトの画像)
 ## の形で定義します。各レイヤーの状態を保存できるように、default を使います。
 ## layers のパラメーターを省略すると ["base", "feet", "bottom", "top", "face"] がデフォルトで使われます。
 ## デフォルトの画像は、フォルダー名="ファイル名（拡張子なし）"で指定します。これも省略可能です。
@@ -34,38 +34,38 @@ image erin = LayeredDisplayable("erin")
 
 label doll_example:
     ## ゲームがスタートしたら、 イメージで定義した画像を表示します。
-    show erin    
+    show erin
     pause
 
     ## 表示した画像は $ doll.layer = "filename" の形で、各レイヤーの画像を切り変えることができます。
     ## 下の例では face レイヤーの画像を "angry.png" に変更します。
     $ erin.face = "angry"
     pause
-    
+
     return
-    
-    
+
+
 ##############################################################################
 ## 応用
 
 ## inventory からアイテムを受け取って装備することで、レイヤーを切り替えることもできます。
 ## この機能を使うためには inventory.rpy が必要です。
 
-## まずドールオブジェクトを Doll(フォルダー名、 レイヤーのリスト、装備タイプのリスト、デフォルトの画像) 
+## まずドールオブジェクトを Doll(フォルダー名、 レイヤーのリスト、装備タイプのリスト、デフォルトの画像)
 ## で定義します。装備タイプはレイヤー名を使う必要があります。
 default erin2 = Doll("images/erin", layers=["base", "bottom", "top", "face"], types = ["bottom", "top"], base="base", face="happy")
 image erin2 = LayeredDisplayable("erin2")
 
 ## 次にアイテムの保管者を定義します。
 ## inventory.rpy がなくてもエラーにならないように、コメントアウトしています。
-default closet = Inventory()
+#default closet = Inventory()
 
 ## 各アイテムを Item(名前、装備タイプ) で定義します。it, item の名前空間も使えます。
 ## 名前がファイル名、タイプがフォルダ名になるようにします。
-define it.pleated_skirt = Item("Pleated Skirt", type="bottom")
-define it.buruma = Item("Buruma", type="bottom")
-define it.school_sailor = Item("School Sailer", type="top")
-define it.gym_shirt = Item("Gym Shirt", type="top")
+#define it.pleated_skirt = Item("Pleated Skirt", type="bottom")
+#define it.buruma = Item("Buruma", type="bottom")
+#define it.school_sailor = Item("School Sailer", type="top")
+#define it.gym_shirt = Item("Gym Shirt", type="top")
 
 ## 以上で準備完了です。
 
@@ -73,31 +73,31 @@ define it.gym_shirt = Item("Gym Shirt", type="top")
 ## ゲームがスタートしたら jump doll_example2 でここに飛んでください。
 
 label doll_example2:
-    
+
     # it で定義された全てのアイテムを closet に追加
     $ closet.get_all_items(store.it)
-    
+
     $ renpy.block_rollback()
     $ renpy.retain_after_load()
-    
+
     # dressup スクリーンを（"画像"、ドール、保管者）で呼び出します。
     call screen dressup("erin2", erin2, closet)
-    
+
     show erin2
-    
+
     "How do I look?"
-    
+
     return
-    
+
 
 ##############################################################################
 ## Dressup screen
 
 screen dressup(im, doll, inv):
-    
+
     # image
     add im at center
-    
+
     # doll
     vbox:
         label "Equipped"
@@ -106,8 +106,8 @@ screen dressup(im, doll, inv):
                 text i yoffset 8
                 if doll.equips.get(i):
                     $ name = inv.get_item(doll.equips[i][0]).name
-                    textbutton name action Function(doll.unequip_item, i, inv) 
-            
+                    textbutton name action Function(doll.unequip_item, i, inv)
+
     # inv
     vbox xalign 1.0:
         label "Closet"
@@ -115,7 +115,7 @@ screen dressup(im, doll, inv):
             $ item = i[0]
             $ name = inv.get_item(item).name
             textbutton name action Function(doll.equip_item, i, inv)
-            
+
     textbutton "Return" action Return() yalign 1.0
 
 
@@ -134,62 +134,62 @@ init -3 python:
 
         # デフォルトのレイヤーを下から順番に定義します。
         _layers = ["base", "feet", "bottom", "top", "face"]
-        
+
         # 装備できるアイテムのタイプを定義します。
         _types = ["feet", "bottom", "top"]
 
-        
+
         def __init__(self, folder, layers = None, types = None, **kwargs):
-            
+
             self.folder = folder
             self.layers = layers or self._layers
             self.types = types or self._types
-            
+
             # set default image on each layer
             for i in self.layers:
                 if i in kwargs.keys():
                     setattr(self, i, kwargs[i])
                 else:
                     setattr(self, i, None)
-                    
+
             # dictionary whose keys are item types and values are list [item, amount]
             self.equips = {}
             for i in self.types:
                 self.equips.setdefault(i, None)
-                    
+
             # dictionary whose keys are layer names and values are lists of images
-            self.images = {}            
+            self.images = {}
             for i in self.layers:
-                self.images.setdefault(i, [])                
+                self.images.setdefault(i, [])
             for i in renpy.list_files():
                 for j in self.layers:
                     if i.startswith(self.folder+"/"+j):
                         self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace(".png", ""))
-                        
+
 
         @staticmethod
         def draw_doll(st, at, doll):
             # Function that is used for dynamic displayable.
-    
+
             layers=[]
             if doll in dir(store) :
                 doll = getattr(store, doll)
                 folder = doll.folder
-    
+
                 for i in doll.layers:
                     if getattr(doll, i) and renpy.loadable("{}/{}/{}.png".format(folder, i, getattr(doll, i))):
                         layers.append("{}/{}/{}.png".format(folder, i, getattr(doll, i)))
-    
+
             return Fixed(*layers, fit_first=True), None
-            
-                        
-        # the following methods are used with inventory class 
+
+
+        # the following methods are used with inventory class
         # if you don't use inventory, ignore them
-                
-                    
+
+
         def equip_item(self, slot, inv, merge=True):
             # equip item slot in this type from inv
-                 
+
             if slot:
                 type = inv.get_item(slot[0]).type
                 if type in self.types:
@@ -200,11 +200,11 @@ init -3 python:
                     self.update()
             else:
                 raise Exception("Couldn't find this item in inventory")
-            
-            
+
+
         def unequip_item(self, type, inv, merge=True):
             # remove item slot in this type then add this to inv
-            
+
             slot = self.equips.get(type)
             if slot:
                 self.equips[type] = None
@@ -212,18 +212,18 @@ init -3 python:
                 self.update()
             else:
                 raise Exception("Couldn't find this item type in equips")
-                
-                
+
+
         def unequip_all_items(self, inv, merge=True):
             # remove all items
-            
+
             for i in self.types:
                 self.unequip_item(i, inv, merge)
-                
-        
+
+
         def update(self):
             # call this method each time to change layers
-            
+
             for i in self.layers:
                 if i in self.types:
                     slot = self.equips.get(i)
@@ -231,12 +231,12 @@ init -3 python:
                         setattr(self, i, slot[0])
                     else:
                         setattr(self, i, None)
-            
+
 
 ##############################################################################
 ## Displayable
 
     def LayeredDisplayable(doll):
         return DynamicDisplayable(Doll.draw_doll, doll)
-        
+
 
