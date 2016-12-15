@@ -58,14 +58,14 @@ image erin2 = LayeredDisplayable("erin2")
 
 ## 次にアイテムの保管者を定義します。
 ## inventory.rpy がなくてもエラーにならないように、コメントアウトしています。
-#default closet = Inventory()
+default closet = Inventory()
 
 ## 各アイテムを Item(名前、装備タイプ) で定義します。it, item の名前空間も使えます。
 ## 名前がファイル名、タイプがフォルダ名になるようにします。
-#define it.pleated_skirt = Item("Pleated Skirt", type="bottom")
-#define it.buruma = Item("Buruma", type="bottom")
-#define it.school_sailor = Item("School Sailer", type="top")
-#define it.gym_shirt = Item("Gym Shirt", type="top")
+define it.pleated_skirt = Item("Pleated Skirt", type="bottom")
+define it.buruma = Item("Buruma", type="bottom")
+define it.school_sailor = Item("School Sailer", type="top")
+define it.gym_shirt = Item("Gym Shirt", type="top")
 
 ## 以上で準備完了です。
 

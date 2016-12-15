@@ -28,7 +28,7 @@ default housewife = Inventory(currency=1000)
 default merchant = Inventory(tradein=.25, infinite=True)
 
 
-## ゲームがスタートしたら、 jump inventory_example でここに飛んでください。
+## ゲームがスタートしたら jump inventory_example でここに飛んでください。
 
 label inventory_example:
 
@@ -231,18 +231,10 @@ init -3 python:
         def get_item(self, name):
             # returns item object from name
 
-            if isinstance(name, Item):
-                return name
-            try:
-                return getattr(store.item, name)
-            except: pass
-            try:
-                return getattr(store.it, name)
-            except: pass
-            try:
-                return getattr(store, name)
-            except: pass
-            return None
+            if isinstance(name, Item): return name
+            elif name in dir(store.item): return getattr(store.item, name)
+            elif name in dir(store.it): return getattr(store.it, name)
+            elif name in dir(store): return getattr(store, name)
 
 
         def get_slot(self, item):
@@ -322,7 +314,7 @@ init -3 python:
             # remove an item slot then add this item to buyer for money
 
             amount = self.get_item(slot[0]).amount if self.infinite else slot[1]
-            rv = buyer.buy_item(slot[0], amountt, merge)
+            rv = buyer.buy_item(slot[0], amount, merge)
             if rv and not self.infinite:
                 price = self.get_item(slot[0]).price*amount
                 self.currency += int(price*buyer.tradein)

@@ -38,26 +38,26 @@ default player = Explorer("home", turn=0)
 ## multi を True にすると他のイベントも同時に発生します。
 ## first を True にするとマップ表示前にイベントを確認します。
 ## event、ev の名前空間でも定義できます。
-
+    
 define ev.myhome = Event("home")
 label myhome:
     "this is my home"
     return
-
-define ev.e_station = Event("e_station")
+    
+define ev.e_station = Event("e_station")      
 label e_station:
     ## return のあとに次に移動するレベルや場所を指定できます。
     return "w_station"
-
+    
 define ev.w_station = Event("w_station")
 label w_station:
     return "e_station"
-
+    
 define ev.shop = Event("shop")
 label shop:
     "this is a shop"
     return
-
+    
 ## click を True にすると場所と同じように image を表示して
 ## クリックから即座にリンクしたラベルを呼び出します。
 ## player.seen('ev') でそのイベントを見たかどうか評価できます。
@@ -65,7 +65,7 @@ define ev.direct = Event(cond="player.seen('shop')", level="west", pos=(.1,.1), 
 label direct:
     "this is a direct click event"
     return ev.direct.pos
-
+    
 ## このラベルは毎ターン最後に呼ばれ、ターンの経過を記録しています。
 define ev.turn = Event(priority = -100, first =True, multi=True)
 label turn:
@@ -73,10 +73,10 @@ label turn:
     $player.turn += 1
     return
 
-
+    
 ## start ラベルから explore へジャンプすると探索を開始します。
 
-
+    
 ##############################################################################
 ## Definitions
 ##############################################################################
@@ -91,14 +91,14 @@ label explore:
     $ player.update_events()
 
     # Play music
-    if player.level.music:
-        if renpy.music.get_playing() != player.level.music:
-            play music player.level.music fadeout 1.0
+    if player.music:
+        if renpy.music.get_playing() != player.music:
+            play music player.music fadeout 1.0
 
     # Show background
-    if player.level.image:
-        scene black with Dissolve(.25)
-        scene expression player.level.image
+    if player.image:
+        scene black with Dissolve(.25)        
+        scene expression player.image
         with Dissolve(.25)
 
     while True:
@@ -110,7 +110,7 @@ label explore:
         # sub loop to excecute all normal events
         $ _loop = 0
         while _loop < len(_events):
-
+            
             $ player.event = _events[_loop]
             $ block()
             call expression player.event.label or player.event.name
@@ -126,32 +126,32 @@ label explore:
         # move by place
         if isinstance(_return, Place):
             $player.pos = _return.pos
-
+            
         # excecute click event
         elif isinstance(_return, Event):
             $ player.event = _return
             $ block()
             call expression player.event.label or player.event.name
-
+    
             # check next coodinate. if this returns not None, terminate this loop to change level
             if player.check_jump(_return):
                 jump explore
-
+                
         $ player.first = False
 
-
+            
 label after_load():
 
     # Update event list in current level
     $ player.update_events()
     return
-
-
-init python:
+                
+    
+init python:    
 
     def block():
         # blocks rollback then allows saving data in the current interaction
-
+        
         renpy.block_rollback()
         renpy.retain_after_load()
 
@@ -160,25 +160,21 @@ init python:
 ## Eventmap screen
 
 screen eventmap(player):
-
+    
     ## show places
     for i in player.get_places():
         button pos i.pos:
             action Return(i)
             if i.image:
                 add i.image
-
+                
     ## show events
     for i in player.get_events(click=True):
         button pos i.pos:
             action Return(i)
             if  i.image:
                 add i.image
-
-    ## show player
-    if player.image:
-        add player.image pos player.pos
-
+        
 
 ##############################################################################
 ## Level class
@@ -200,15 +196,11 @@ init -3 python:
 
         def __init__(self, level=None, pos=None, cond="True", image=None, info=""):
 
-            self._level = level
+            self.level = level
             self.pos = pos
             self.cond = cond
             self.image = image
             self.info = info
-
-        @property
-        def level(self):
-            return Explorer.get_level(self._level)
 
 
 ##############################################################################
@@ -218,7 +210,7 @@ init -3 python:
 
         def __init__(self, place = None, cond="True", priority=0, once=False, multi=False, first=False, click=False, image=None, level=None, pos=None, label=None, info=""):
 
-            self._level = Explorer.get_place(place).level if place else level
+            self.level = Explorer.get_place(place).level if place else level
             self.pos = Explorer.get_place(place).pos if place else pos
             self.cond = cond
             self.priority = int(priority)
@@ -230,22 +222,17 @@ init -3 python:
             self.label = label
             self.info = info
             self.name = ""
-
-        @property
-        def level(self):
-            return Explorer.get_level(self._level)
-
+            
 
 ##############################################################################
 ## Explorer class
 
     class Explorer(object):
+        
+        def __init__(self, place=None, level=None, pos=None, **kwargs):
 
-        def __init__(self, place=None, image=None, level=None, pos=None, **kwargs):
-
-            self._level = Explorer.get_place(place).level if place else level
+            self.level = Explorer.get_place(place).level if place else level
             self.pos = Explorer.get_place(place).pos if place else pos
-            self.image = image
             self.first = True
             self.event = None
             self.current_events = []
@@ -254,26 +241,27 @@ init -3 python:
 
             for i in kwargs.keys():
                 setattr(self, i, kwargs[i])
-
-
+            
+                
         @property
-        def level(self):
-            return self.get_level(self._level)
-
-        @level.setter
-        def level(self, value):
-            self._level = value
-
-
+        def image(self):
+            return self.get_level(self.level).image
+            
+            
+        @property
+        def music(self):
+            return self.get_level(self.level).music
+            
+            
         def seen(self, ev):
             #returns True if this event is seen.
 
             return ev in self.seen_events
-
+            
 
         def update_events(self, check=True):
             # get current_events and current_places in the current level
-
+            
             # get current events
             self.current_events = []
             for i in dir(store.event) + dir(store.ev) + dir(store):
@@ -298,7 +286,7 @@ init -3 python:
                     pl = self.get_place(i)
                     if isinstance(pl, Place) and (pl.level == None or pl.level == self.level):
                         self.current_places.append(pl)
-
+                        
 
         def get_events(self, click = False):
             # returns event list that happens in current interaction.
@@ -310,18 +298,18 @@ init -3 python:
                         if click or i.first or not self.first:
                             if self.check_pos(i, click) and eval(i.cond):
                                 events.append(i)
-
+            
             return self.cut_events(events)
-
-
+            
+            
         def check_pos(self, ev, click):
            if click or ev.pos == None or ev.pos == self.pos:
-               return True
-
-
+               return True                
+            
+                                
         def cut_events(self, events):
-            # if not multi is False, remove scond or later
-
+            # if not multi is False, remove scond or later  
+            
             found = False
             for i in events[:]:
                 if not i.multi:
@@ -342,7 +330,7 @@ init -3 python:
                     places.append(i)
 
             return places
-
+            
 
         def check_jump(self, _return):
             # Changes own level and pos
@@ -353,8 +341,8 @@ init -3 python:
 
             # no transition
             if not _return:
-                return None
-
+                return None                
+                              
             self.first = True
 
             # try place
@@ -363,7 +351,7 @@ init -3 python:
                 self.level = rv.level
                 self.pos = rv.pos
                 return True
-
+                
             # try level
             rv = self.get_level(_return)
             if rv and isinstance(rv, Level):
@@ -380,68 +368,44 @@ init -3 python:
                     self.level = _return[0]
                     self.pos = _return[1]
                     return True
-
+                    
                 # only pos
                 self.pos = _return
                 return True
 
             # jump to do transition
             return True
-
+                
 
         @classmethod
         def get_level(self, name):
-            # make level object from name
+            # returns item object from name
 
-            if isinstance(name, Level):
-                return name
-            try:
-                return getattr(store.level, name)
-            except: pass
-            try:
-                return getattr(store.lv, name)
-            except: pass
-            try:
-                return getattr(store, name)
-            except: pass
-            return None
+            if isinstance(name, Level): return name
+            elif name in dir(store.level): return getattr(store.level, name)
+            elif name in dir(store.lv): return getattr(store.lv, name)
+            elif name in dir(store): return getattr(store, name)
+            
 
-
-        @classmethod
+        @classmethod            
         def get_place(self, name):
             # make place object from name
 
-            if isinstance(name, Place):
-                return name
-            try:
-                return getattr(store.place, name)
-            except: pass
-            try:
-                return getattr(store.pl, name)
-            except: pass
-            try:
-                return getattr(store, name)
-            except: pass
-            return None
-
+            if isinstance(name, Place): return name
+            elif name in dir(store.place): return getattr(store.place, name)
+            elif name in dir(store.pl): return getattr(store.pl, name)
+            elif name in dir(store): return getattr(store, name)
+            
 
         @classmethod
         def get_event(self, name):
             # make event object from name
 
-            if isinstance(name, Event):
-                return name
-            try:
-                return getattr(store.event, name)
-            except: pass
-            try:
-                return getattr(store.ev, name)
-            except: pass
-            try:
-                 return getattr(store, name)
-            except: pass
-            return None
-
+            if isinstance(name, Event): return name
+            elif name in dir(store.event): return getattr(store.event, name)
+            elif name in dir(store.ev): return getattr(store.ev, name)
+            elif name in dir(store): return getattr(store, name)
+            
 
 ##############################################################################
 ## Create namespace
