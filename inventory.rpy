@@ -12,7 +12,7 @@ define gui.item_types = ["supply", "food", "outfit"]
 ## name は表示される名前、type はカテゴリー、price は価格です。
 ## amount はアイテムを追加時のデフォルトの個数で、省略すると１になります。
 ## info はマウスフォーカスした時に表示される情報です。
-## 他の変数と衝突しないように item の名前空間を使うといいでしょう。
+## it, item の名前空間を使う事もできます。
 
 define item.apple = Item("Apple", type="food", price=10, info="This is an apple")
 define item.orange = Item("Orange", type="food", price=20)
@@ -28,14 +28,13 @@ default housewife = Inventory(currency=1000)
 default merchant = Inventory(tradein=.25, infinite=True)
 
 
-## ゲームがスタートしたら、jump inventory でここに飛んでください。
+## ゲームがスタートしたら、 jump inventory_example でここに飛んでください。
 
-label inventory:
+label inventory_example:
 
     ## add_item(item, amount) でアイテムを追加します。個数を指定する場合は引数 amount を使います。
-    $ housewife.add_item(item.apple, amount=2)
-    ## ""で囲んだ文字列でも追加できます。その場合は item. を外すことができます。
-    $ housewife.add_item("orange")
+    ## item は item. を外した文字列です。
+    $ housewife.add_item("apple", amount=2)
 
     ## get_all_items(namespace) で名前空間で定義したすべてのアイテムを自動的に追加します。
     $ merchant.get_all_items(store.item)
@@ -142,12 +141,13 @@ screen inventory(inv, buyer=None, title="Inventory"):
                     python:
                         item = slot[0]
                         amount = slot[1]
-                        price = int(slot[0].price*slot[1]*(buyer.tradein if buyer else inv.tradein))
+                        obj = inv.get_item(item)
+                        price = int(obj.price*slot[1]*(buyer.tradein if buyer else inv.tradein))
 
-                    if tab in [item.type, "all"]:
-                        textbutton "[item.name] x[amount] ([price])":
+                    if tab in [obj.type, "all"]:
+                        textbutton "[obj.name] x[amount] ([price])":
                             selected inv.selected == slot
-                            hovered tt.Action(item.info)
+                            hovered tt.Action(obj.info)
 
                             # sell/buy
                             if buyer:
@@ -198,19 +198,7 @@ init -3 python:
             self.type = type
             self.price = int(price)
             self.amount = int(amount)
-            self.info = info
-
-
-        @staticmethod
-        def get(name):
-            # make string into item object
-
-            if isinstance(name, Item):
-                return name
-            try:
-                return getattr(store.item, name)
-            except AttributeError:
-                return getattr(store, name)
+            self.info = info            
 
 
 ##############################################################################
@@ -224,7 +212,7 @@ init -3 python:
         currency - amount of money this object has
         tradein - when someone buyoff items to this inventory, price is reduced by this value
         infinite - if true, its currency and amont of items are infinite, like NPC merchant.
-        items - list of item slots. item slot is a pair of [item, amount]. items are stored as slot, not item.
+        items - list of item slots. item slot is a pair of ["item name", amount]. items are stored as slot, not item object. 
         selected - selected slot in a current screen.
         """
 
@@ -240,25 +228,27 @@ init -3 python:
             self.selected = None
 
 
-        def has_item(self, item):
-            # returns True if inventory has this item
+        def get_item(self, name):
+            # returns item object from name
 
-            item = Item.get(item)
-            return item in [i[0] for i in self.items]
-
-
-        def count_item(self, item):
-            # returns sum of amount of this item
-
-            item = Item.get(item)
-            return sum([i[1] for i in self.items if i[0] == item])
+            if isinstance(name, Item):
+                return name
+            try:
+                return getattr(store.item, name)
+            except: pass
+            try:
+                return getattr(store.it, name)
+            except: pass
+            try:
+                return getattr(store, name)
+            except: pass
+            return None
 
 
         def get_slot(self, item):
-            # returns item slot that has a same item
+            # returns first slot that has a same item
             # None if inventory deosn't have this item.
 
-            item = Item.get(item)
             if item in self.items:
                 return item
             for i in self.items:
@@ -267,14 +257,25 @@ init -3 python:
             return None
 
 
+        def has_item(self, item):
+            # returns True if inventory has this item
+
+            return item in [i[0] for i in self.items]
+
+
+        def count_item(self, item):
+            # returns sum of amount of this item
+
+            return sum([i[1] for i in self.items if i[0] == item])
+
+
         def add_item(self, item, amount = None, merge = True):
             # add an item
             # if amount is given, this amount is used insted of item's default value.
             # if merge is True, amount is summed when inventory has same item
 
-            item = Item.get(item)
             slot = self.get_slot(item)
-            amount = amount if amount != None else item.amount
+            amount = amount or self.get_item(item).amount
             if slot and merge:
                 slot[1] += amount
             else:
@@ -284,7 +285,6 @@ init -3 python:
         def remove_item(self, item):
             # remove an item
 
-            item = Item.get(item)
             slot = self.get_slot(item)
             if slot:
                 self.items.remove(slot)
@@ -295,7 +295,6 @@ init -3 python:
             # if remove is True, item is removed when amount reaches 0
             # if add is True, an item is added when inventory hasn't this item
 
-            item = Item.get(item)
             slot = self.get_slot(item)
             if slot:
                 slot[1] += amount
@@ -309,26 +308,35 @@ init -3 python:
             # buy an item
             # return True if trade is succeeded
 
-            item = Item.get(item)
-            amount = amount if amount != None else item.amount
-            price = item.price*amount
+            amount = amount or self.get_item(item).amount
+            price = self.get_item(item).price*amount
             if self.infinite:
                 return True
             elif self.currency >= price:
-                self.add_item(item, amount = amount, merge=merge)
+                self.add_item(item, amount, merge)
                 self.currency -= price
                 return True
 
 
         def sell_item(self, slot, buyer, merge=True):
-            # remove an item slot then add this item to buyer
+            # remove an item slot then add this item to buyer for money
 
-            amount = slot[0].amount if self.infinite else slot[1]
-            rv = buyer.buy_item(slot[0], amount = amount, merge=merge)
+            amount = self.get_item(slot[0]).amount if self.infinite else slot[1]
+            rv = buyer.buy_item(slot[0], amountt, merge)
             if rv and not self.infinite:
-                price = slot[0].price*amount
+                price = self.get_item(slot[0]).price*amount
                 self.currency += int(price*buyer.tradein)
                 self.items.remove(slot)
+                
+                
+        def give_item(self, slot, getter, merge=True):
+            # remove an item slot then add this item to getter
+            
+            if merge and getter.has_item(slot[0]):
+                getter.score_item(slot[0], slot[1])
+            else:
+                getter.items.append(slot)
+            self.items.remove(slot)            
 
 
         def replace_items(self, first, second):
@@ -341,15 +349,16 @@ init -3 python:
 
         def sort_items(self, order="name"):
             # sort slots
+            
 
             if order == "name":
-                self.items.sort(key = lambda item: item[0].name)
+                self.items.sort(key = lambda item: self.get_item(item[0]).name)
             elif order == "type":
-                self.items.sort(key = lambda item: gui.item_types.index(item[0].type))
+                self.items.sort(key = lambda item: gui.item_types.index(self.get_item(item[0]).type))
             elif order == "price":
-                self.items.sort(key = lambda item: item[0].price, reverse=True)
+                self.items.sort(key = lambda item: self.get_item(item[0]).price, reverse=True)
             elif order == "amount":
-                self.items.sort(key = lambda item: item[1], reverse=True)
+                self.items.sort(key = lambda item: self.get_item(item[1]), reverse=True)
 
 
         def get_all_items(self, namespace=store):
@@ -357,7 +366,7 @@ init -3 python:
 
             for i in dir(namespace):
                 if isinstance(getattr(namespace, i), Item):
-                    self.add_item(getattr(namespace, i))
+                    self.add_item(i)
 
 
 
@@ -366,5 +375,9 @@ init -3 python:
 
 init -999 python in item:
     pass
+
+init -999 python in it:
+    pass
+
 
 
