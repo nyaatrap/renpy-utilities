@@ -256,7 +256,7 @@ init -3 python:
         def seen(self, ev):
             #returns True if this event is seen.
 
-            return ev in self.seen_events
+            return ev.name in self.seen_events
             
 
         def update_events(self, check=True):
@@ -281,7 +281,7 @@ init -3 python:
 
             # get current places
             self.current_places = []
-            for i in dir(store.place) + dir(store.pl) + dir(store):
+            for i in dir(store.place) + dir(store.place) + dir(store):
                 if not i.startswith("_"):
                     pl = self.get_place(i)
                     if isinstance(pl, Place) and (pl.level == None or pl.level == self.level):
@@ -294,7 +294,7 @@ init -3 python:
             events = []
             for i in self.current_events:
                 if i.click == click:
-                    if not i.once or not i.seen(self):
+                    if not i.once or not self.seen(i):
                         if click or i.first or not self.first:
                             if self.check_pos(i, click) and eval(i.cond):
                                 events.append(i)
@@ -303,12 +303,12 @@ init -3 python:
             
             
         def check_pos(self, ev, click):
-           if click or ev.pos == None or ev.pos == self.pos:
-               return True                
+            if click or ev.pos == None or ev.pos == self.pos:
+                return True                
             
                                 
         def cut_events(self, events):
-            # if not multi is False, remove scond or later  
+            # if not multi is False, remove second or later  
             
             found = False
             for i in events[:]:
@@ -337,7 +337,7 @@ init -3 python:
             # if nothing changed, return None
 
             # before checking jump, add current event into the seen list.
-            explorer.seen_events.add(self.event.name)
+            self.seen_events.add(self.event.name)
 
             # no transition
             if not _return:
