@@ -112,50 +112,64 @@ label crawl:
                 jump explore
             $ _loop += 1
 
-        # show eventmap or dungeon navigator
-        $ block()
-        if crawler.in_dungeon():
-            call screen dungeon(crawler)
-        else:
-            call screen eventmap(crawler)
-
-        # move by place
-        if isinstance(_return, Place):
-            $crawler.pos = _return.pos
-            
-        # excecute click event
-        elif isinstance(_return, Event):
-            $ crawler.event = _return
-            $ block()
-            call expression crawler.event.label or crawler.event.name
-    
-            # check next coodinate. if this returns not None, terminate this loop to change level
-            if crawler.check_jump(_return):
-                jump explore
-                            
-        # move
-        elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] not in crawler.collision:
-            $ crawler.pos = _return.unpack()
-            $ crawler.draw_dungeon()
+        # sub loop for turn around
+        $ _loop2 = 0
+        while not _loop2:
                 
-        # Collision 
-        elif isinstance(_return, Coordinate):
-
-            # check normal events in collision
+            # show eventmap or dungeon navigator
             $ block()
-            $ _events = crawler.get_events()
+            if crawler.in_dungeon():
+                call screen dungeon(crawler)
+            else:
+                call screen eventmap(crawler)
     
-            # sub loop to excecute all normal events
-            $ _loop = 0
-            while _loop < len(_events):
+            # move by place
+            if isinstance(_return, Place):
+                $crawler.pos = _return.pos
+                $_loop2=1
                 
-                $ crawler.event = _events[_loop]
+            # excecute click event
+            elif isinstance(_return, Event):
+                $ crawler.event = _return
                 $ block()
                 call expression crawler.event.label or crawler.event.name
+        
                 # check next coodinate. if this returns not None, terminate this loop to change level
                 if crawler.check_jump(_return):
                     jump explore
-                $ _loop += 1
+                $_loop2=1
+                                
+            # turnaround
+            elif isinstance(_return, Coordinate) and\
+                _return.x == crawler.pos[0] and _return.y == crawler.pos[1]:
+                $ crawler.pos = _return.unpack()
+                $ crawler.draw_dungeon()
+                                
+            # move
+            elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] not in crawler.collision:
+                $ crawler.pos = _return.unpack()
+                $ crawler.draw_dungeon()
+                $_loop2=1
+                    
+            # Collision 
+            elif isinstance(_return, Coordinate):
+    
+                # check normal events in collision
+                $ block()
+                $ _events = crawler.get_events()
+        
+                # sub loop to excecute all normal events
+                $ _loop = 0
+                while _loop < len(_events):
+                    
+                    $ crawler.event = _events[_loop]
+                    $ block()
+                    call expression crawler.event.label or crawler.event.name
+                    # check next coodinate. if this returns not None, terminate this loop to change level
+                    if crawler.check_jump(_return):
+                        jump explore
+                    $ _loop += 1
+                $_loop2=1
             
         $ crawler.first = False
 
