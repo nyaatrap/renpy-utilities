@@ -78,19 +78,20 @@ label chest:
 label crawl:
     # Update event list in current level
     $ crawler.update_events()
+    $ explorer.first = True
 
     # Play music
-    if crawler.music:
-        if renpy.music.get_playing() != crawler.music:
-            play music crawler.music fadeout 1.0
+    if crawler.lv.music:
+        if renpy.music.get_playing() != crawler.lv.music:
+            play music crawler.lv.music fadeout 1.0
 
     # Show background
-    if crawler.image:
+    if crawler.lv.image:
         scene black with Dissolve(.25)
         if crawler.in_dungeon():
             $ crawler.draw_dungeon()
         else:
-            scene expression crawler.image            
+            scene expression crawler.lv.image            
         with Dissolve(.25)
 
     while True:
@@ -133,7 +134,7 @@ label crawl:
                 jump explore
                             
         # move
-        elif isinstance(_return, Coordinate) and crawler.dungeon.map[_return.y][_return.x] not in crawler.collision:
+        elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] not in crawler.collision:
             $ crawler.pos = _return.unpack()
             $ crawler.draw_dungeon()
                 
@@ -161,6 +162,7 @@ label crawl:
 
 ##############################################################################
 ## Dungeon screen
+## screen that shows orientation buttons in dungeon
 
 screen dungeon(crawler):
     
@@ -208,6 +210,11 @@ init -2 python:
     
     class Dungeon(Level):
         
+        """
+        Expanded Level class to hold 2-dimentional map.
+        map should be list or filename of spreadsheet.
+        """
+        
         def __init__(self, image=None, music=None, map = None):
             
             super(Dungeon, self).__init__(image, music)
@@ -239,7 +246,9 @@ init -2 python:
     
     class Coordinate(object):
         
-        ''' A class that calculates coordinates. '''   
+        """
+        A class that calculates coordinates.
+        """
         
         def __init__(self, x=0, y=0, dx=0, dy=0):
             
@@ -283,25 +292,47 @@ init -2 python:
 ## Crawler class 
 
     class Crawler(Explorer):
-    
+        
+        """
+        Expanded Explorer Class that stores various methods and data for crawling. 
+        """
+                
         # Make a dict that maps characters in dungeon map to image names
         mapping = {"1":"wall", "2":"door", "3":"up", "4":"down"}
         
         # tuple of collision on dungeon map.
         collision = ("1", "2", "3", "4")
-        
-        
-        @property
-        def dungeon(self):
-            return self.get_level(self.level)
+            
+            
+        def in_dungeon(self):
+            # returns true if crawler is in dungeon
+            
+            return isinstance(self.get_level(self.level), Dungeon)
+                            
+            
+        def _check_pos(self, ev, click):
+            # It overrides a same method to support coordinate
+            
+            if ev.pos == None:
+                return True
+            if self.pos:
+                if len(self.pos) == 2:
+                    if click or ev.pos == None or ev.pos[0] == self.pos:
+                        return True
+                elif len(ev.pos) == 4:
+                    if ev.pos == self.pos:
+                        return True                
+                else:
+                    if (ev.pos[0] == self.pos[0] and ev.pos[1] == self.pos[1]):
+                        return True  
             
                                 
         def draw_dungeon(self):            
             # Draw front view image on the coord on the master layer. 
             
             coord = Coordinate(*self.pos)
-            image = self.dungeon.image
-            map = self.dungeon.map
+            image = self.lv.image
+            map = self.lv.map
             mapping = self.mapping
             
             # Calculate relative coordinates
@@ -352,26 +383,4 @@ init -2 python:
                 except IndexError: 
                     pass
             
-            
-        def in_dungeon(self):
-            # returns true if crawler is in dungeon
-            
-            return isinstance(self.get_level(self.level), Dungeon)
-                            
-            
-        def check_pos(self, ev, click):
-            # It overrides the Explorer class to support coordinate
-            
-            if ev.pos == None:
-                return True
-            if self.pos:
-                if len(self.pos) == 2:
-                    if click or ev.pos == None or ev.pos[0] == self.pos:
-                        return True
-                elif len(ev.pos) == 4:
-                    if ev.pos == self.pos:
-                        return True                
-                else:
-                    if (ev.pos[0] == self.pos[0] and ev.pos[1] == self.pos[1]):
-                        return True  
-            
+                

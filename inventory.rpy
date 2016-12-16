@@ -182,7 +182,7 @@ init -3 python:
     class Item(object):
 
         """
-        Class that represents item that is stored by inventory object. It has follwing fields:
+        Class that represents item that is stored by inventory object. It has following fields:
         
         name - item name that is shown on the screen
         type - item category
@@ -214,7 +214,7 @@ init -3 python:
     class Inventory(object):
 
         """
-        Class that stores items. It has follwing fields:
+        Class that stores items. It has following fields:
         
         currency - score of money this object has
         tradein - when someone buyoff items to this inventory, value is reduced by this value
@@ -353,8 +353,7 @@ init -3 python:
 
 
         def sort_items(self, order="name"):
-            # sort slots
-            
+            # sort slots            
 
             if order == "name":
                 self.items.sort(key = lambda item: self.get_item(item[0]).name)

@@ -76,10 +76,7 @@ label sample_dressup:
 
     # it で定義された全てのアイテムを closet に追加
     $ closet.get_all_items(store.item)
-
-    $ renpy.block_rollback()
-    $ renpy.retain_after_load()
-
+    
     # dressup スクリーンを（"画像"、ドール、保管者）で呼び出します。
     call screen dressup("erin2", erin2, closet)
 
@@ -130,7 +127,16 @@ init -3 python:
 
     class Doll(object):
 
-        '''class that stores equips and layer infomation'''
+        """
+        class that stores equips and layer infomation. It has the following fields:
+        
+        folder - dolfer name that this doll's images are stored.
+        layers - folder names that this doll's each layer images are stored.
+        types - layer and type names that can be equipped when inventory system is using.
+        
+        It also has fields as same as layer names for example, self.base=None
+        These fields vlues are filenames of each layer.
+        """
 
         # デフォルトのレイヤーを下から順番に定義します。
         _layers = ["base", "feet", "bottom", "top", "face"]

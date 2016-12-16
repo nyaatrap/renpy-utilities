@@ -60,8 +60,8 @@ label shop:
     
 ## click を True にすると場所と同じように image を表示して
 ## クリックから即座にリンクしたラベルを呼び出します。
-## explorer.seen('ev') でそのイベントを見たかどうか評価できます。
-define ev.direct = Event(cond="explorer.seen('shop')", level="west", pos=(.1,.1), click=True, image=Text("click here"))
+## explorer.seen(ev) でそのイベントを見たかどうか評価できます。
+define ev.direct = Event(cond="explorer.seen(ev.shop)", level="west", pos=(.1,.1), click=True, image=Text("click here"))
 label direct:
     "this is a direct click event"
     return ev.direct.pos
@@ -89,16 +89,17 @@ label explore:
 
     # Update event list in current level
     $ explorer.update_events()
+    $ explorer.first = True
 
     # Play music
-    if explorer.music:
-        if renpy.music.get_playing() != explorer.music:
-            play music explorer.music fadeout 1.0
+    if explorer.lv.music:
+        if renpy.music.get_playing() != explorer.lv.music:
+            play music explorer.lv.music fadeout 1.0
 
     # Show background
-    if explorer.image:
+    if explorer.lv.image:
         scene black with Dissolve(.25)        
-        scene expression explorer.image
+        scene expression explorer.lv.image
         with Dissolve(.25)
 
     while True:
@@ -158,6 +159,7 @@ init python:
 
 ##############################################################################
 ## Eventmap screen
+## screen that shows events and places over the current level
 
 screen eventmap(explorer):
     
@@ -183,6 +185,13 @@ init -3 python:
 
     class Level(object):
 
+        """
+        Class that represents level that place events on it. It has following fields:
+        
+        image - image that is shown behind events
+        music - music that is played while explorer in this level
+        """
+
         def __init__(self, image=None, music=None):
 
             self.image = image
@@ -193,8 +202,13 @@ init -3 python:
 ## Place class
 
     class Place(object):
+        
+        """
+        Class that places event on level.
+        This class's fileds are same to event class
+        """
 
-        def __init__(self, level=None, pos=None, cond="True", image=None, info=""):
+        def __init__(self, level=None, pos=None, cond="True", image=None, info=""):            
 
             self.level = level
             self.pos = pos
@@ -207,8 +221,25 @@ init -3 python:
 ## Event class
 
     class Event(object):
+        
+        """
+        Class that represents events that is places on level or place. It has the following fileds:
+        
+        level - String of level where this events placed onto.
+        pos - (x, y) coordinate on the screen.
+        cond - Conditions to evaluate this event happnes or not. This should be quotated.
+        priority - An event with higher value happens firster. default is 0.
+        once - Set this true prevents calling this event second time.
+        multi - Set this true don't prevent other events in the same interaction.
+        first - Set this true serches this event before showing event map screen.
+        click - Set this true makes event place object, that allows showing image and clicking on map
+                but prevents checking events in passive state (staying).
+        image - Imagebutton to be shown on eventmap if click is True.
+        label - If it's given this label is called instead of object name.
+        info - Information text to be shown on event map screen.
+        """
 
-        def __init__(self, place = None, cond="True", priority=0, once=False, multi=False, first=False, click=False, image=None, level=None, pos=None, label=None, info=""):
+        def __init__(self, place = None, cond="True", priority=0, once=False, multi=False, first=False, click=False, image=None, level=None, pos=None, label=None, info=""):            
 
             self.level = Explorer.get_place(place).level if place else level
             self.pos = Explorer.get_place(place).pos if place else pos
@@ -228,11 +259,16 @@ init -3 python:
 ## Explorer class
 
     class Explorer(object):
+
+        """
+        Class that stores various methods and data for explroring.
+        """
         
         def __init__(self, place=None, level=None, pos=None, **kwargs):
-
+            
             self.level = Explorer.get_place(place).level if place else level
             self.pos = Explorer.get_place(place).pos if place else pos
+            
             self.first = True
             self.event = None
             self.current_events = []
@@ -244,17 +280,14 @@ init -3 python:
             
                 
         @property
-        def image(self):
-            return self.get_level(self.level).image
+        def lv(self):
+            # shortcut to access the current level
             
-            
-        @property
-        def music(self):
-            return self.get_level(self.level).music
+            return self.get_level(self.level)
             
             
         def seen(self, ev):
-            #returns True if this event is seen.
+            # returns True if this event is seen.
 
             return ev.name in self.seen_events
             
@@ -296,13 +329,15 @@ init -3 python:
                 if i.click == click:
                     if not i.once or not self.seen(i):
                         if click or i.first or not self.first:
-                            if self.check_pos(i, click) and eval(i.cond):
+                            if self._check_pos(i, click) and eval(i.cond):
                                 events.append(i)
             
             return self.cut_events(events)
             
             
-        def check_pos(self, ev, click):
+        def _check_pos(self, ev, click):
+            # inner function for get_events.
+            
             if click or ev.pos == None or ev.pos == self.pos:
                 return True                
             
@@ -342,8 +377,6 @@ init -3 python:
             # no transition
             if not _return:
                 return None                
-                              
-            self.first = True
 
             # try place
             rv = self.get_place(_return)
