@@ -8,16 +8,16 @@
 ## まずアイテム画面に表示されるアイテムのタイプを定義します。
 define gui.item_types = ["supply", "food", "outfit"]
 
-## 次にアイテムオブジェクトを Item(name, type, price, amount, info) で定義します。
-## name は表示される名前、type はカテゴリー、price は価格です。
-## amount はアイテムを追加時のデフォルトの個数で、省略すると１になります。
+## 次にアイテムオブジェクトを Item(name, type, value, score, info) で定義します。
+## name は表示される名前、type はカテゴリー、value は価格です。
+## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
 ## info はマウスフォーカスした時に表示される情報です。
 ## it, item の名前空間を使う事もできます。
 
-define item.apple = Item("Apple", type="food", price=10, info="This is an apple")
-define item.orange = Item("Orange", type="food", price=20)
-define item.knife = Item("Knife", type="supply", price=50)
-define item.dress = Item("Dress", type="outfit", price=100)
+define item.apple = Item("Apple", type="food", value=10, info="This is an apple")
+define item.orange = Item("Orange", type="food", value=20)
+define item.knife = Item("Knife", type="supply", value=50)
+define item.dress = Item("Dress", type="outfit", value=100)
 
 ## 最後に所持者を Inventory(currency, tradein, infinite, items) で定義します。
 ## currency は所持金、tradein はその所持者が下取りする時の価格比です。
@@ -28,13 +28,13 @@ default housewife = Inventory(currency=1000)
 default merchant = Inventory(tradein=.25, infinite=True)
 
 
-## ゲームがスタートしたら jump inventory_example でここに飛んでください。
+## ゲームがスタートしたら jump sample_inventory でここに飛んでください。
 
-label inventory_example:
+label sample_inventory:
 
-    ## add_item(item, amount) でアイテムを追加します。個数を指定する場合は引数 amount を使います。
+    ## add_item(item, score) でアイテムを追加します。個数を指定する場合は引数 score を使います。
     ## item は item. を外した文字列です。
-    $ housewife.add_item("apple", amount=2)
+    $ housewife.add_item("apple", score=2)
 
     ## get_all_items(namespace) で名前空間で定義したすべてのアイテムを自動的に追加します。
     $ merchant.get_all_items(store.item)
@@ -43,8 +43,8 @@ label inventory_example:
     ## has_item(item) - 所持していれば True を返します。
     ## count_item(item) - 所持している合計の個数を返します。
     ## remove_item(item) - 所持していれば、そのアイテムを奪います。
-    ## score_item(item, amount) - 所持している個数を変更します。
-    ## buy_item(item, amount) - 所持金が足りていれば、それを消費してアイテムを追加します。
+    ## score_item(item, score) - 所持している個数を変更します。
+    ## buy_item(item, score) - 所持金が足りていれば、それを消費してアイテムを追加します。
 
 
     while True:
@@ -117,7 +117,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
         
         # sort buttons
         text "Sort by"
-        for i in ["name", "type", "price", "amount"]:
+        for i in ["name", "type", "value", "score"]:
             textbutton i.capitalize():
                 action Function(inv.sort_items, order=i)
 
@@ -140,12 +140,12 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
                     python:
                         item = slot[0]
-                        amount = slot[1]
+                        score = slot[1]
                         obj = inv.get_item(item)
-                        price = int(obj.price*slot[1]*(buyer.tradein if buyer else inv.tradein))
+                        value = int(obj.value*slot[1]*(buyer.tradein if buyer else inv.tradein))
 
                     if tab in [obj.type, "all"]:
-                        textbutton "[obj.name] x[amount] ([price])":
+                        textbutton "[obj.name] x[score] ([value])":
                             selected inv.selected == slot
                             hovered tt.Action(obj.info)
 
@@ -182,24 +182,31 @@ init -3 python:
     class Item(object):
 
         """
-        Class that represents item that is stored by party object. It has follwing fields:
+        Class that represents item that is stored by inventory object. It has follwing fields:
         
         name - item name that is shown on the screen
         type - item category
-        price - amount of currency for trading
-        amount - default amount of item when it's added into inventory
+        value - score of currency for trading
+        score - default score of item when it's added into inventory
         info - description that is shown when an item is focused
         """
 
 
-        def __init__(self, name="", type=None, price=0, amount=1, info=""):
+        def __init__(self, name="", type=None, value=0, score=1, info=""):
 
             self.name = name
             self.type = type
-            self.price = int(price)
-            self.amount = int(amount)
+            self.value = int(value)
+            self.score = int(score)
             self.info = info            
+            
 
+        def use(self, target):
+            
+            # write your own code
+            
+            return            
+            
 
 ##############################################################################
 ## Inventory class.
@@ -209,10 +216,10 @@ init -3 python:
         """
         Class that stores items. It has follwing fields:
         
-        currency - amount of money this object has
-        tradein - when someone buyoff items to this inventory, price is reduced by this value
+        currency - score of money this object has
+        tradein - when someone buyoff items to this inventory, value is reduced by this value
         infinite - if true, its currency and amont of items are infinite, like NPC merchant.
-        items - list of item slots. item slot is a pair of ["item name", amount]. items are stored as slot, not item object. 
+        items - list of item slots. item slot is a pair of ["item name", score]. items are stored as slot, not item object. 
         selected - selected slot in a current screen.
         """
 
@@ -225,9 +232,10 @@ init -3 python:
             if items:
                 for i in items:
                     self.add_item(i)
-            self.selected = None
+            self.selected = None            
+            
 
-
+        @classmethod
         def get_item(self, name):
             # returns item object from name
 
@@ -256,22 +264,22 @@ init -3 python:
 
 
         def count_item(self, item):
-            # returns sum of amount of this item
+            # returns sum of score of this item
 
             return sum([i[1] for i in self.items if i[0] == item])
 
 
-        def add_item(self, item, amount = None, merge = True):
+        def add_item(self, item, score = None, merge = True):
             # add an item
-            # if amount is given, this amount is used insted of item's default value.
-            # if merge is True, amount is summed when inventory has same item
+            # if score is given, this score is used insted of item's default value.
+            # if merge is True, score is summed when inventory has same item
 
             slot = self.get_slot(item)
-            amount = amount or self.get_item(item).amount
+            score = score or self.get_item(item).score
             if slot and merge:
-                slot[1] += amount
+                slot[1] += score
             else:
-                self.items.append([item, amount])
+                self.items.append([item, score])
 
 
         def remove_item(self, item):
@@ -282,42 +290,48 @@ init -3 python:
                 self.items.remove(slot)
 
 
-        def score_item(self, item, amount, remove = True, add = True):
-            # changes amount of item
-            # if remove is True, item is removed when amount reaches 0
+        def score_item(self, item, score, remove = True, add = True):
+            # changes score of item
+            # if remove is True, item is removed when score reaches 0
             # if add is True, an item is added when inventory hasn't this item
 
             slot = self.get_slot(item)
             if slot:
-                slot[1] += amount
+                slot[1] += score
                 if remove and self.slot[1]<=0:
                     self.remove_item(slot)
             elif add:
-                self.add_item(self, [item, amount])
+                self.add_item(self, [item, score])
+            
+            
+        def use_item(self, item, target):
+            # uses item on target
+            
+            self.get_item(item).use(target)
 
 
-        def buy_item(self, item, amount = None, merge=True):
+        def buy_item(self, item, score = None, merge=True):
             # buy an item
             # return True if trade is succeeded
 
-            amount = amount or self.get_item(item).amount
-            price = self.get_item(item).price*amount
+            score = score or self.get_item(item).score
+            value = self.get_item(item).value*score
             if self.infinite:
                 return True
-            elif self.currency >= price:
-                self.add_item(item, amount, merge)
-                self.currency -= price
+            elif self.currency >= value:
+                self.add_item(item, score, merge)
+                self.currency -= value
                 return True
 
 
         def sell_item(self, slot, buyer, merge=True):
             # remove an item slot then add this item to buyer for money
 
-            amount = self.get_item(slot[0]).amount if self.infinite else slot[1]
-            rv = buyer.buy_item(slot[0], amount, merge)
+            score = self.get_item(slot[0]).score if self.infinite else slot[1]
+            rv = buyer.buy_item(slot[0], score, merge)
             if rv and not self.infinite:
-                price = self.get_item(slot[0]).price*amount
-                self.currency += int(price*buyer.tradein)
+                value = self.get_item(slot[0]).value*score
+                self.currency += int(value*buyer.tradein)
                 self.items.remove(slot)
                 
                 
@@ -347,9 +361,9 @@ init -3 python:
                 self.items.sort(key = lambda item: self.get_item(item[0]).name)
             elif order == "type":
                 self.items.sort(key = lambda item: gui.item_types.index(self.get_item(item[0]).type))
-            elif order == "price":
-                self.items.sort(key = lambda item: self.get_item(item[0]).price, reverse=True)
-            elif order == "amount":
+            elif order == "value":
+                self.items.sort(key = lambda item: self.get_item(item[0]).value, reverse=True)
+            elif order == "score":
                 self.items.sort(key = lambda item: self.get_item(item[1]), reverse=True)
 
 

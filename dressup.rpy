@@ -30,9 +30,9 @@ image erin = LayeredDisplayable("erin")
 ## 以上で準備完了です。
 
 
-## ゲームがスタートしたら jump doll_example でここに飛んでください。
+## ゲームがスタートしたら jump sample_doll でここに飛んでください。
 
-label doll_example:
+label sample_doll:
     ## ゲームがスタートしたら、 イメージで定義した画像を表示します。
     show erin
     pause
@@ -70,9 +70,9 @@ image erin2 = LayeredDisplayable("erin2")
 ## 以上で準備完了です。
 
 
-## ゲームがスタートしたら jump doll_example2 でここに飛んでください。
+## ゲームがスタートしたら jump sample_dressup でここに飛んでください。
 
-label doll_example2:
+label sample_dressup:
 
     # it で定義された全てのアイテムを closet に追加
     $ closet.get_all_items(store.it)

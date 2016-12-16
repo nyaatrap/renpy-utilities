@@ -27,7 +27,7 @@ define pl.shop = Place(level="west", pos=(.2,.5), image=Text("shop"))
 
 ## それから現在位置や達成イベントなどを保持する探検者を Explorer(place, image) で default で定義します
 ## 任意のパラメーターを追加すると、各イベントを呼び出す条件に使えます。
-default player = Explorer("home", turn=0)
+default explorer = Explorer("home", turn=0)
 
 
 ## 各イベントは define と label のペアで定義します。
@@ -60,8 +60,8 @@ label shop:
     
 ## click を True にすると場所と同じように image を表示して
 ## クリックから即座にリンクしたラベルを呼び出します。
-## player.seen('ev') でそのイベントを見たかどうか評価できます。
-define ev.direct = Event(cond="player.seen('shop')", level="west", pos=(.1,.1), click=True, image=Text("click here"))
+## explorer.seen('ev') でそのイベントを見たかどうか評価できます。
+define ev.direct = Event(cond="explorer.seen('shop')", level="west", pos=(.1,.1), click=True, image=Text("click here"))
 label direct:
     "this is a direct click event"
     return ev.direct.pos
@@ -70,7 +70,7 @@ label direct:
 define ev.turn = Event(priority = -100, first =True, multi=True)
 label turn:
     #"turn+1"
-    $player.turn += 1
+    $ explorer.turn += 1
     return
 
     
@@ -88,62 +88,62 @@ label turn:
 label explore:
 
     # Update event list in current level
-    $ player.update_events()
+    $ explorer.update_events()
 
     # Play music
-    if player.music:
-        if renpy.music.get_playing() != player.music:
-            play music player.music fadeout 1.0
+    if explorer.music:
+        if renpy.music.get_playing() != explorer.music:
+            play music explorer.music fadeout 1.0
 
     # Show background
-    if player.image:
+    if explorer.image:
         scene black with Dissolve(.25)        
-        scene expression player.image
+        scene expression explorer.image
         with Dissolve(.25)
 
     while True:
 
         # check normal events
         $ block()
-        $ _events = player.get_events()
+        $ _events = explorer.get_events()
 
         # sub loop to excecute all normal events
         $ _loop = 0
         while _loop < len(_events):
             
-            $ player.event = _events[_loop]
+            $ explorer.event = _events[_loop]
             $ block()
-            call expression player.event.label or player.event.name
+            call expression explorer.event.label or explorer.event.name
             # check next coodinate. if this returns not None, terminate this loop to change level
-            if player.check_jump(_return):
+            if explorer.check_jump(_return):
                 jump explore
             $ _loop += 1
 
         # show eventmap
         $ block()
-        call screen eventmap(player)
+        call screen eventmap(explorer)
 
         # move by place
         if isinstance(_return, Place):
-            $player.pos = _return.pos
+            $explorer.pos = _return.pos
             
         # excecute click event
         elif isinstance(_return, Event):
-            $ player.event = _return
+            $ explorer.event = _return
             $ block()
-            call expression player.event.label or player.event.name
+            call expression explorer.event.label or explorer.event.name
     
             # check next coodinate. if this returns not None, terminate this loop to change level
-            if player.check_jump(_return):
+            if explorer.check_jump(_return):
                 jump explore
                 
-        $ player.first = False
+        $ explorer.first = False
 
             
 label after_load():
 
     # Update event list in current level
-    $ player.update_events()
+    $ explorer.update_events()
     return
                 
     
@@ -159,17 +159,17 @@ init python:
 ##############################################################################
 ## Eventmap screen
 
-screen eventmap(player):
+screen eventmap(explorer):
     
     ## show places
-    for i in player.get_places():
+    for i in explorer.get_places():
         button pos i.pos:
             action Return(i)
             if i.image:
                 add i.image
                 
     ## show events
-    for i in player.get_events(click=True):
+    for i in explorer.get_events(click=True):
         button pos i.pos:
             action Return(i)
             if  i.image:
@@ -337,7 +337,7 @@ init -3 python:
             # if nothing changed, return None
 
             # before checking jump, add current event into the seen list.
-            player.seen_events.add(self.event.name)
+            explorer.seen_events.add(self.event.name)
 
             # no transition
             if not _return:
