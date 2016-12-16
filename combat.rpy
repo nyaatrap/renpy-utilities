@@ -6,8 +6,8 @@ define skill.heal = Skill("Heal", type="heal", value=5)
 default knight = Actor("Knight", ["attack"], health=20)
 default bishop = Actor("Bishop", ["attack", "heal"], health=15)
 default pawn = Actor("Pawn", ["attack"], health=10)
-default pawn2 = copy(pawn)
-default pawn3 = copy(pawn)
+default pawn2 = pawn.copy()
+default pawn3 = pawn.copy()
 
 default arena = Arena()
 
@@ -19,10 +19,10 @@ label sample_combat:
     
     call combat(arena)
     
-    if battle.state == "win":
+    if arena.state == "win":
          "You win"
      
-    elif battle.state == "lose":
+    elif arena.state == "lose":
         "You lose"
         
     else:
@@ -31,10 +31,6 @@ label sample_combat:
     $ arena.reset()
         
     return
-    
-
-init -999 python:
-    from copy import copy
     
 
 ##############################################################################
@@ -162,6 +158,16 @@ init -3 python:
                 else:
                     setattr(self, "max_"+i, None)
                     setattr(self, i, None)
+                    
+        def copy(self, name=None):
+            
+            from copy import copy
+            
+            actor = copy(self)
+            if name:
+                actor.name = name
+            
+            return copy(self)
             
             
         def check_state(self):
@@ -189,13 +195,12 @@ init -3 python:
 
             if isinstance(name, Skill): return name
             elif name in dir(store.skill): return getattr(store.skill, name)
-            elif name in dir(store.sk): return getattr(store.sk, name)
             elif name in dir(store): return getattr(store, name)
 
 
         def get_slot(self, skill):
             # returns first slot that has a same skill
-            # None if inventory deosn't have this skill.
+            # None if actor deosn't have this skill.
 
             if skill in self.skills:
                 return skill
@@ -206,7 +211,7 @@ init -3 python:
 
 
         def has_skill(self, skill):
-            # returns True if inventory has this skill
+            # returns True if actor has this skill
 
             return skill in [i[0] for i in self.skills]
 
@@ -220,7 +225,7 @@ init -3 python:
         def add_skill(self, skill, score = None, merge = True):
             # add an skill
             # if score is given, this score is used insted of skill's default value.
-            # if merge is True, score is summed when inventory has same skill
+            # if merge is True, score is summed when actor has same skill
 
             slot = self.get_slot(skill)
             score = score or self.get_skill(skill).score
@@ -241,7 +246,7 @@ init -3 python:
         def score_skill(self, skill, score, remove = True, add = True):
             # changes score of skill
             # if remove is True, skill is removed when score reaches 0
-            # if add is True, an skill is added when inventory hasn't this skill
+            # if add is True, an skill is added when actor hasn't this skill
 
             slot = self.get_slot(skill)
             if slot:
@@ -326,10 +331,6 @@ init -3 python:
 
 init -999 python in skill:
     pass
-
-init -999 python in sk:
-    pass
-
 
 
         

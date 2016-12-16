@@ -8,21 +8,21 @@
 
 
 ## まず最初にイベントを配置するレベル（マップ／ステージ）を Level(image, music) で定義します。
-## level、lv の名前空間でも定義できます。
+## level の名前空間でも定義できます。
 
-define lv.east = Level(image=Solid("#6a6"))
-define lv.west = Level(image=Solid("#339"))
+define level.east = Level(image=Solid("#6a6"))
+define level.west = Level(image=Solid("#339"))
 
 
 ## 次にイベント発生の場所を place(level, pos, cond, image) で定義します。
 ## レベルは上で定義した level を文字列で与えます。pos は表示する座標です。
 ## cond が満たされると image がマップに表示されクリックするとその場所に移動します。
-## place、pl の名前空間でも定義できます。
+## place の名前空間でも定義できます。
 
-define pl.home = Place(level="east", pos=(.8,.5), image=Text("home"))
-define pl.e_station = Place(level="east", pos=(.6,.7), image=Text("east-station"))
-define pl.w_station = Place(level="west", pos=(.4,.4), image=Text("west-station"))
-define pl.shop = Place(level="west", pos=(.2,.5), image=Text("shop"))
+define place.home = Place(level="east", pos=(.8,.5), image=Text("home"))
+define place.e_station = Place(level="east", pos=(.6,.7), image=Text("east-station"))
+define place.w_station = Place(level="west", pos=(.4,.4), image=Text("west-station"))
+define place.shop = Place(level="west", pos=(.2,.5), image=Text("shop"))
 
 
 ## それから現在位置や達成イベントなどを保持する探検者を Explorer(place, image) で default で定義します
@@ -383,7 +383,6 @@ init -3 python:
 
             if isinstance(name, Level): return name
             elif name in dir(store.level): return getattr(store.level, name)
-            elif name in dir(store.lv): return getattr(store.lv, name)
             elif name in dir(store): return getattr(store, name)
             
 
@@ -393,7 +392,6 @@ init -3 python:
 
             if isinstance(name, Place): return name
             elif name in dir(store.place): return getattr(store.place, name)
-            elif name in dir(store.pl): return getattr(store.pl, name)
             elif name in dir(store): return getattr(store, name)
             
 
@@ -412,14 +410,14 @@ init -3 python:
 
 init -999 python in level:
     pass
-init -999 python in lv:
-    pass
+
 init -999 python in place:
     pass
-init -999 python in pl:
-    pass
+
 init -999 python in event:
     pass
+
 init -999 python in ev:
     pass
+
 

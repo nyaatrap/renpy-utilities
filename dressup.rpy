@@ -62,10 +62,10 @@ image erin2 = LayeredDisplayable("erin2")
 
 ## 各アイテムを Item(名前、装備タイプ) で定義します。it, item の名前空間も使えます。
 ## 名前がファイル名、タイプがフォルダ名になるようにします。
-#define it.pleated_skirt = Item("Pleated Skirt", type="bottom")
-#define it.buruma = Item("Buruma", type="bottom")
-#define it.school_sailor = Item("School Sailer", type="top")
-#define it.gym_shirt = Item("Gym Shirt", type="top")
+#define item.pleated_skirt = Item("Pleated Skirt", type="bottom")
+#define item.buruma = Item("Buruma", type="bottom")
+#define item.school_sailor = Item("School Sailer", type="top")
+#define item.gym_shirt = Item("Gym Shirt", type="top")
 
 ## 以上で準備完了です。
 
@@ -75,7 +75,7 @@ image erin2 = LayeredDisplayable("erin2")
 label sample_dressup:
 
     # it で定義された全てのアイテムを closet に追加
-    $ closet.get_all_items(store.it)
+    $ closet.get_all_items(store.item)
 
     $ renpy.block_rollback()
     $ renpy.retain_after_load()

@@ -12,7 +12,7 @@ define gui.item_types = ["supply", "food", "outfit"]
 ## name は表示される名前、type はカテゴリー、value は価格です。
 ## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
 ## info はマウスフォーカスした時に表示される情報です。
-## it, item の名前空間を使う事もできます。
+## item の名前空間を使う事もできます。
 
 define item.apple = Item("Apple", type="food", value=10, info="This is an apple")
 define item.orange = Item("Orange", type="food", value=20)
@@ -241,7 +241,6 @@ init -3 python:
 
             if isinstance(name, Item): return name
             elif name in dir(store.item): return getattr(store.item, name)
-            elif name in dir(store.it): return getattr(store.it, name)
             elif name in dir(store): return getattr(store, name)
 
 
@@ -381,9 +380,5 @@ init -3 python:
 
 init -999 python in item:
     pass
-
-init -999 python in it:
-    pass
-
 
 
