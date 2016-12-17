@@ -24,7 +24,7 @@
 
 ## 次に２次元配列 [[]] でマップを定義します。
 ## "0" または空白は画像なし、"1" は "wall"、"2" は"door" で定義した画像が
-## 割り当てられます。この割り当てや衝突判定は Crawrer クラスで変更できます。
+## 割り当てられます。この割り当てや衝突判定は Crawler クラスで変更できます。
 
 define sample_map =[
 ["1","1","1","1","1","1","1","1"],
@@ -105,7 +105,7 @@ label crawl:
 label crawler_loop:        
     while True:
 
-        # check normal events
+        # check passive events
         $ block()
         $ _events = crawler.get_events()
 
@@ -122,7 +122,7 @@ label crawler_loop:
 
         $ explorer.ignore_precede = False
             
-        # sub loop for turn around
+        # sub loop to ignore passive events
         while True:
                 
             # show eventmap or dungeon navigator

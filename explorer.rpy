@@ -109,7 +109,7 @@ label explore:
 label explore_loop:
     while True:
 
-        # check normal events
+        # check passive events
         $ block()
         $ _events = explorer.get_events()
 
@@ -230,7 +230,7 @@ init -3 python:
         level - String of level where this events placed onto.
         pos - (x, y) coordinate on the screen.
         cond - Conditions to evaluate this event happnes or not. This should be quotated.
-        priority - An event with higher value happens precedeer. default is 0.
+        priority - An event with higher value happens firster. default is 0.
         once - Set this true prevents calling this event second time.
         multi - Set this true don't prevent other events in the same interaction.
         precede - Set this true serches this event before showing event map screen.
