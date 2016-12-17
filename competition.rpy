@@ -1,7 +1,22 @@
-## This file defines Actor and Arena class for competition
+## This file defines Actor and Arena class to compete
+## このファイルはターン制の競争を行うためのアクタークラスとアリーナクラスを提供します。
+## 基本的には戦闘に利用しますが、勝負条件を変えればコンテストなどにも使えます。
 
-define skill.attack = Skill("Attack", type="attack", value=5)
-define skill.heal = Skill("Heal", type="heal", value=5)
+##############################################################################
+## How to Use
+##############################################################################
+
+## まずアクターが使用するスキルを Skill(name, type, value、target) で定義します。
+## type は使用した時の効果です。"attack", "heal" 以外は Skill クラスに書き加えて。
+## value は効果のスキルを使用した時の効果の強さです。
+## skill の名前空間も使えます。
+
+define skill.attack = Skill("Attack", type="attack", value=5, target="foe")
+define skill.heal = Skill("Heal", type="heal", value=5, target="friend")
+
+## 次にアクターを Actor(name, skills, hp) で定義します。
+## skills は上で定義したオブジェクトそのままを使います
+## hp 以外の特性値は Actor クラスを書き換えることで追加します。
 
 default knight = Actor("Knight", [skill.attack], hp=20)
 default bishop = Actor("Bishop", [skill.attack, skill.heal], hp=15)
@@ -9,16 +24,25 @@ default pawn = Actor("Pawn", [skill.attack], hp=10)
 default pawn2 = pawn.copy()
 default pawn3 = pawn.copy()
 
+## 最後に競走中のデータを保存するアリーナを定義します。
 default arena = Arena()
 
+## 以上で準備完了です。
 
-label sample_competition:
+
+## ゲームがスタートしたら jump sample_compete でここに飛んでください。
+
+label sample_compete:    
+    
+    ## 競争仲間と競争相手のアクターをリストとしてアリーナに追加します。    
     
     $ arena.friends = [knight, bishop]
     $ arena.foes = [pawn, pawn2, pawn3]
     
-    call competition(arena)
+    ## ここから競争開始。
+    call compete(arena)
     
+    ## 競争が終わると結果を arena.state で知ることができます。
     if arena.state == "win":
          "You win"
      
@@ -30,17 +54,21 @@ label sample_competition:
         
     return
     
+    
+##############################################################################
+## Definition
+##############################################################################
 
 ##############################################################################
-## Competition label
+## Compete label
 
-label competition(arena):
+label compete(arena):
     
     $ _rollback = False
     
     # initialize
     $ arena.init()        
-    show screen competition_ui(arena)
+    show screen compete_ui(arena)
     
     while arena.state not in ["win", "lose", "draw"]: 
         
@@ -52,18 +80,18 @@ label competition(arena):
             # get skill and target
             if _actor in arena.friends:
                 _skill = renpy.call_screen("choose_skill", _actor)
-                _target_list = arena.friends if _skill.type=="heal" else arena.foes
+                _target_list = arena.friends if _skill.target=="friend" else arena.foes
                 _target = renpy.call_screen("choose_target", _target_list)
             else:
                 _skill = _actor.choose_skill()
-                _target_list = arena.foes if _skill.type=="heal" else arena.friends
+                _target_list = arena.foes if _skill.target=="friend" else arena.friends
                 _target = _actor.choose_target(_target_list)
                             
             # perform skill
             _actor.use_skill(_skill, _target)
             
             # update arena's state
-            arena.set_state()
+            arena.update_state()
     
     # crean up
     hide screen battle_ui        
@@ -76,9 +104,9 @@ label competition(arena):
 
     
 ##############################################################################
-## Combat screens
+## Compete screens
 
-screen competition_ui(arena):
+screen compete_ui(arena):
     
     zorder -1
     
@@ -135,24 +163,25 @@ init -3 python:
         
         name - skill name that is shown on the screen
         type - skill category
-        target - type of target. "friend" or "foe"
         value - quality of skill
-        score - default score when it's added into actor
+        target - target of skill. if not "friend", "foe" is default
         info - description that is shown when an skill is focused
         """
         
         types = ["attack", "heal"]
 
 
-        def __init__(self, name="", type=None, value=0, info=""):
+        def __init__(self, name="", type=None, value=0, target="foe", info=""):
 
             self.name = name
             self.type = type
             self.value = int(value)
+            self.target = target
             self.info = info
             
             
         def use(self, target):
+            # use skill on target.
             
             if self.type == "attack":
                 target.hp -= self.value
@@ -182,7 +211,7 @@ init -3 python:
         default_attr - default value of attr. if it's positive number, attr's value is limited to this value.
         """
         
-        # This will create self.hp and self.max_hp
+        # This will create self.hp and self.default_hp
         attributes = ["hp"] 
 
         def __init__(self, name, skills=None, **kwargs):
@@ -201,6 +230,7 @@ init -3 python:
                     
                     
         def copy(self, name=None):
+            # Returns copy of actor, changing its name.
             
             from copy import copy
             
@@ -211,7 +241,8 @@ init -3 python:
             return copy(self)
             
             
-        def check_state(self):
+        def update_state(self):
+            # call this each turn to amend invalid attributes
             
             for i in self.attributes:
                 attr = getattr(self, i)
@@ -223,6 +254,7 @@ init -3 python:
                     
                     
         def reset(self):
+            # reset attributes
             
             for i in self.attributes:
                 setattr(self, i, getattr(self, "default_"+i))
@@ -232,16 +264,18 @@ init -3 python:
             # use skill on target
             
             skill.use(target)
-            self.check_state()
-            target.check_state()
+            self.update_state()
+            target.update_state()
             
             
         def choose_skill(self):
+            # returns skill randomly
             
             return renpy.random.choice(self.skills)
             
             
         def choose_target(self, actors):
+            # returns target randomly
             
             return renpy.random.choice([x for x in actors if x.hp>0])
             
@@ -257,6 +291,7 @@ init -3 python:
         
         friends - list of playable actors
         foes - list of unplayable actors
+        state - curernt state of arena. "win", "lose", "draw" ends compete, otherwise keep performing.
         '''
         
         def __init__(self, friends=None, foes=None):
@@ -269,20 +304,22 @@ init -3 python:
             
             
         def init(self):
+            # call this to set order
             
-            self.turn = 0
             self.state = None
             self.order = self.friends+self.foes
             renpy.random.shuffle(self.order)
             
             
         def reset(self):
+            # reset actors
             
             for i in self.friends + self.foes:
                 i.reset()
             
         
         def get_turn(self):
+            # returns the next performer
             
             while True:
                 actor = self.order.pop(0)
@@ -291,7 +328,8 @@ init -3 python:
                     return actor
         
                     
-        def set_state(self):
+        def update_state(self):
+            # call this each turn to update arena's state
             
             for i in self.friends:
                 if i.hp > 0:
