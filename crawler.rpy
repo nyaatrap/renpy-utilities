@@ -53,7 +53,7 @@ default crawler = Crawler(level="cave", pos=(1,1,0,1))
 ## ダンジョンのイベントを定義します。
 ## dx,dy を与えるとその向きのみイベントが発生します。
 
-define ev.entrance = Event(level="cave", pos=(1,1), first=True, once=True)
+define ev.entrance = Event(level="cave", pos=(1,1), precede=True, once=True)
 label entrance:
     "Here starts crawling"
     return
@@ -61,6 +61,11 @@ label entrance:
 define ev.chest = Event(level="cave", pos=(6,6,0,1), click=True)
 label chest:
     "You found a chest"
+    return
+
+define ev.nothing = Event(level="cave", priority=-10, click=True)
+label nothing:
+    "There is nothing"
     return
 
     
@@ -78,7 +83,7 @@ label chest:
 label crawl:
     # Update event list in current level
     $ crawler.update_events()
-    $ explorer.first = True
+    $ explorer.ignore_precede = True
 
     # Play music
     if crawler.lv.music:
@@ -94,27 +99,31 @@ label crawl:
             scene expression crawler.lv.image            
         with Dissolve(.25)
 
+    jump crawler_loop
+    
+    
+label crawler_loop:        
     while True:
 
         # check normal events
         $ block()
         $ _events = crawler.get_events()
 
-        # sub loop to excecute all normal events
+        # sub loop to excecute all passive events
         $ _loop = 0
         while _loop < len(_events):
             
             $ crawler.event = _events[_loop]
             $ block()
             call expression crawler.event.label or crawler.event.name
-            # check next coodinate. if this returns not None, terminate this loop to change level
-            if crawler.check_jump(_return):
+            if crawler.move_pos(_return):
                 jump explore
             $ _loop += 1
 
+        $ explorer.ignore_precede = False
+            
         # sub loop for turn around
-        $ _loop2 = 0
-        while not _loop2:
+        while True:
                 
             # show eventmap or dungeon navigator
             $ block()
@@ -125,53 +134,31 @@ label crawl:
     
             # move by place
             if isinstance(_return, Place):
-                $crawler.pos = _return.pos
-                $_loop2=1
+                $ crawler.pos = _return.pos
+                jump crawler_loop
                 
             # excecute click event
             elif isinstance(_return, Event):
                 $ crawler.event = _return
                 $ block()
                 call expression crawler.event.label or crawler.event.name
-        
-                # check next coodinate. if this returns not None, terminate this loop to change level
-                if crawler.check_jump(_return):
-                    jump explore
-                $_loop2=1
-                                
-            # turnaround
-            elif isinstance(_return, Coordinate) and\
-                _return.x == crawler.pos[0] and _return.y == crawler.pos[1]:
-                $ crawler.pos = _return.unpack()
-                $ crawler.draw_dungeon()
+                if crawler.move_pos(_return):
+                    jump crawler
+                jump crawler_loop
+                    
+            # collision 
+            elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] in crawler.collision:
+                with vpunch
                                 
             # move
-            elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] not in crawler.collision:
-                $ crawler.pos = _return.unpack()
-                $ crawler.draw_dungeon()
-                $_loop2=1
-                    
-            # Collision 
             elif isinstance(_return, Coordinate):
-    
-                # check normal events in collision
-                $ block()
-                $ _events = crawler.get_events()
-        
-                # sub loop to excecute all normal events
-                $ _loop = 0
-                while _loop < len(_events):
-                    
-                    $ crawler.event = _events[_loop]
-                    $ block()
-                    call expression crawler.event.label or crawler.event.name
-                    # check next coodinate. if this returns not None, terminate this loop to change level
-                    if crawler.check_jump(_return):
-                        jump explore
-                    $ _loop += 1
-                $_loop2=1
-            
-        $ crawler.first = False
+                if _return.x == crawler.pos[0] and _return.y == crawler.pos[1]:
+                    $ crawler.move_pos(_return.unpack())
+                    $ crawler.draw_dungeon()   
+                else:
+                    $ crawler.move_pos(_return.unpack())
+                    $ crawler.draw_dungeon()   
+                    jump crawler_loop
 
 
 ##############################################################################
@@ -324,20 +311,20 @@ init -2 python:
             return isinstance(self.get_level(self.level), Dungeon)
                             
             
-        def _check_pos(self, ev, click):
+        def _check_pos(self, ev, click, pos):
             # It overrides a same method to support coordinate
             
             if ev.pos == None:
                 return True
-            if self.pos:
-                if len(self.pos) == 2:
-                    if click or ev.pos == None or ev.pos[0] == self.pos:
+            if pos:
+                if len(pos) == 2:
+                    if click or ev.pos == None or ev.pos[0] == pos:
                         return True
                 elif len(ev.pos) == 4:
-                    if ev.pos == self.pos:
+                    if ev.pos == pos:
                         return True                
                 else:
-                    if (ev.pos[0] == self.pos[0] and ev.pos[1] == self.pos[1]):
+                    if (ev.pos[0] == pos[0] and ev.pos[1] == pos[1]):
                         return True  
             
                                 

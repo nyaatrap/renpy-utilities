@@ -31,12 +31,12 @@ default explorer = Explorer("home", turn=0)
 
 
 ## 各イベントは define と label のペアで定義します。
-## defne ラベル名 = Event(place, cond, priority, once, multi, first, click, image) で定義します。
+## defne ラベル名 = Event(place, cond, priority, once, multi, precede, click, image) で定義します。
 ## 探索者が place の場所にいて cond が満たされると、リンクしたラベルが呼ばれます。
 ## priorty は発生の優先度で、一番数字が大きいものが優先して実行されます。
 ## once を True にすると一度しか実行されません。
 ## multi を True にすると他のイベントも同時に発生します。
-## first を True にするとマップ表示前にイベントを確認します。
+## precede を True にするとマップ表示前にイベントを確認します。
 ## event、ev の名前空間でも定義できます。
     
 define ev.myhome = Event("home")
@@ -60,6 +60,7 @@ label shop:
     
 ## click を True にすると場所と同じように image を表示して
 ## クリックから即座にリンクしたラベルを呼び出します。
+## click が False の場合は移動後にイベントをチェックします。
 ## explorer.seen(ev) でそのイベントを見たかどうか評価できます。
 define ev.direct = Event(cond="explorer.seen(ev.shop)", level="west", pos=(.1,.1), click=True, image=Text("click here"))
 label direct:
@@ -67,7 +68,7 @@ label direct:
     return ev.direct.pos
     
 ## このラベルは毎ターン最後に呼ばれ、ターンの経過を記録しています。
-define ev.turn = Event(priority = -100, first =True, multi=True)
+define ev.turn = Event(priority = -100, precede =True, multi=True)
 label turn:
     #"turn+1"
     $ explorer.turn += 1
@@ -89,7 +90,7 @@ label explore:
 
     # Update event list in current level
     $ explorer.update_events()
-    $ explorer.first = True
+    $ explorer.ignore_precede = True
 
     # Play music
     if explorer.lv.music:
@@ -101,44 +102,45 @@ label explore:
         scene black with Dissolve(.25)        
         scene expression explorer.lv.image
         with Dissolve(.25)
+        
+    jump explore_loop
+    
 
+label explore_loop:
     while True:
 
         # check normal events
         $ block()
         $ _events = explorer.get_events()
 
-        # sub loop to excecute all normal events
+        # sub loop to excecute all passive events
         $ _loop = 0
         while _loop < len(_events):
             
             $ explorer.event = _events[_loop]
             $ block()
             call expression explorer.event.label or explorer.event.name
-            # check next coodinate. if this returns not None, terminate this loop to change level
-            if explorer.check_jump(_return):
+            if explorer.move_pos(_return):
                 jump explore
             $ _loop += 1
 
+        $ explorer.ignore_precede = False
+        
         # show eventmap
         $ block()
         call screen eventmap(explorer)
 
         # move by place
         if isinstance(_return, Place):
-            $explorer.pos = _return.pos
+            $ explorer.pos = _return.pos
             
         # excecute click event
         elif isinstance(_return, Event):
             $ explorer.event = _return
             $ block()
             call expression explorer.event.label or explorer.event.name
-    
-            # check next coodinate. if this returns not None, terminate this loop to change level
-            if explorer.check_jump(_return):
+            if explorer.move_pos(_return):
                 jump explore
-                
-        $ explorer.first = False
 
             
 label after_load():
@@ -228,18 +230,18 @@ init -3 python:
         level - String of level where this events placed onto.
         pos - (x, y) coordinate on the screen.
         cond - Conditions to evaluate this event happnes or not. This should be quotated.
-        priority - An event with higher value happens firster. default is 0.
+        priority - An event with higher value happens precedeer. default is 0.
         once - Set this true prevents calling this event second time.
         multi - Set this true don't prevent other events in the same interaction.
-        first - Set this true serches this event before showing event map screen.
-        click - Set this true makes event place object, that allows showing image and clicking on map
-                but prevents checking events in passive state (staying).
+        precede - Set this true serches this event before showing event map screen.
+        click - Set this true makes click events. Like an event place object, that allows clicking this event on map.
+                Otherwise, this is passive event.
         image - Imagebutton to be shown on eventmap if click is True.
         label - If it's given this label is called instead of object name.
         info - Information text to be shown on event map screen.
         """
 
-        def __init__(self, place = None, cond="True", priority=0, once=False, multi=False, first=False, click=False, image=None, level=None, pos=None, label=None, info=""):            
+        def __init__(self, place = None, cond="True", priority=0, once=False, multi=False, precede=False, click=False, image=None, level=None, pos=None, label=None, info=""):            
 
             self.level = Explorer.get_place(place).level if place else level
             self.pos = Explorer.get_place(place).pos if place else pos
@@ -247,7 +249,7 @@ init -3 python:
             self.priority = int(priority)
             self.once = once
             self.multi = multi
-            self.first = first
+            self.precede = precede
             self.click = click
             self.image = image
             self.label = label
@@ -269,7 +271,7 @@ init -3 python:
             self.level = Explorer.get_place(place).level if place else level
             self.pos = Explorer.get_place(place).pos if place else pos
             
-            self.first = True
+            self.ignore_precede = True
             self.event = None
             self.current_events = []
             self.current_places = []
@@ -321,24 +323,26 @@ init -3 python:
                         self.current_places.append(pl)
                         
 
-        def get_events(self, click = False):
-            # returns event list that happens in current interaction.
-
+        def get_events(self, click = False, pos=None):
+            # returns event list that happens in the given pos.
+            
+            pos = pos or self.pos
+            
             events = []
             for i in self.current_events:
                 if i.click == click:
                     if not i.once or not self.seen(i):
-                        if click or i.first or not self.first:
-                            if self._check_pos(i, click) and eval(i.cond):
+                        if click or i.precede or not self.ignore_precede:
+                            if self._check_pos(i, click, pos) and eval(i.cond):
                                 events.append(i)
             
             return self.cut_events(events)
             
             
-        def _check_pos(self, ev, click):
-            # inner function for get_events.
+        def _check_pos(self, ev, click, pos):
+            # internal function for get_events.
             
-            if click or ev.pos == None or ev.pos == self.pos:
+            if click or ev.pos == None or ev.pos == pos:
                 return True                
             
                                 
@@ -367,14 +371,14 @@ init -3 python:
             return places
             
 
-        def check_jump(self, _return):
+        def move_pos(self, _return):
             # Changes own level and pos
             # if nothing changed, return None
 
             # before checking jump, add current event into the seen list.
             self.seen_events.add(self.event.name)
 
-            # no transition
+            # don't move
             if not _return:
                 return None                
 
@@ -383,30 +387,24 @@ init -3 python:
             if rv and isinstance(rv, Place):
                 self.level = rv.level
                 self.pos = rv.pos
-                return True
                 
             # try level
             rv = self.get_level(_return)
             if rv and isinstance(rv, Level):
                 self.level = _return
                 self.pos = None
-                return True
 
             # try tuple
             if isinstance(_return, tuple):
 
-                # try level and pos
                 rv = self.get_level(_return[0])
                 if rv and isinstance(rv, Level):
                     self.level = _return[0]
                     self.pos = _return[1]
-                    return True
-                    
-                # only pos
-                self.pos = _return
-                return True
+                else:
+                    self.pos = _return
 
-            # jump to do transition
+            # move
             return True
                 
 
