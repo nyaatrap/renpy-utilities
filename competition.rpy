@@ -7,24 +7,27 @@
 ##############################################################################
 
 ## まずアクターが使用するスキルを Skill(name, type, value、target) で定義します。
-## type は使用した時の効果です。"attack", "heal" 以外は Skill クラスに書き加えて。
+## type は使用した時の効果です。"attack", "heal" 以外は Skill クラスに書き加えます。
 ## value は効果のスキルを使用した時の効果の強さです。
+## target はスキルを使う相手で "friend" か "foe" があります。
 ## skill の名前空間も使えます。
 
 define skill.attack = Skill("Attack", type="attack", value=5, target="foe")
 define skill.heal = Skill("Heal", type="heal", value=5, target="friend")
 
 ## 次にアクターを Actor(name, skills, hp) で定義します。
-## skills は上で定義したオブジェクトそのままを使います
+## skills は上で定義したオブジェクトそのままを使います。
 ## hp 以外の特性値は Actor クラスを書き換えることで追加します。
 
 default knight = Actor("Knight", [skill.attack], hp=20)
 default bishop = Actor("Bishop", [skill.attack, skill.heal], hp=15)
-default pawn = Actor("Pawn", [skill.attack], hp=10)
-default pawn2 = pawn.copy()
-default pawn3 = pawn.copy()
+default pawn = Actor("Pawn A", [skill.attack], hp=10)
 
-## 最後に競走中のデータを保存するアリーナを定義します。
+## actor.copy(name) で同じ能力のアクターを名前を変えてコピーします。
+default pawn2 = pawn.copy("Pawn B")
+default pawn3 = pawn.copy("Pawn C")
+
+## 最後に競争に関するデータを保存するアリーナを定義します。
 default arena = Arena()
 
 ## 以上で準備完了です。
@@ -51,6 +54,9 @@ label sample_compete:
         
     else:
         "Draw"
+        
+    ## arena.reset で参加者の特性値を元に戻せます。
+    $ arena.reset()
         
     return
     
@@ -93,9 +99,7 @@ label compete(arena):
             # update arena's state
             arena.update_state()
     
-    # crean up
     hide screen battle_ui        
-    $ arena.reset()
     
     $ _rollback = False
     $ renpy.block_rollback()
@@ -238,7 +242,7 @@ init -3 python:
             if name:
                 actor.name = name
             
-            return copy(self)
+            return copy(actor)
             
             
         def update_state(self):
