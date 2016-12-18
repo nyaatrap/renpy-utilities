@@ -12,6 +12,9 @@
 ## animation.rpy
 様々な transform（画像変換）や transition（画像遷移）を追加・変更するファイルです。
 
+## gallery.rpy
+視聴済みの画像や音楽を自動的に検索・追加する、統合型のギャラリーを追加するファイルです。
+
 ## _statements.rpy
 Ren'Py に新たなステートメント（命令文）を追加します。
 
