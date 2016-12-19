@@ -34,7 +34,7 @@ define sample_map =[
 ["1","0","0","0","0","1","0","1"],
 ["1","0","1","1","0","0","0","1"],
 ["1","0","0","0","0","1","0","1"],
-["1","0","0","1","1","1","0","1"],
+["1","e","0","1","1","1","0","1"],
 ["1","1","1","1","1","1","1","1"]
 ]
 
@@ -52,16 +52,22 @@ default crawler = Crawler(level="cave", pos=(1,1,0,1))
 
 
 ## ダンジョンのイベントを定義します。
-## dx,dy を与えるとその向きのみイベントが発生します。
 
 define ev.entrance = Event(level="cave", pos=(1,1), precede=True, once=True)
 label entrance:
     "Here starts crawling"
     return
 
+## dx,dy を与えるとその向きのみイベントが発生します。
 define ev.chest = Event(level="cave", pos=(6,6,0,1), click=True)
 label chest:
     "You found a chest"
+    return
+
+## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
+define ev.enemy = Event(level="cave", pos="e", precede=True)
+label enemy:
+    "There is an enemy"
     return
 
 define ev.nothing = Event(level="cave", priority=-10, click=True)
@@ -239,7 +245,7 @@ init -2 python:
             f.close()
                 
             return map
-                            
+                
             
 ##############################################################################
 ## Coordinate class
@@ -285,6 +291,21 @@ init -2 python:
             
         def right(self):
             return Coordinate(self.x-self.dy, self.y+self.dx, self.dx, self.dy)
+            
+        def moveright(self):
+            return Coordinate(self.x+1, self.y, 1, 0)
+            
+        def moveleft(self):
+            return Coordinate(self.x-1, self.y, -1, 0)
+            
+        def movebottom(self):
+            return Coordinate(self.x, self.y+1, 0, 1)
+            
+        def movetop(self):
+            return Coordinate(self.x, self.y-1, 0, -1)
+
+        def moveto(self, x, y):
+            return Coordinate(self.x+x, self.y+y, self.dx, self.dy)
 
         def unpack(self):
             return (self.x, self.y, self.dx, self.dy)
@@ -315,17 +336,16 @@ init -2 python:
         def _check_pos(self, ev, click, pos):
             # It overrides a same method to support coordinate
             
-            if ev.pos == None:
+            if ev.pos == None or ev.pos == pos:
                 return True
-            if pos:
-                if len(pos) == 2:
-                    if click or ev.pos == None or ev.pos[0] == pos:
+            if not isinstance(self.lv, Dungeon) and click:
+                return True
+            elif pos:
+                if len(ev.pos) == 2:
+                    if ev.pos[0] == pos[0] and ev.pos[1] == pos[1]:
                         return True
-                elif len(ev.pos) == 4:
-                    if ev.pos == pos:
-                        return True                
                 else:
-                    if (ev.pos[0] == pos[0] and ev.pos[1] == pos[1]):
+                    if ev.pos == self.lv.map[pos[1]][pos[0]]:
                         return True  
             
                                 
