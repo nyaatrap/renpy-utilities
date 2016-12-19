@@ -136,7 +136,7 @@ init -3 python:
         for r in xrange(rows):
             for c in xrange(columns):
                 rect = ((sprite_width+spacing)*c+margin, (sprite_height+spacing)*r+margin, sprite_width, sprite_height)
-                sprites.append(LiveCrop(rect, file))
+                sprites.append(im.Crop(file, rect))
 
         return sprites
 
