@@ -66,7 +66,7 @@ screen gallery():
                         textbutton "NEXT" action gallery.jukebox.Next()
                         
                     hbox style_prefix "jukebox":
-                        textbutton "RPEAT" action gallery.jukebox.ToggleLoop()
+                        textbutton "REPEAT" action gallery.jukebox.ToggleLoop()
                         textbutton "SINGLE" action gallery.jukebox.ToggleSingleTrack()
                         textbutton "SHUFFLE" action gallery.jukebox.ToggleShuffle()
                         
