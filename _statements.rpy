@@ -1,5 +1,5 @@
 ﻿## This file contains additional statements
-## このファイルは新しい Ren'Py ステートメント（命令文）を追加します。
+## Ren'Py に新しいステートメント（命令文）を追加するファイルです。
 ## https://www.renpy.org/doc/html/cds.html
 
 ## このファイルは、数字や_など他のファイルよりも優先される頭文字で命名する必要があります。

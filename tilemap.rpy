@@ -1,5 +1,5 @@
-﻿## This file defines Tilemap class.
-## このファイルはタイルマップを定義します。
+﻿## This file defines Tilemap class that create single map from small tile images.
+## 小さな画像を並べて一枚の画像にする Tilemap クラスを追加するファイルです。
 
 ##############################################################################
 ## How to Use

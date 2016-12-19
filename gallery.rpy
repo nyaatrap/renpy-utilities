@@ -1,5 +1,5 @@
 ﻿## This file implements integrated gallery that serches images and music automatically.
-## このファイルは自動的に画像や音楽を検索する、統合型のギャラリーを追加します。
+## 視聴済みの画像や音楽を自動的に検索・追加する、統合型のギャラリーを追加するファイルです。
 
 ## screens.rpy の navigation に以下の文を追加すると、ギャラリーがゲームメニューに追加されます。
 ## textbutton _("ギャラリー") action ShowMenu("gallery")

@@ -1,5 +1,5 @@
 ﻿# This file modifies key bindings.
-# このファイルはキーの割り当てを変更します。
+# マウス・キーボード・ゲームパッドの割り当てを追加・変更するファイルです。
 # https://www.renpy.org/doc/html/keymap.html
 
 

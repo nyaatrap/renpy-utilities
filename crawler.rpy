@@ -1,5 +1,6 @@
-## This file expand add dungeon crawl function into explorer framework.
-## このファイルは explore.rpy に疑似３Dダンジョン機能を追加します。
+## This file add pseudo-3D dungeon crawl unction into explorer framework.
+## このファイルは explore を拡張して疑似３Dダンジョン探索機能を追加します。
+## サンプルを実行するには cave フォルダーの画像をダウンロードして images フォルダーに置く必要があります。
 
 ##############################################################################
 ## How to Use
@@ -99,10 +100,10 @@ label crawl:
             scene expression crawler.lv.image            
         with Dissolve(.25)
 
-    jump crawler_loop
+    jump crawl_loop
     
     
-label crawler_loop:        
+label crawl_loop:        
     while True:
 
         # check passive events
@@ -135,7 +136,7 @@ label crawler_loop:
             # move by place
             if isinstance(_return, Place):
                 $ crawler.pos = _return.pos
-                jump crawler_loop
+                jump crawl_loop
                 
             # excecute click event
             elif isinstance(_return, Event):
@@ -144,7 +145,7 @@ label crawler_loop:
                 call expression crawler.event.label or crawler.event.name
                 if crawler.move_pos(_return):
                     jump crawler
-                jump crawler_loop
+                jump crawl_loop
                     
             # collision 
             elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] in crawler.collision:
@@ -158,7 +159,7 @@ label crawler_loop:
                 else:
                     $ crawler.move_pos(_return.unpack())
                     $ crawler.draw_dungeon()   
-                    jump crawler_loop
+                    jump crawl_loop
 
 
 ##############################################################################

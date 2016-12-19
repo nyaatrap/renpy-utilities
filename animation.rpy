@@ -1,5 +1,5 @@
-﻿## This file defines transforms and transitions.
-## このファイルは transform（画像変換）とtransition（画像遷移）を定義します。
+﻿## This file modifies transforms and transitions.
+## 様々な transform（画像変換）や transition（画像遷移）を追加・変更するファイルです。
 
 ## このファイルは gui や画像定義に使えるように、それらのどのファイルよりも先に実行しなければなりません。
 
