@@ -46,7 +46,7 @@ This file defines Actor and Arena class to add turn-based competition.
 
 ## explorer.rpy
 This file provides exploration game framework that uses event maps.   
-２Dマップにイベントを配置する探索型ゲームのフレームワークですを追加するファイルです。   
+２Dマップにイベントを配置する探索型ゲームのフレームワークを追加するファイルです。   
 ラベルをオブジェクトとのペアで管理することで、マップ上にイベントとして配置して呼び出すことができます。   
 RPGからSLGまで様々に使えるように汎用性を高くしてありますが、その分コードは少し複雑になっています。
 
