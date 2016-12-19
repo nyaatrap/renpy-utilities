@@ -91,7 +91,7 @@ label explore:
 
     # Update event list in current level
     $ explorer.update_events()
-    $ explorer.ignore_precede = True
+    $ explorer.after_interact = False
 
     # Play music
     if explorer.lv.music:
@@ -125,8 +125,7 @@ label explore_loop:
                 jump explore
             $ _loop += 1
 
-        $ explorer.ignore_precede = False
-        
+        $ explorer.after_interact = True
         # show eventmap
         $ block()
         call screen eventmap(explorer)
@@ -234,7 +233,7 @@ init -3 python:
         priority - An event with higher value happens firster. default is 0.
         once - Set this true prevents calling this event second time.
         multi - Set this true don't prevent other events in the same interaction.
-        precede - Set this true serches this event before showing event map screen.
+        precede - Set this true searches this event before showing event map screen.
         click - Set this true makes click events. Like an event place object, that allows clicking this event on map.
                 Otherwise, this is passive event.
         image - Imagebutton to be shown on eventmap if click is True.
@@ -272,7 +271,7 @@ init -3 python:
             self.level = Explorer.get_place(place).level if place else level
             self.pos = Explorer.get_place(place).pos if place else pos
             
-            self.ignore_precede = True
+            self.after_interact = False
             self.event = None
             self.current_events = []
             self.current_places = []
@@ -333,7 +332,7 @@ init -3 python:
             for i in self.current_events:
                 if i.click == click:
                     if not i.once or not self.seen(i):
-                        if click or i.precede or not self.ignore_precede:
+                        if click or i.precede or self.after_interact:
                             if self._check_pos(i, click, pos) and eval(i.cond):
                                 events.append(i)
             

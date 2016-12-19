@@ -13,7 +13,7 @@
 
 ## left2, front2, right2
 ## left1, front1, right1
-## left0, player, right0 
+## left0, player, right0
 
 # image cave floor = "images/cave floor.png"
 # image cave wall left0 = "images/cave wall left0.png"
@@ -65,9 +65,15 @@ label chest:
     return
 
 ## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
-define ev.enemy = Event(level="cave", pos="e", precede=True)
+define ev.enemy = Event(level="cave", pos="e")
 label enemy:
     "There is an enemy"
+    return
+    
+## 衝突の場合は衝突先のイベントが呼ばれます。
+define ev.collision = Event(level="cave", pos="1")
+label collision:
+    with vpunch
     return
 
 define ev.nothing = Event(level="cave", priority=-10, click=True)
@@ -90,7 +96,7 @@ label nothing:
 label crawl:
     # Update event list in current level
     $ crawler.update_events()
-    $ explorer.ignore_precede = True
+    $ crawler.after_interact = False
 
     # Play music
     if crawler.lv.music:
@@ -127,7 +133,7 @@ label crawl_loop:
                 jump explore
             $ _loop += 1
 
-        $ explorer.ignore_precede = False
+        $ crawler.after_interact = True
             
         # sub loop to ignore passive events
         while True:
@@ -155,7 +161,23 @@ label crawl_loop:
                     
             # collision 
             elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] in crawler.collision:
-                with vpunch
+                
+                # check passive events
+                $ block()
+                $ _events = crawler.get_events(pos = _return.unpack())
+                
+                # sub loop to excecute all passive events
+                $ _loop = 0
+                while _loop < len(_events):
+                    
+                    $ crawler.event = _events[_loop]
+                    $ block()
+                    call expression crawler.event.label or crawler.event.name
+                    if crawler.move_pos(_return):
+                        jump explore
+                    $ _loop += 1
+                    
+                jump crawl_loop
                                 
             # move
             elif isinstance(_return, Coordinate):
