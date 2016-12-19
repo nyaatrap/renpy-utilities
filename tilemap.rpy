@@ -128,7 +128,7 @@ init -3 python:
 
     ## 次の関数は一枚の画像を分割して displayable のリストにして返します。
 
-    def read_spritesheet(file, sprite_width, sprite_height, columns, rows, spacing=0, margin=0):
+    def read_spritesheet(file, sprite_width, sprite_height, columns, rows, spacing=0, margin=0, livecrop=False):
 
         ''' Function that returns a list of displayables from a spritesheet. '''
 
@@ -136,9 +136,13 @@ init -3 python:
         for r in xrange(rows):
             for c in xrange(columns):
                 rect = ((sprite_width+spacing)*c+margin, (sprite_height+spacing)*r+margin, sprite_width, sprite_height)
-                sprites.append(im.Crop(file, rect))
+                if livecrop:
+                    sprites.append(LiveCrop(rect, file))
+                else:
+                    sprites.append(im.Crop(file, rect))
 
         return sprites
-
-
+        
+    
+    
 
