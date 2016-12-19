@@ -1,5 +1,6 @@
-﻿## This file provides layered sprites for dressup games
-## このファイルは、ドレスアップゲームに使える多層レイヤーのスプライト（立ち絵）を提供します。
+﻿## This file adds Doll class and LayeredDisplayable that provides layered sprites.
+## 多層レイヤーのスプライトを提供する Doll クラスと LayeredDisplayable を追加するファイルです。
+## Inventory クラスと組み合わせることでドレスアップゲームなども作ることもできます。
 
 ##############################################################################
 ## How to Use
@@ -22,7 +23,7 @@
 ## の形で定義します。各レイヤーの状態を保存できるように、default を使います。
 ## layers のパラメーターを省略すると ["base", "feet", "bottom", "top", "face"] がデフォルトで使われます。
 ## デフォルトの画像は、フォルダー名="ファイル名（拡張子なし）"で指定します。これも省略可能です。
-default erin = Doll("images/erin", layers=["base", "face"], base="base", face="happy")
+default erin = Doll("erin", layers=["base", "face"], base="base", face="happy")
 
 ## 次に、さきほど定義したドールオブジェクトを""で囲み LayeredDisplayable に渡して画像を定義します。
 image erin = LayeredDisplayable("erin")
@@ -53,7 +54,7 @@ label sample_doll:
 
 ## まずドールオブジェクトを Doll(フォルダー名、 レイヤーのリスト、装備タイプのリスト、デフォルトの画像)
 ## で定義します。装備タイプはレイヤー名を使う必要があります。
-default erin2 = Doll("images/erin", layers=["base", "bottom", "top", "face"], types = ["bottom", "top"], base="base", face="happy")
+default erin2 = Doll("erin", layers=["base", "bottom", "top", "face"], types = ["bottom", "top"], base="base", face="happy")
 image erin2 = LayeredDisplayable("erin2")
 
 ## 次にアイテムの保管者を定義します。
@@ -138,10 +139,12 @@ init -3 python:
         These fields vlues are filenames of each layer.
         """
 
+        # Define default layers from bottom.
         # デフォルトのレイヤーを下から順番に定義します。
         _layers = ["base", "feet", "bottom", "top", "face"]
 
-        # 装備できるアイテムのタイプを定義します。
+        # Define default eqippable item types
+        # デフォルトの装備できるアイテムのタイプを定義します。
         _types = ["feet", "bottom", "top"]
 
 
@@ -174,7 +177,7 @@ init -3 python:
 
 
         @staticmethod
-        def draw_doll(st, at, doll):
+        def draw_doll(st, at, doll, flatten=False):
             # Function that is used for dynamic displayable.
 
             layers=[]
@@ -186,11 +189,14 @@ init -3 python:
                     if getattr(doll, i) and renpy.loadable("{}/{}/{}.png".format(folder, i, getattr(doll, i))):
                         layers.append("{}/{}/{}.png".format(folder, i, getattr(doll, i)))
 
-            return Fixed(*layers, fit_first=True), None
+            if flatten:
+                return Flatten(Fixed(*layers, fit_first=True)), None
+            else:
+                return Fixed(*layers, fit_first=True), None
 
 
-        # the following methods are used with inventory class
-        # if you don't use inventory, ignore them
+        ## The following methods are used with inventory class
+        ## If you don't use inventory, ignore them
 
 
         def equip_item(self, slot, inv, merge=True):
@@ -242,7 +248,10 @@ init -3 python:
 ##############################################################################
 ## Displayable
 
-    def LayeredDisplayable(doll):
-        return DynamicDisplayable(Doll.draw_doll, doll)
+    def LayeredDisplayable(doll, flatten =False):
+        # Function that returns displayable that composite image files.
+        # If flatten is true, image is flatten to render alpha properly.
+        
+        return DynamicDisplayable(Doll.draw_doll, doll, flatten)
 
 
