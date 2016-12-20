@@ -190,8 +190,10 @@ init -3 python:
                         item = kwargs.get(layer) or getattr(doll, layer)         
                     else:
                         item = getattr(doll, layer)
-                    if item and renpy.loadable("{}/{}/{}.png".format(folder, layer, item)):
-                        layers.append("{}/{}/{}.png".format(folder, layer, item))
+                    if item:
+                        image = "{}/{}/{}.png".format(folder, layer, item)
+                        if renpy.loadable(image):
+                            layers.append(image)
 
             if flatten:
                 return Flatten(Fixed(*layers, fit_first=True)), None
@@ -255,7 +257,7 @@ init -3 python:
     def LayeredDisplayable(doll, flatten =False, **kwargs):
         # Function that returns displayable that composite image files.
         # If flatten is true, image is flatten to render alpha properly.
-        # If kwargs is give, given file is always used.
+        # If kwargs is given, given file is always used.
         
         return DynamicDisplayable(Doll.draw_doll, doll, flatten, kwargs)
 

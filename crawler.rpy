@@ -376,7 +376,7 @@ init -2 python:
             # Draw front view image on the coord on the master layer. 
             
             coord = Coordinate(*self.pos)
-            image = self.lv.image
+            tag = self.lv.image
             map = self.lv.map
             mapping = self.mapping
             
@@ -399,7 +399,7 @@ init -2 python:
             renpy.scene()
             
             # floor base
-            renpy.show("{} floor".format(image))        
+            renpy.show("{} floor".format(tag))        
                 
             for n, i in enumerate(["left2", "right2", "front2", "left1", "right1", "front1", "left0", "right0", "floor"]):
             
@@ -412,21 +412,21 @@ init -2 python:
                         
                         # left side
                         if i in ["left2", "left1", "left0"]: 
-                            if renpy.has_image("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i)):
-                                d = "{} {} {}".format(image, mapping[map[tile.y][tile.x]], i)
-                                renpy.show(i, what = Transform(d, yalign=.5))
+                            image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i)
+                            if renpy.has_image(image):                           
+                                renpy.show(i, what = Transform(image, yalign=.5))
                                 
                         # righit side use mirror image of left side
                         elif i in ["right2", "right1", "right0"]: 
-                            if renpy.has_image("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i.replace("right", "left"))):
-                                d = "{} {} {}".format(image, mapping[map[tile.y][tile.x]], i.replace("right", "left"))
-                                renpy.show(i, what = Transform(d, xzoom = -1, xalign = 1.0, yalign=.5))
+                            image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i.replace("right", "left"))
+                            if renpy.has_image(image):
+                                renpy.show(i, what = Transform(image, xzoom = -1, xalign = 1.0, yalign=.5))
                                     
                         # front
                         elif i in ["front2", "front1"]: 
-                            if renpy.has_image("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i)):
-                                d = "{} {} {}".format(image, mapping[map[tile.y][tile.x]], i)
-                                renpy.show(i, what = Transform(d, align=(.5,.5)))  
+                            image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i)
+                            if renpy.has_image(image):                                
+                                renpy.show(i, what = Transform(image, align=(.5,.5)))  
                                 
                 except IndexError: 
                     pass
