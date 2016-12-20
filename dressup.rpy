@@ -61,7 +61,7 @@ image erin2 = LayeredDisplayable("erin2")
 ## inventory.rpy がなくてもエラーにならないように、コメントアウトしています。
 #default closet = Inventory()
 
-## 各アイテムを Item(名前、装備タイプ) で定義します。it, item の名前空間も使えます。
+## 各アイテムを Item(名前、装備タイプ) で定義します。item の名前空間も使えます。
 ## 名前がファイル名、タイプがフォルダ名になるようにします。
 #define item.pleated_skirt = Item("Pleated Skirt", type="bottom")
 #define item.buruma = Item("Buruma", type="bottom")
@@ -177,17 +177,21 @@ init -3 python:
 
 
         @staticmethod
-        def draw_doll(st, at, doll, flatten=False):
+        def draw_doll(st, at, doll, flatten=False, kwargs=None):
             # Function that is used for dynamic displayable.
 
             layers=[]
             if doll in dir(store) :
                 doll = getattr(store, doll)
                 folder = doll.folder
-
-                for i in doll.layers:
-                    if getattr(doll, i) and renpy.loadable("{}/{}/{}.png".format(folder, i, getattr(doll, i))):
-                        layers.append("{}/{}/{}.png".format(folder, i, getattr(doll, i)))
+                
+                for layer in doll.layers:
+                    if kwargs:
+                        item = kwargs.get(layer) or getattr(doll, layer)         
+                    else:
+                        item = getattr(doll, layer)
+                    if item and renpy.loadable("{}/{}/{}.png".format(folder, layer, item)):
+                        layers.append("{}/{}/{}.png".format(folder, layer, item))
 
             if flatten:
                 return Flatten(Fixed(*layers, fit_first=True)), None
@@ -248,10 +252,11 @@ init -3 python:
 ##############################################################################
 ## Displayable
 
-    def LayeredDisplayable(doll, flatten =False):
+    def LayeredDisplayable(doll, flatten =False, **kwargs):
         # Function that returns displayable that composite image files.
         # If flatten is true, image is flatten to render alpha properly.
+        # If kwargs is give, given file is always used.
         
-        return DynamicDisplayable(Doll.draw_doll, doll, flatten)
+        return DynamicDisplayable(Doll.draw_doll, doll, flatten, kwargs)
 
 

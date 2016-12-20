@@ -210,9 +210,9 @@ init -3 python:
         
         name - name of this actor
         skills - list of skills
-        attr - there are many values defined by self.attr = value form
-                attr can be defined the blow
-        default_attr - default value of attr. if it's positive number, attr's value is limited to this value.
+        attribute - there are many values defined by self.attr = value form
+                attribute can be defined the blow
+        default_attrribute - default value of attribute. if it's positive number, attribute's value is limited to this value.
         """
         
         # This will create self.hp and self.default_hp
