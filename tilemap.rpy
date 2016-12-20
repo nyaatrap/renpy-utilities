@@ -8,7 +8,11 @@
 init python:
 
     ## まず最初に、 各タイルを displayable（表示可能オブジェクト）のリストとして定義します。
-    tileset =[Solid("#77f", xysize=(32,32)), Solid("#ff9", xysize=(32,32)), Solid("#3f6", xysize=(32,32))]
+    tileset =[Solid("#77f", xysize=(32,32)), Solid("#ff9", xysize=(32,32)), Solid("#3f6", xysize=(32,32))]    
+    
+    ## タイルを並べた一枚の画像を分割したい時は、次の関数も使えます。
+    # tileset = read_spritesheet(filename, sprite_width, sprite_height, columns=1, rows=1)
+    
 
     ## 次に整数の二次元配列を定義します。。値は tileset のインデックスで 0 は tileset[0] を表します。
 
@@ -41,13 +45,19 @@ init python:
 image map = tilemap
 
 
-## ゲームがスタートしたら、 イメージで定義した画像を表示します。
-# show map at truecenter
-# "マップ全てを表示"
+## ゲームがスタートしたら jump sample_tilemap でここに飛んでください。
 
-## tilemap.area を None 以外にすると、その範囲のみ描画します。
-# $ tilemap.area = (64,64,256,256)
-# "マップの一部を表示"
+label sample_tilemap:
+    
+    ## イメージで定義した画像を表示します。
+    show map at truecenter
+    pause
+    
+    ## tilemap.area を None 以外にすると、その範囲のみ描画します。
+    $ tilemap.area = (64,64,256,256)    
+    pause
+    
+    return
 
 
 ##############################################################################
@@ -90,7 +100,10 @@ init -3 python:
                 for y in xrange(len(self.map)):
                     for x in xrange(len(self.map[y])):
                         tile = self.tile_mapping[self.map[y][x]]  if self.tile_mapping else self.map[y][x]
-                        render.blit(renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at), (x*self.tile_width, y*self.tile_height))
+                        render.blit(
+                            renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
+                            (x*self.tile_width, y*self.tile_height)
+                            )
 
                     # Adjust the render size.
                     render = render.subsurface((0, 0, len(self.map[0])*self.tile_width, len(self.map)*self.tile_height))
@@ -106,11 +119,17 @@ init -3 python:
                     for x in xrange(self.xoffset[0], min(len(self.map[y]), self.area[2]//self.tile_width+self.xoffset[0]+1)):
                         if 0 <=  y < len(self.map) and 0 <= x < len(self.map[0]):
                             tile = self.tile_mapping[self.map[y][x]]  if self.tile_mapping else self.map[y][x]
-                            render.blit(renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at), (x*self.tile_width, y*self.tile_height))
+                            render.blit(
+                                renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
+                                (x*self.tile_width, y*self.tile_height)
+                                )
 
                 # Crop the render.
                 render = render.subsurface(self.area)
 
+            # Redraw regularly
+            # renpy.redraw(self, 1.0/30)
+            
             return render
 
 
@@ -126,9 +145,7 @@ init -3 python:
            return self.tileset
 
 
-    ## 次の関数は一枚の画像を分割して displayable のリストにして返します。
-
-    def read_spritesheet(file, sprite_width, sprite_height, columns, rows, spacing=0, margin=0, livecrop=False):
+    def read_spritesheet(file, sprite_width, sprite_height, columns=1, rows=1, spacing=0, margin=0, livecrop=False):
 
         ''' Function that returns a list of displayables from a spritesheet. '''
 
