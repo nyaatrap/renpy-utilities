@@ -241,7 +241,8 @@ init -3 python:
         info - Information text to be shown on event map screen.
         """
 
-        def __init__(self, place = None, cond="True", priority=0, once=False, multi=False, precede=False, click=False, image=None, level=None, pos=None, label=None, info=""):            
+        def __init__(self, place = None, cond="True", priority=0, once=False, multi=False, precede=False, click=False,
+            image=None, level=None, pos=None, label=None, info=""):            
 
             self.level = Explorer.get_place(place).level if place else level
             self.pos = Explorer.get_place(place).pos if place else pos

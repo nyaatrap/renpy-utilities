@@ -156,7 +156,8 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
                             # reorder after selected
                             elif inv.selected:
-                                action [Function(inv.replace_items, first=slot, second=inv.selected), SetField(inv, "selected", None)]
+                                action [Function(inv.replace_items, first=slot, second=inv.selected),
+                                        SetField(inv, "selected", None)]
 
                             # reorder before selecting
                             else:

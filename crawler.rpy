@@ -412,17 +412,20 @@ init -2 python:
                         # left side
                         if i in ["left2", "left1", "left0"]: 
                             if renpy.has_image("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i)):
-                                renpy.show(i, what = Transform("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i), yalign=.5))
+                                d = "{} {} {}".format(image, mapping[map[tile.y][tile.x]], i)
+                                renpy.show(i, what = Transform(d, yalign=.5))
                                 
                         # righit side use mirror image of left side
                         elif i in ["right2", "right1", "right0"]: 
                             if renpy.has_image("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i.replace("right", "left"))):
-                                renpy.show(i, what = Transform("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i.replace("right", "left")),  xzoom = -1, xalign = 1.0, yalign=.5))
+                                d = "{} {} {}".format(image, mapping[map[tile.y][tile.x]], i.replace("right", "left"))
+                                renpy.show(i, what = Transform(d, xzoom = -1, xalign = 1.0, yalign=.5))
                                     
                         # front
                         elif i in ["front2", "front1"]: 
                             if renpy.has_image("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i)):
-                                renpy.show(i, what = Transform("{} {} {}".format(image, mapping[map[tile.y][tile.x]], i), align=(.5,.5)))  
+                                d = "{} {} {}".format(image, mapping[map[tile.y][tile.x]], i)
+                                renpy.show(i, what = Transform(d, align=(.5,.5)))  
                                 
                 except IndexError: 
                     pass
