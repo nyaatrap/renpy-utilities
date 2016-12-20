@@ -1,5 +1,6 @@
-## This file add pseudo-3D dungeon crawl unction into explorer framework.
-## このファイルは explore を拡張して疑似３Dダンジョン探索機能を追加します。
+## This file add pseudo-3D dungeon crawl function into explorer framework.
+## To player the sample game, download the cave folder then place it in the images directory.
+## explore を拡張して疑似３Dダンジョン探索機能を追加するファイルです。
 ## サンプルを実行するには cave フォルダーの画像をダウンロードして images フォルダーに置く必要があります。
 
 ##############################################################################
