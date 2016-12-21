@@ -5,7 +5,8 @@
 ## textbutton _("ギャラリー") action ShowMenu("gallery")
 
 ## このギャラリーは視聴済みの画像と音楽を自動的に検索・追加します。
-## 下の変数を設定すると手動で追加できます。
+## また config.developer が True（ビルド前）の場合は視聴に関わらず追加されます。
+## 下の変数を設定すると追加する画像・音楽とその順番を手動で指定できます。
 
 ## ギャラリーに使いたい画像のタグのリスト
 define gallery.image_tags = []
@@ -110,7 +111,7 @@ screen _gallery(images):
 init 1900 python in gallery:
     
     from collections import OrderedDict
-    from store import MusicRoom
+    from store import MusicRoom, config
     import os
     
     ## Create dictionary whose keys are image tags and values are list of seen images
@@ -123,7 +124,7 @@ init 1900 python in gallery:
         
         for j in renpy.get_available_image_attributes(i):
             image = i+ " "+" ".join(j)
-            if renpy.seen_image(image):   
+            if renpy.seen_image(image) or config.developer:   
                 images[i].append(image)
                 
                     
@@ -138,7 +139,7 @@ init 1900 python in gallery:
         if i.startswith(music_folder+"/"):
             track = music_folder+"/"+i if track_list else i
             title = os.path.splitext(i.replace(music_folder+"/", ""))[0].capitalize()
-            jukebox.add(track, always_unlocked=False)
+            jukebox.add(track, always_unlocked=config.developer)
             tracks[title] = track
             
         

@@ -188,8 +188,8 @@ init -3 python:
         
         name - item name that is shown on the screen
         type - item category
-        value - score of currency for trading
-        score - default score of item when it's added into inventory
+        value - price that is used for trading
+        score - default amount of item when it's added into inventory
         info - description that is shown when an item is focused
         """
 

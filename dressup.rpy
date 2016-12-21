@@ -135,8 +135,8 @@ init -3 python:
         layers - folder names that this doll's each layer images are stored.
         types - layer and type names that can be equipped when inventory system is using.
         
-        It also has fields as same as layer names for example, self.base=None
-        These fields vlues are filenames of each layer.
+        It also has fields as same as layer names. For example, self.base=None
+        These field values are filenames of each layer.
         """
 
         # Define default layers from bottom.
@@ -255,9 +255,11 @@ init -3 python:
 ## Displayable
 
     def LayeredDisplayable(doll, flatten =False, **kwargs):
-        # Function that returns displayable that composite image files.
-        # If flatten is true, image is flatten to render alpha properly.
-        # If kwargs is given, given file is always used.
+        """
+        Function that returns displayable that composite image files.
+        If flatten is true, image is flatten to render alpha properly.
+        If kwargs is given, given file is always used.
+        """
         
         return DynamicDisplayable(Doll.draw_doll, doll, flatten, kwargs)
 
