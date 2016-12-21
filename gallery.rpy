@@ -15,7 +15,7 @@ define gallery.image_tags = []
 define gallery.music_folder = "music"
 
 ## ジュークボックスに入れたい音楽のファイル名のリスト
-define gallery.track_list = []
+define gallery.music_tracks = []
 
                         
 ## Gallery screen #################################################################
@@ -47,7 +47,7 @@ screen gallery():
                     if gallery.images[i]:                    
                         button xysize width, height:
                             background Transform(gallery.images[i][0],  size = (width, height))
-                            action ShowMenu("_gallery", images=gallery.images[i])
+                            action [With(gallery.trans), Show("_gallery", images=gallery.images[i])]
                             
                     ## Otherwise show blank image
                     else:                        
@@ -73,6 +73,8 @@ screen gallery():
                         
                     # show duration
                     bar value AudioPositionValue() ysize 20
+                    
+                    null height 8
                         
                     # show tracks
                     viewport mousewheel True scrollbars "vertical":
@@ -89,7 +91,6 @@ style jukebox_button_text:
 ## Screen that shows actual images
 screen _gallery(images):    
     
-    tag menu    
     default page = 0
     
     add "black"    
@@ -97,11 +98,11 @@ screen _gallery(images):
         add images[page] align (.5, .5)
     
     if page < len(images)-1:
-        key "button_select" action [With(Dissolve(.25)), SetScreenVariable("page", page + 1)]
+        key "button_select" action [With(gallery.trans), SetScreenVariable("page", page + 1)]
     else:
-        key "button_select" action ShowMenu("gallery")
+        key "button_select" action [With(gallery.trans), Hide("_gallery")]
     
-    key "game_menu" action ShowMenu("gallery")
+    key "game_menu" action [With(gallery.trans), Hide("_gallery")]
 
 
 ##############################################################################
@@ -111,8 +112,11 @@ screen _gallery(images):
 init 1900 python in gallery:
     
     from collections import OrderedDict
-    from store import MusicRoom, config
+    from store import *
     import os
+    
+    # transition for gallery
+    trans = Dissolve(.25)
     
     ## Create dictionary whose keys are image tags and values are list of seen images
     ## gallery.images = {"girl":["girl happy", "girl angry"], "boy":["boy happy", "boy angry"],,,}
@@ -135,9 +139,9 @@ init 1900 python in gallery:
     tracks = OrderedDict()
     music_folder = music_folder or ""
     
-    for i in track_list or renpy.list_files():
+    for i in music_tracks or renpy.list_files():
         if i.startswith(music_folder+"/"):
-            track = music_folder+"/"+i if track_list else i
+            track = music_folder+"/"+i if music_tracks else i
             title = os.path.splitext(i.replace(music_folder+"/", ""))[0].capitalize()
             jukebox.add(track, always_unlocked=config.developer)
             tracks[title] = track
