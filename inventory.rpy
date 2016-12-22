@@ -145,15 +145,14 @@ screen inventory(inv, buyer=None, title="Inventory"):
                 for slot in inv.items:
 
                     python:
-                        item = slot[0]
-                        score = slot[1]
-                        obj = inv.get_item(item)
-                        value = int(obj.value*slot[1]*(buyer.tradein if buyer else inv.tradein))
+                        item = inv.get_item(slot[0])
+                        amount = slot[1]
+                        price = int(item.value*slot[1]*(buyer.tradein if buyer else inv.tradein))
 
-                    if tab in [obj.type, "all"]:
-                        textbutton "[obj.name] x[score] ([value])":
+                    if tab in [item.type, "all"]:
+                        textbutton "[item.name] x[amount] ([price])":
                             selected inv.selected == slot
-                            hovered tt.Action(obj.info)
+                            hovered tt.Action(item.info)
 
                             # sell/buy
                             if buyer:
