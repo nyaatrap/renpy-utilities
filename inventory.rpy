@@ -102,6 +102,11 @@ screen inventory(inv, buyer=None, title="Inventory"):
     # screen variables
     default tab = "all"
     default tt = Tooltip("")
+    
+    # frame size
+    python:                    
+        width = config.screen_width*3//4
+        height = config.screen_height//2
 
     # unselect item on show
     on "show" action SetField(inv, "selected", None)
@@ -112,17 +117,17 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
         # currency. when seller (inv) is an infinite inventory, show buyer's currency
         $ currency = inv.currency if not inv.infinite else buyer.currency
-        text "currency: [currency:>6]" xalign .5
+        text "Currency:[currency:>5]" xalign .5
         
         null height 20
         
         # sort buttons
         text "Sort by"
-        for i in ["name", "type", "value", "score"]:
+        for i in ["name", "type", "price", "amount"]:
             textbutton i.capitalize():
                 action Function(inv.sort_items, order=i)
 
-    vbox align .5,.5:
+    vbox align .5,.6:
 
         # category tabs
         hbox style_prefix "radio":
@@ -132,7 +137,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
                     action SetScreenVariable("tab", i)
 
         # item slots
-        frame xysize 800, 400:
+        frame xysize width, height:
 
             vpgrid style_prefix "item":
                 cols 4 mousewheel True draggable True scrollbars "vertical"
@@ -164,7 +169,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
                                 action SetField(inv, "selected", slot)
 
         # information window
-        frame xysize 800, 150:
+        frame xysize width, height//2:
             text tt.value
 
     textbutton "Return" action Return() yalign 1.0
@@ -173,7 +178,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
 
 style item_button:
-    xsize 200
+    xsize 250
 
 
 ##############################################################################
@@ -361,9 +366,9 @@ init -3 python:
                 self.items.sort(key = lambda item: self.get_item(item[0]).name)
             elif order == "type":
                 self.items.sort(key = lambda item: gui.item_types.index(self.get_item(item[0]).type))
-            elif order == "value":
+            elif order == "price":
                 self.items.sort(key = lambda item: self.get_item(item[0]).value, reverse=True)
-            elif order == "score":
+            elif order == "amount":
                 self.items.sort(key = lambda item: self.get_item(item[1]), reverse=True)
 
 

@@ -67,7 +67,7 @@ python early:
 ## it allows to add at clause. If at transform is added, it's equivalent to:
 ## show image at transform
 ## hide image
-## hide ステートメントを at 節をが使えるように拡張します。
+## hide ステートメントが at 節を使えるように拡張します。
 
     def parse_hide(lex):
         import renpy.parser

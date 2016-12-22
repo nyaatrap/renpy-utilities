@@ -148,7 +148,7 @@ init -3 python:
         _types = ["feet", "bottom", "top"]
 
 
-        def __init__(self, folder, layers = None, types = None, **kwargs):
+        def __init__(self, folder="", layers = None, types = None, **kwargs):
 
             self.folder = folder
             self.layers = layers or self._layers
@@ -172,7 +172,7 @@ init -3 python:
                 self.images.setdefault(i, [])
             for i in renpy.list_files():
                 for j in self.layers:
-                    if i.startswith(self.folder+"/"+j):
+                    if self.folder and i.startswith(self.folder+"/"+j):
                         self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace(".png", ""))
 
 

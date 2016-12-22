@@ -218,7 +218,7 @@ init -3 python:
         # This will create self.hp and self.default_hp
         attributes = ["hp"] 
 
-        def __init__(self, name, skills=None, **kwargs):
+        def __init__(self, name="", skills=None, **kwargs):
 
             self.name = name            
             self.skills = skills or []
