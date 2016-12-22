@@ -50,6 +50,8 @@ image map = tilemap
 label sample_tilemap:
     
     ## イメージで定義した画像を表示します。
+    ## tilemap.area を None にすると、画像全てを描画します。
+    $ tilemap.area = None
     show map at truecenter
     pause
     
@@ -78,9 +80,10 @@ init -3 python:
         tile_mapping - a dictionaly that maps string of map to index of tileset.
            If None, each corrdinate of map should be integer.
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
+        mask - 2-dimentional list of 0 or 1. If it's 0, tile will no be rendered.
         """
 
-        def __init__(self, map, tileset, tile_width, tile_height, tile_mapping = None, area = None, **properties):
+        def __init__(self, map, tileset, tile_width, tile_height, tile_mapping = None, area = None, mask = None, **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
@@ -89,6 +92,7 @@ init -3 python:
             self.tile_height = tile_height
             self.tile_mapping = tile_mapping
             self.area = area
+            self.mask = mask
 
 
         def render(self, width, height, st, at):
@@ -99,14 +103,15 @@ init -3 python:
                 # Blit all tiles into the render.
                 for y in xrange(len(self.map)):
                     for x in xrange(len(self.map[y])):
-                        tile = self.tile_mapping[self.map[y][x]]  if self.tile_mapping else self.map[y][x]
-                        render.blit(
-                            renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
-                            (x*self.tile_width, y*self.tile_height)
-                            )
+                        if not self.mask or self.mask[y][x] == 1:
+                            tile = self.tile_mapping[self.map[y][x]]  if self.tile_mapping else self.map[y][x]
+                            render.blit(
+                                renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
+                                (x*self.tile_width, y*self.tile_height)
+                                )
 
-                    # Adjust the render size.
-                    render = render.subsurface((0, 0, len(self.map[0])*self.tile_width, len(self.map)*self.tile_height))
+                # Adjust the render size.
+                render = render.subsurface((0, 0, len(self.map[0])*self.tile_width, len(self.map)*self.tile_height))
 
             else:
 
@@ -118,11 +123,12 @@ init -3 python:
                 for y in xrange(self.yoffset[0], min(len(self.map), self.area[3]//self.tile_height+self.yoffset[0]+1)):
                     for x in xrange(self.xoffset[0], min(len(self.map[y]), self.area[2]//self.tile_width+self.xoffset[0]+1)):
                         if 0 <=  y < len(self.map) and 0 <= x < len(self.map[0]):
-                            tile = self.tile_mapping[self.map[y][x]]  if self.tile_mapping else self.map[y][x]
-                            render.blit(
-                                renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
-                                (x*self.tile_width, y*self.tile_height)
-                                )
+                            if not self.mask or self.mask[y][x] == 1:
+                                tile = self.tile_mapping[self.map[y][x]]  if self.tile_mapping else self.map[y][x]
+                                render.blit(
+                                    renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
+                                    (x*self.tile_width, y*self.tile_height)
+                                    )
 
                 # Crop the render.
                 render = render.subsurface(self.area)
@@ -161,5 +167,3 @@ init -3 python:
         return sprites
         
     
-    
-
