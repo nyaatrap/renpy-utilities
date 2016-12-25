@@ -233,7 +233,6 @@ transform shake(t=base_time, d=base_offset):
     xoffset 0 yoffset 0
 
 
-
 ##############################################################################
 # Transitions
 ##############################################################################
@@ -290,5 +289,4 @@ transform fallin(t=1.0, old_widget, new_widget):
         new_widget
         yanchor 1.0 ypos 0
         easein_bounce t yalign 1.0
-
 

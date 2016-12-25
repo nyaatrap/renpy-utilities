@@ -79,15 +79,15 @@ label sample_inventory:
 ##############################################################################
 ## Definitions
 ##############################################################################
-                
-init python:    
+
+init python:
 
     def block():
         # blocks rollback then allows saving data in the current interaction
-        
+
         renpy.block_rollback()
         renpy.retain_after_load()
-        
+
 
 ##############################################################################
 ## Inventory Screen
@@ -102,9 +102,9 @@ screen inventory(inv, buyer=None, title="Inventory"):
     # screen variables
     default tab = "all"
     default tt = Tooltip("")
-    
+
     # frame size
-    python:                    
+    python:
         width = config.screen_width*3//4
         height = config.screen_height//2
 
@@ -118,9 +118,9 @@ screen inventory(inv, buyer=None, title="Inventory"):
         # currency. when seller (inv) is an infinite inventory, show buyer's currency
         $ currency = inv.currency if not inv.infinite else buyer.currency
         text "Currency:[currency:>5]" xalign .5
-        
+
         null height 20
-        
+
         # sort buttons
         text "Sort by"
         for i in ["name", "type", "price", "amount"]:
@@ -189,7 +189,7 @@ init -3 python:
 
         """
         Class that represents item that is stored by inventory object. It has following fields:
-        
+
         name - item name that is shown on the screen
         type - item category
         value - price that is used for trading
@@ -204,15 +204,15 @@ init -3 python:
             self.type = type
             self.value = int(value)
             self.score = int(score)
-            self.info = info            
-            
+            self.info = info
+
 
         def use(self, target):
-            
+
             # write your own code
-            
-            return            
-            
+
+            return
+
 
 ##############################################################################
 ## Inventory class.
@@ -221,11 +221,11 @@ init -3 python:
 
         """
         Class that stores items. It has following fields:
-        
+
         currency - score of money this object has
         tradein - when someone buyoff items to this inventory, value is reduced by this value
         infinite - if true, its currency and amont of items are infinite, like NPC merchant.
-        items - list of item slots. item slot is a pair of ["item name", score]. items are stored as slot, not item object. 
+        items - list of item slots. item slot is a pair of ["item name", score]. items are stored as slot, not item object.
         selected - selected slot in a current screen.
         """
 
@@ -238,8 +238,8 @@ init -3 python:
             if items:
                 for i in items:
                     self.add_item(i)
-            self.selected = None            
-            
+            self.selected = None
+
 
         @classmethod
         def get_item(self, name):
@@ -307,11 +307,11 @@ init -3 python:
                     self.remove_item(slot)
             elif add:
                 self.add_item(self, [item, score])
-            
-            
+
+
         def use_item(self, item, target):
             # uses item on target
-            
+
             self.get_item(item).use(target)
 
 
@@ -338,16 +338,16 @@ init -3 python:
                 value = self.get_item(slot[0]).value*score
                 self.currency += int(value*buyer.tradein)
                 self.items.remove(slot)
-                
-                
+
+
         def give_item(self, slot, getter, merge=True):
             # remove an item slot then add this item to getter
-            
+
             if merge and getter.has_item(slot[0]):
                 getter.score_item(slot[0], slot[1])
             else:
                 getter.items.append(slot)
-            self.items.remove(slot)            
+            self.items.remove(slot)
 
 
         def replace_items(self, first, second):
@@ -359,7 +359,7 @@ init -3 python:
 
 
         def sort_items(self, order="name"):
-            # sort slots            
+            # sort slots
 
             if order == "name":
                 self.items.sort(key = lambda item: self.get_item(item[0]).name)
@@ -379,11 +379,9 @@ init -3 python:
                     self.add_item(i)
 
 
-
 ##############################################################################
 ## Create namespace
 
 init -999 python in item:
     pass
-
 

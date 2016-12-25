@@ -6,7 +6,7 @@
 python early:
 
 ##############################################################################
-## hardpause 
+## hardpause
 
 ## The new hardpause statement is same statement to renpy.pause(delay, hard=True)
 ## if delay is ommited, .5 is used
@@ -18,7 +18,7 @@ python early:
 
     def execute_hardpause(obj):
         renpy.pause(float(obj) if obj else .5, hard=True)
-                
+
     renpy.register_statement("hardpause", parse=parse_hardpause, execute=execute_hardpause)
 
 
@@ -97,7 +97,6 @@ python early:
             renpy.error("Image %s is not defined" % image_name)
 
     renpy.register_statement("hide", parse=parse_hide, lint=lint_hide, execute=execute_hide)
-
 
 
 

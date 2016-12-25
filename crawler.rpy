@@ -70,7 +70,7 @@ define ev.enemy = Event(level="cave", pos="e")
 label enemy:
     "There is an enemy"
     return
-    
+
 ## 衝突の場合は衝突先のイベントが呼ばれます。
 define ev.collision = Event(level="cave", pos="1")
 label collision:
@@ -82,10 +82,10 @@ label nothing:
     "There is nothing"
     return
 
-    
+
 ## start ラベルから crawl へジャンプすると探索を開始します。
 
-    
+
 ##############################################################################
 ## Definitions
 ##############################################################################
@@ -110,13 +110,13 @@ label crawl:
         if crawler.in_dungeon():
             $ crawler.draw_dungeon()
         else:
-            scene expression crawler.lv.image            
+            scene expression crawler.lv.image
         with Dissolve(.25)
 
     jump crawl_loop
-    
-    
-label crawl_loop:        
+
+
+label crawl_loop:
     while True:
 
         # check passive events
@@ -126,7 +126,7 @@ label crawl_loop:
         # sub loop to excecute all passive events
         $ _loop = 0
         while _loop < len(_events):
-            
+
             $ crawler.event = _events[_loop]
             $ block()
             call expression crawler.event.label or crawler.event.name
@@ -135,22 +135,22 @@ label crawl_loop:
             $ _loop += 1
 
         $ crawler.after_interact = True
-            
+
         # sub loop to ignore passive events
         while True:
-                
+
             # show eventmap or dungeon navigator
             $ block()
             if crawler.in_dungeon():
                 call screen dungeon(crawler)
             else:
                 call screen eventmap(crawler)
-    
+
             # move by place
             if isinstance(_return, Place):
                 $ crawler.pos = _return.pos
                 jump crawl_loop
-                
+
             # excecute click event
             elif isinstance(_return, Event):
                 $ crawler.event = _return
@@ -159,35 +159,35 @@ label crawl_loop:
                 if crawler.move_pos(_return):
                     jump crawler
                 jump crawl_loop
-                    
-            # collision 
+
+            # collision
             elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] in crawler.collision:
-                
+
                 # check passive events
                 $ block()
                 $ _events = crawler.get_events(pos = _return.unpack())
-                
+
                 # sub loop to excecute all passive events
                 $ _loop = 0
                 while _loop < len(_events):
-                    
+
                     $ crawler.event = _events[_loop]
                     $ block()
                     call expression crawler.event.label or crawler.event.name
                     if crawler.move_pos(_return):
                         jump explore
                     $ _loop += 1
-                    
+
                 jump crawl_loop
-                                
+
             # move
             elif isinstance(_return, Coordinate):
                 if _return.x == crawler.pos[0] and _return.y == crawler.pos[1]:
                     $ crawler.move_pos(_return.unpack())
-                    $ crawler.draw_dungeon()   
+                    $ crawler.draw_dungeon()
                 else:
                     $ crawler.move_pos(_return.unpack())
-                    $ crawler.draw_dungeon()   
+                    $ crawler.draw_dungeon()
                     jump crawl_loop
 
 
@@ -196,27 +196,27 @@ label crawl_loop:
 ## screen that shows orientation buttons in dungeon
 
 screen dungeon(crawler):
-    
+
     $ coord = Coordinate(*crawler.pos)
-                
+
     ## show events
     for i in crawler.get_events(click=True):
         button xysize (config.screen_width, config.screen_height):
             action Return(i)
         if  i.image:
             add i.image
-                
+
 
     #move buttons
     fixed style_prefix "move":
-        textbutton "W" action Return(coord.front())  xcenter .5 ycenter .86 
+        textbutton "W" action Return(coord.front())  xcenter .5 ycenter .86
         textbutton "S" action Return(coord.back())  xcenter .5 ycenter .96
-        textbutton "E" action Return(coord.turnright())  xcenter .58 ycenter .91   
+        textbutton "E" action Return(coord.turnright())  xcenter .58 ycenter .91
         textbutton "Q" action Return(coord.turnleft())   xcenter .42 ycenter .91
         textbutton "D" action Return(coord.right()) xcenter .65 ycenter .96
         textbutton "A" action Return(coord.left())  xcenter .35 ycenter .96
-                
-    #keys          
+
+    #keys
         for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
             key i action Return(coord.front())
         for i in ["repeat_s", "s","repeat_S","S", "focus_down"]:
@@ -224,37 +224,37 @@ screen dungeon(crawler):
         for i in ["repeat_d","d", "repeat_D","D", "rollforward"]:
             key i action Return(coord.right())
         for i in ["repeat_a","a", "repeat_A","A", "rollback"]:
-            key i action Return(coord.left())           
+            key i action Return(coord.left())
         for i in ["repeat_q", "q","repeat_Q","Q", "focus_left"]:
             key i action Return(coord.turnleft())
         for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
             key i action Return(coord.turnright())
-            
+
 style move_button_text:
     size 50
-        
-    
+
+
 ##############################################################################
-## Dungeon class.             
-    
-init -2 python:         
-    
+## Dungeon class.
+
+init -2 python:
+
     class Dungeon(Level):
-        
+
         """
         Expanded Level class to hold 2-dimentional map.
         map should be list or filename of spreadsheet.
         """
-        
+
         def __init__(self, image=None, music=None, map = None):
-            
+
             super(Dungeon, self).__init__(image, music)
             self.map = self.read_map(map) if map and isinstance(map, basestring) else map
-                        
-                
+
+
         def read_map(self, file):
             # read tsv or csv file to make them into 2-dimentional map
-            
+
             map=[]
             f = renpy.file(file)
             for l in f:
@@ -266,34 +266,34 @@ init -2 python:
                     raise Exception("Separater is not found in '{}'".format(file))
                 map.append([x for x in a])
             f.close()
-                
+
             return map
-                
-            
+
+
 ##############################################################################
 ## Coordinate class
-         
-init -2 python:   
-    
+
+init -2 python:
+
     class Coordinate(object):
-        
+
         """
         A class that calculates coordinates.
         """
-        
+
         def __init__(self, x=0, y=0, dx=0, dy=0):
-            
+
             self.x=x
             self.y=y
-            self.dx=dx 
+            self.dx=dx
             self.dy=dy
-        
+
         def turnback(self):
             return Coordinate(self.x, self.y, -self.dx, -self.dy)
-            
+
         def turnleft(self):
             return Coordinate(self.x, self.y, self.dy, -self.dx)
-            
+
         def turnright(self):
             return Coordinate(self.x, self.y, -self.dy, self.dx)
 
@@ -302,28 +302,28 @@ init -2 python:
 
         def front2(self):
             return self.front().front()
-            
+
         def back(self):
             return Coordinate(self.x-self.dx, self.y-self.dy, self.dx, self.dy)
-            
+
         def back2(self):
             return self.back().back()
-            
+
         def left(self):
             return Coordinate(self.x+self.dy, self.y-self.dx, self.dx, self.dy)
-            
+
         def right(self):
             return Coordinate(self.x-self.dy, self.y+self.dx, self.dx, self.dy)
-            
+
         def moveright(self):
             return Coordinate(self.x+1, self.y, 1, 0)
-            
+
         def moveleft(self):
             return Coordinate(self.x-1, self.y, -1, 0)
-            
+
         def movebottom(self):
             return Coordinate(self.x, self.y+1, 0, 1)
-            
+
         def movetop(self):
             return Coordinate(self.x, self.y-1, 0, -1)
 
@@ -332,33 +332,33 @@ init -2 python:
 
         def unpack(self):
             return (self.x, self.y, self.dx, self.dy)
-            
-            
+
+
 ##############################################################################
-## Crawler class 
+## Crawler class
 
     class Crawler(Explorer):
-        
+
         """
-        Expanded Explorer Class that stores various methods and data for crawling. 
+        Expanded Explorer Class that stores various methods and data for crawling.
         """
-                
+
         # Make a dict that maps characters in dungeon map to image names
         mapping = {"1":"wall", "2":"door", "3":"up", "4":"down"}
-        
+
         # tuple of collision on dungeon map.
         collision = ("1", "2", "3", "4")
-            
-            
+
+
         def in_dungeon(self):
             # returns true if crawler is in dungeon
-            
+
             return isinstance(self.get_level(self.level), Dungeon)
-                            
-            
+
+
         def _check_pos(self, ev, click, pos):
             # It overrides a same method to support coordinate
-            
+
             if ev.pos == None or ev.pos == pos:
                 return True
             if not isinstance(self.lv, Dungeon) and click:
@@ -369,17 +369,17 @@ init -2 python:
                         return True
                 else:
                     if ev.pos == self.lv.map[pos[1]][pos[0]]:
-                        return True  
-            
-                                
-        def draw_dungeon(self):            
-            # Draw front view image on the coord on the master layer. 
-            
+                        return True
+
+
+        def draw_dungeon(self):
+            # Draw front view image on the coord on the master layer.
+
             coord = Coordinate(*self.pos)
             tag = self.lv.image
             map = self.lv.map
             mapping = self.mapping
-            
+
             # Calculate relative coordinates
             floor = coord
             turnleft = coord.turnleft()
@@ -394,41 +394,40 @@ init -2 python:
             front2 =  front1.front()
             left2 = front2.left()
             right2 = front2.right()
-            
+
             # Composite background images.
             renpy.scene()
-            
+
             # floor base
-            renpy.show("{} floor".format(tag))        
-                
+            renpy.show("{} floor".format(tag))
+
             for n, i in enumerate(["left2", "right2", "front2", "left1", "right1", "front1", "left0", "right0", "floor"]):
-            
-                # Try-except clauses are used to prevent IndexError 
+
+                # Try-except clauses are used to prevent IndexError
                 try:
                     # get coordinate object defined above
-                    tile=locals()[i] 
-                    
+                    tile=locals()[i]
+
                     if map[tile.y][tile.x] in mapping.keys():
-                        
+
                         # left side
-                        if i in ["left2", "left1", "left0"]: 
+                        if i in ["left2", "left1", "left0"]:
                             image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i)
-                            if renpy.has_image(image):                           
+                            if renpy.has_image(image):
                                 renpy.show(i, what = Transform(image, yalign=.5))
-                                
+
                         # righit side use mirror image of left side
-                        elif i in ["right2", "right1", "right0"]: 
+                        elif i in ["right2", "right1", "right0"]:
                             image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i.replace("right", "left"))
                             if renpy.has_image(image):
                                 renpy.show(i, what = Transform(image, xzoom = -1, xalign = 1.0, yalign=.5))
-                                    
+
                         # front
-                        elif i in ["front2", "front1"]: 
+                        elif i in ["front2", "front1"]:
                             image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i)
-                            if renpy.has_image(image):                                
-                                renpy.show(i, what = Transform(image, align=(.5,.5)))  
-                                
-                except IndexError: 
+                            if renpy.has_image(image):
+                                renpy.show(i, what = Transform(image, align=(.5,.5)))
+
+                except IndexError:
                     pass
-            
-                
+

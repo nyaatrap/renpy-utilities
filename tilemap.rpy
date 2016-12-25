@@ -170,7 +170,7 @@ init -3 python:
 
     def read_spritesheet(file, sprite_width, sprite_height=None, columns=1, rows=1, spacing=0, margin=0, livecrop=False):
 
-        ''' Function that returns a list of displayables from a spritesheet. '''
+        """ Function that returns a list of displayables from a spritesheet. """
 
         sprite_height = sprite_height or sprite_width
         sprites=[]
