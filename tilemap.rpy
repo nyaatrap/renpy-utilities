@@ -8,11 +8,11 @@
 init python:
 
     ## まず最初に、 各タイルを displayable（表示可能オブジェクト）のリストとして定義します。
-    tileset =[Solid("#77f", xysize=(32,32)), Solid("#ff9", xysize=(32,32)), Solid("#3f6", xysize=(32,32))]    
-    
+    tileset =[Solid("#77f", xysize=(32,32)), Solid("#ff9", xysize=(32,32)), Solid("#3f6", xysize=(32,32))]
+
     ## タイルを並べた一枚の画像を分割したい時は、次の関数も使えます。
     # tileset = read_spritesheet(filename, sprite_width, sprite_height, columns=1, rows=1)
-    
+
 
     ## 次に整数の二次元配列を定義します。。値は tileset のインデックスで 0 は tileset[0] を表します。
 
@@ -48,17 +48,17 @@ image map = tilemap
 ## ゲームがスタートしたら jump sample_tilemap でここに飛んでください。
 
 label sample_tilemap:
-    
+
     ## イメージで定義した画像を表示します。
     ## tilemap.area を None にすると、画像全てを描画します。
     $ tilemap.area = None
     show map at truecenter
     pause
-    
+
     ## tilemap.area を None 以外にすると、その範囲のみ描画します。
-    $ tilemap.area = (64,64,256,256)    
+    $ tilemap.area = (64,64,256,256)
     pause
-    
+
     return
 
 
@@ -83,13 +83,13 @@ init -3 python:
         mask - 2-dimentional list of 0 or 1. If it's 0, tile will no be rendered.
         """
 
-        def __init__(self, map, tileset, tile_width, tile_height, tile_mapping = None, area = None, mask = None, **properties):
+        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, area = None, mask = None, **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
             self.tileset = tileset
             self.tile_width = tile_width
-            self.tile_height = tile_height
+            self.tile_height = tile_height or tile_width
             self.tile_mapping = tile_mapping
             self.area = area
             self.mask = mask
@@ -99,12 +99,21 @@ init -3 python:
 
             render = renpy.Render(width, height)
 
+            # Blit all tiles into the render.
             if self.area == None:
-                # Blit all tiles into the render.
+
+                # Get tile position
                 for y in xrange(len(self.map)):
                     for x in xrange(len(self.map[y])):
                         if not self.mask or self.mask[y][x] == 1:
-                            tile = self.tile_mapping[self.map[y][x]]  if self.tile_mapping else self.map[y][x]
+
+                            # Get index of tileset
+                            if self.tile_mapping:
+                                tile = self.tile_mapping[self.map[y][x]] if self.map[y][x] in self.tile_mapping else 0
+                            else:
+                                tile = self.map[y][x]
+
+                            # Blit
                             render.blit(
                                 renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
                                 (x*self.tile_width, y*self.tile_height)
@@ -113,18 +122,26 @@ init -3 python:
                 # Adjust the render size.
                 render = render.subsurface((0, 0, len(self.map[0])*self.tile_width, len(self.map)*self.tile_height))
 
+            # Blit only tiles around the area into the render
             else:
 
                 # Calculate where the area is positioned on the entire map.
                 self.xoffset = divmod(self.area[0], self.tile_width)
                 self.yoffset = divmod(self.area[1], self.tile_height)
 
-                # Blit only tiles around the area into the render
+                # Get tile position
                 for y in xrange(self.yoffset[0], min(len(self.map), self.area[3]//self.tile_height+self.yoffset[0]+1)):
                     for x in xrange(self.xoffset[0], min(len(self.map[y]), self.area[2]//self.tile_width+self.xoffset[0]+1)):
                         if 0 <=  y < len(self.map) and 0 <= x < len(self.map[0]):
                             if not self.mask or self.mask[y][x] == 1:
-                                tile = self.tile_mapping[self.map[y][x]]  if self.tile_mapping else self.map[y][x]
+
+                                # Get index of tileset
+                                if self.tile_mapping:
+                                    tile = self.tile_mapping[self.map[y][x]] if self.map[y][x] in self.tile_mapping else 0
+                                else:
+                                    tile = self.map[y][x]
+
+                                # Blit
                                 render.blit(
                                     renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
                                     (x*self.tile_width, y*self.tile_height)
@@ -135,7 +152,7 @@ init -3 python:
 
             # Redraw regularly
             # renpy.redraw(self, 1.0/30)
-            
+
             return render
 
 
@@ -151,10 +168,11 @@ init -3 python:
            return self.tileset
 
 
-    def read_spritesheet(file, sprite_width, sprite_height, columns=1, rows=1, spacing=0, margin=0, livecrop=False):
+    def read_spritesheet(file, sprite_width, sprite_height=None, columns=1, rows=1, spacing=0, margin=0, livecrop=False):
 
         ''' Function that returns a list of displayables from a spritesheet. '''
 
+        sprite_height = sprite_height or sprite_width
         sprites=[]
         for r in xrange(rows):
             for c in xrange(columns):
@@ -165,5 +183,5 @@ init -3 python:
                     sprites.append(im.Crop(file, rect))
 
         return sprites
-        
-    
+
+
