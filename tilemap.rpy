@@ -109,7 +109,10 @@ init -3 python:
 
                             # Get index of tileset
                             if self.tile_mapping:
-                                tile = self.tile_mapping[self.map[y][x]] if self.map[y][x] in self.tile_mapping else 0
+                                if self.map[y][x] in self.tile_mapping.keys():
+                                    tile = self.tile_mapping[self.map[y][x]]
+                                else:
+                                    tile = 0
                             else:
                                 tile = self.map[y][x]
 
@@ -137,7 +140,10 @@ init -3 python:
 
                                 # Get index of tileset
                                 if self.tile_mapping:
-                                    tile = self.tile_mapping[self.map[y][x]] if self.map[y][x] in self.tile_mapping else 0
+                                    if self.map[y][x] in self.tile_mapping.keys():
+                                            tile = self.tile_mapping[self.map[y][x]]
+                                    else:
+                                            tile = 0
                                 else:
                                     tile = self.map[y][x]
 
