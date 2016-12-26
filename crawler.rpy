@@ -161,7 +161,7 @@ label crawl_loop:
                 jump crawl_loop
 
             # collision
-            elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] in crawler.collision:
+            elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] in crawler.lv.collision:
 
                 # check passive events
                 $ block()
@@ -246,10 +246,18 @@ init -2 python:
         map should be list or filename of spreadsheet.
         """
 
-        def __init__(self, image=None, music=None, map = None):
+        # Make a dict that maps characters in dungeon map to image names
+        _mapping = {"1":"wall", "2":"door", "3":"up", "4":"down"}
+
+        # tuple of collision on dungeon map.
+        _collision = ("1", "2", "3", "4")
+
+        def __init__(self, image=None, music=None, map = None, mapping=None, collision=None):
 
             super(Dungeon, self).__init__(image, music)
             self.map = self.read_map(map) if map and isinstance(map, basestring) else map
+            self.mapping = mapping or self._mapping
+            self.collision = collision or self._collision
 
 
         def read_map(self, file):
@@ -343,12 +351,6 @@ init -2 python:
         Expanded Explorer Class that stores various methods and data for crawling.
         """
 
-        # Make a dict that maps characters in dungeon map to image names
-        mapping = {"1":"wall", "2":"door", "3":"up", "4":"down"}
-
-        # tuple of collision on dungeon map.
-        collision = ("1", "2", "3", "4")
-
 
         def in_dungeon(self):
             # returns true if crawler is in dungeon
@@ -378,7 +380,7 @@ init -2 python:
             coord = Coordinate(*self.pos)
             tag = self.lv.image
             map = self.lv.map
-            mapping = self.mapping
+            mapping = self.lv.mapping
 
             # Calculate relative coordinates
             floor = coord

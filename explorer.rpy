@@ -411,7 +411,7 @@ init -3 python:
 
         @classmethod
         def get_level(self, name):
-            # returns item object from name
+            # returns level object from name
 
             if isinstance(name, Level): return name
             elif name in dir(store.level): return getattr(store.level, name)
