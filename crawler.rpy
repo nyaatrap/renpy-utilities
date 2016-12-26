@@ -131,7 +131,7 @@ label crawl_loop:
             $ block()
             call expression crawler.event.label or crawler.event.name
             if crawler.move_pos(_return):
-                jump explore
+                jump crawl
             $ _loop += 1
 
         $ crawler.after_interact = True
@@ -157,7 +157,7 @@ label crawl_loop:
                 $ block()
                 call expression crawler.event.label or crawler.event.name
                 if crawler.move_pos(_return):
-                    jump crawler
+                    jump crawl
                 jump crawl_loop
 
             # collision
@@ -175,7 +175,7 @@ label crawl_loop:
                     $ block()
                     call expression crawler.event.label or crawler.event.name
                     if crawler.move_pos(_return):
-                        jump explore
+                        jump crawl
                     $ _loop += 1
 
                 jump crawl_loop
