@@ -1,6 +1,6 @@
-## This file defines Actor and Arena class to add turn-based competition.
-## ターン制の競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。
-## 本的な枠組みしかありませんので、実用には改変する必要があります。
+## This file defines Actor and Arena class to add turn-based combat and competition.
+## ターン制の戦闘や競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。
+## 基本的な枠組みしかありませんので、実用には改変する必要があります。
 
 ##############################################################################
 ## How to Use
@@ -33,9 +33,9 @@ default arena = Arena()
 ## 以上で準備完了です。
 
 
-## ゲームがスタートしたら jump sample_compete でここに飛んでください。
+## ゲームがスタートしたら jump sample_combat でここに飛んでください。
 
-label sample_compete:
+label sample_combat:
 
     ## 競争仲間と競争相手のアクターをリストとしてアリーナに追加します。
 
@@ -43,7 +43,7 @@ label sample_compete:
     $ arena.foes = [pawn, pawn2, pawn3]
 
     ## ここから競争開始。
-    call compete(arena)
+    call combat(arena)
 
     ## 競争が終わると結果を arena.state で知ることができます。
     if arena.state == "win":
@@ -66,15 +66,15 @@ label sample_compete:
 ##############################################################################
 
 ##############################################################################
-## Compete label
+## Combat label
 
-label compete(arena):
+label combat(arena):
 
     $ _rollback = False
 
     # initialize
     $ arena.init()
-    show screen compete_ui(arena)
+    show screen combat_ui(arena)
 
     while arena.state not in ["win", "lose", "draw"]:
 
@@ -108,9 +108,9 @@ label compete(arena):
 
 
 ##############################################################################
-## Compete screens
+## combat screens
 
-screen compete_ui(arena):
+screen combat_ui(arena):
 
     zorder -1
 
@@ -295,7 +295,7 @@ init -3 python:
 
         friends - list of playable actors
         foes - list of unplayable actors
-        state - curernt state of arena. "win", "lose", "draw" ends compete, otherwise keep performing.
+        state - curernt state of arena. "win", "lose", "draw" ends combat, otherwise keep performing.
         """
 
         def __init__(self, friends=None, foes=None):
