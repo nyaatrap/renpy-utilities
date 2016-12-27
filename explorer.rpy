@@ -26,13 +26,14 @@ define place.w_station = Place(level="west", pos=(.4,.4), image=Text("west-stati
 define place.shop = Place(level="west", pos=(.2,.5), image=Text("shop"))
 
 
-## それから現在位置や達成イベントなどを保持する探検者を Explorer(place, image) で default で定義します
+## それから現在位置や達成イベントなどを保持する探検者を Explorer(level, pos, image) で default で定義します
+## level のかわりに place を使うこともできます。
 ## 任意のパラメーターを追加すると、各イベントを呼び出す条件に使えます。
 default explorer = Explorer("home", turn=0)
 
 
 ## 各イベントは define と label のペアで定義します。
-## defne ラベル名 = Event(place, cond, priority, once, multi, precede, click, image) で定義します。
+## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede, click, image) で定義します。
 ## 探索者が place の場所にいて cond が満たされると、リンクしたラベルが呼ばれます。
 ## priorty は発生の優先度で、一番数字が大きいものが優先して実行されます。
 ## once を True にすると一度しか実行されません。
@@ -63,7 +64,7 @@ label shop:
 ## クリックから即座にリンクしたラベルを呼び出します。
 ## click が False の場合は移動後にイベントをチェックします。
 ## explorer.seen(ev) でそのイベントを見たかどうか評価できます。
-define ev.direct = Event(cond="explorer.seen(ev.shop)", level="west", pos=(.1,.1), click=True, image=Text("click here"))
+define ev.direct = Event("west", pos=(.1,.1), cond="explorer.seen(ev.shop)", click=True, image=Text("click here"))
 label direct:
     "this is a direct click event"
     return ev.direct.pos
@@ -241,11 +242,12 @@ init -3 python:
         info - Information text to be shown on event map screen.
         """
 
-        def __init__(self, place = None, cond="True", priority=0, once=False, multi=False, precede=False, click=False,
-            image=None, level=None, pos=None, label=None, info=""):
+        def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False, 
+            precede=False, click=False, image=None, label=None, info=""):
 
-            self.level = Explorer.get_place(place).level if place else level
-            self.pos = Explorer.get_place(place).pos if place else pos
+            place = Explorer.get_place(level)
+            self.level = place.level if place else level
+            self.pos = place.pos if place else pos
             self.cond = cond
             self.priority = int(priority)
             self.once = once
@@ -267,10 +269,11 @@ init -3 python:
         Class that stores various methods and data for explroring.
         """
 
-        def __init__(self, place=None, level=None, pos=None, **kwargs):
+        def __init__(self, level=None, pos=None, **kwargs):
 
-            self.level = Explorer.get_place(place).level if place else level
-            self.pos = Explorer.get_place(place).pos if place else pos
+            place = Explorer.get_place(level)
+            self.level = place.level if place else level
+            self.pos = place.pos if place else pos
 
             self.after_interact = False
             self.event = None

@@ -49,35 +49,35 @@ define level.cave = Dungeon(image="cave", map=sample_map)
 ## 最後に冒険者を Crawler クラスで定義します。
 ## ダンジョンの pos は (x,y,dx,dy) の組で、dx が 1 ならみぎ、-1 ならひだりを向きます。
 
-default crawler = Crawler(level="cave", pos=(1,1,0,1))
+default crawler = Crawler("cave", pos=(1,1,0,1))
 
 
 ## ダンジョンのイベントを定義します。
 
-define ev.entrance = Event(level="cave", pos=(1,1), precede=True, once=True)
+define ev.entrance = Event("cave", pos=(1,1), precede=True, once=True)
 label entrance:
     "Here starts crawling"
     return
 
 ## dx,dy を与えるとその向きのみイベントが発生します。
-define ev.chest = Event(level="cave", pos=(6,6,0,1), click=True)
+define ev.chest = Event("cave", pos=(6,6,0,1), click=True)
 label chest:
     "You found a chest"
     return
 
 ## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
-define ev.enemy = Event(level="cave", pos="e")
+define ev.enemy = Event("cave", pos="e")
 label enemy:
     "There is an enemy"
     return
 
 ## 衝突の場合は衝突先のイベントが呼ばれます。
-define ev.collision = Event(level="cave", pos="1")
+define ev.collision = Event("cave", pos="1")
 label collision:
     with vpunch
     return
 
-define ev.nothing = Event(level="cave", priority=-10, click=True)
+define ev.nothing = Event("cave", priority=-10, click=True)
 label nothing:
     "There is nothing"
     return
