@@ -41,7 +41,7 @@ define sample_map =[
 
 ## それらを使ってレベルを Dungeon(image, music, map) で定義します。
 ## image は先に定義したダンジョンの種類です。
-## map は ２次元配列の map [[]] か、コンマ区切りかタブ区切りのスプレッドシートファイル名です。
+## map は ２次元配列の map [[]] か、タブ区切りのスプレッドシートファイル名です。
 
 define level.cave = Dungeon(image="cave", map=sample_map)
 
@@ -66,7 +66,7 @@ label chest:
     return
 
 ## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
-define ev.enemy = Event("cave", pos="e")
+define ev.enemy = Event("cave", pos="e", precede=True)
 label enemy:
     "There is an enemy"
     return
@@ -260,18 +260,14 @@ init -2 python:
             self.collision = collision or self._collision
 
 
-        def read_map(self, file):
-            # read tsv or csv file to make them into 2-dimentional map
+        def read_map(self, file, separator="\t"):
+            # read tsv file to make them into 2-dimentional map
 
             map=[]
             f = renpy.file(file)
             for l in f:
-                if l.find("\t"):
-                    a = l.rstrip().split("\t")
-                elif l.find(","):
-                    a = l.rstrip().split(",")
-                else:
-                    raise Exception("Separater is not found in '{}'".format(file))
+                l = l.decode("utf-8")
+                a = l.rstrip().split(separator)
                 map.append([x for x in a])
             f.close()
 
