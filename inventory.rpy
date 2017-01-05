@@ -6,12 +6,11 @@
 ## How to Use
 ##############################################################################
 
-## まずアイテム画面に表示されるアイテムのタイプを定義します。
-define gui.item_types = ["supply", "food", "outfit"]
-
-## 次にアイテムオブジェクトを Item(name, type, value, score, info) で定義します。
+## まずアイテムオブジェクトを Item(name, type, value, score, cost, stack, info) で定義します。
 ## name は表示される名前、type はカテゴリー、value は価格です。
 ## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
+## cost が 1（デフォルト）の場合、アイテム使用時に個数が一つ減ります。
+## stack が true（デフォルト）の場合、アイテム追加時に個数が加算されます。
 ## info はマウスフォーカスした時に表示される情報です。
 ## item の名前空間を使う事もできます。
 
@@ -20,13 +19,14 @@ define item.orange = Item("Orange", type="food", value=20)
 define item.knife = Item("Knife", type="supply", value=50)
 define item.dress = Item("Dress", type="outfit", value=100)
 
-## 最後に所持者を Inventory(currency, tradein, infinite, items) で定義します。
+## それから所持者を Inventory(currency, tradein, infinite, item_types, items) で定義します。
 ## currency は所持金、tradein はその所持者が下取りする時の価格比です。
 ## infinite を True にすると所持金と在庫が無限になります。
+## item_types はアイテム画面でカテゴリー分けされるアイテムタイプのリストです。
 ## items は所持アイテムの配列で [[アイテム, 個数], [アイテム, 個数],,,] の形になります。
 
 default housewife = Inventory(currency=1000)
-default merchant = Inventory(tradein=.25, infinite=True)
+default merchant = Inventory(tradein=.25, infinite=True, item_types=["supply", "food", "outfit"])
 
 
 ## ゲームがスタートしたら jump sample_inventory でここに飛んでください。
@@ -40,7 +40,7 @@ label sample_inventory:
     ## get_all_items(namespace) で名前空間で定義したすべてのアイテムを自動的に追加します。
     $ merchant.get_all_items(store.item)
 
-    ## 他に以下のメソッド（）があります。
+    ## 他に以下のメソッドがあります。
     ## has_item(item) - 所持していれば True を返します。
     ## count_item(item) - 所持している合計の個数を返します。
     ## remove_item(item) - 所持していれば、そのアイテムを奪います。
@@ -132,7 +132,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
         # category tabs
         hbox style_prefix "radio":
 
-            for i in ["all"] + gui.item_types:
+            for i in ["all"] + inv.item_types:
                 textbutton i.capitalize():
                     action SetScreenVariable("tab", i)
 
@@ -145,14 +145,14 @@ screen inventory(inv, buyer=None, title="Inventory"):
                 for slot in inv.items:
 
                     python:
-                        item = inv.get_item(slot[0])
+                        obj = inv.get_item(slot[0])
                         amount = slot[1]
-                        price = int(item.value*slot[1]*(buyer.tradein if buyer else inv.tradein))
+                        price = int(obj.value*slot[1]*(buyer.tradein if buyer else inv.tradein))
 
-                    if tab in [item.type, "all"]:
-                        textbutton "[item.name] x[amount] ([price])":
+                    if tab in [obj.type, "all"]:
+                        textbutton "[obj.name] x[amount] ([price])":
                             selected inv.selected == slot
-                            hovered tt.Action(item.info)
+                            hovered tt.Action(obj.info)
 
                             # sell/buy
                             if buyer:
@@ -166,6 +166,9 @@ screen inventory(inv, buyer=None, title="Inventory"):
                             # reorder before selecting
                             else:
                                 action SetField(inv, "selected", slot)
+
+                            # This action uses item.
+                            # action Function(inv.use_item, slot=slot, target=?)
 
         # information window
         frame xysize width, height//2:
@@ -181,41 +184,9 @@ style item_button:
 
 
 ##############################################################################
-## Item class.
+## Inventory class.
 
 init -3 python:
-
-    class Item(object):
-
-        """
-        Class that represents item that is stored by inventory object. It has following fields:
-
-        name - item name that is shown on the screen
-        type - item category
-        value - price that is used for trading
-        score - default amount of item when it's added into inventory
-        info - description that is shown when an item is focused
-        """
-
-
-        def __init__(self, name="", type=None, value=0, score=1, info=""):
-
-            self.name = name
-            self.type = type
-            self.value = int(value)
-            self.score = int(score)
-            self.info = info
-
-
-        def use(self, target):
-
-            # write your own code
-
-            return
-
-
-##############################################################################
-## Inventory class.
 
     class Inventory(object):
 
@@ -225,15 +196,21 @@ init -3 python:
         currency - score of money this object has
         tradein - when someone buyoff items to this inventory, value is reduced by this value
         infinite - if true, its currency and amont of items are infinite, like NPC merchant.
+        item_types - list of item type that are grouped up as tab in the inventory screen.
         items - list of item slots. item slot is a pair of ["item name", score]. items are stored as slot, not item object.
+                in this class, variable 'slot' means this pair, 'name' means slot[0], and 'score' mean slot[1].
         selected - selected slot in a current screen.
         """
 
-        def __init__(self, currency = 0, tradein = 1.0, infinite = False, items=None):
+        # Define default item categories
+        _item_types = []
+
+        def __init__(self, currency = 0, tradein = 1.0, infinite = False, item_types=None, items=None):
 
             self.currency = int(currency)
             self.tradein = float(tradein)
             self.infinite = infinite
+            self.item_types = item_types or self._item_types
             self.items = []
             if items:
                 for i in items:
@@ -250,81 +227,70 @@ init -3 python:
             elif name in dir(store): return getattr(store, name)
 
 
-        def get_slot(self, item):
-            # returns first slot that has a same item
-            # None if inventory deosn't have this item.
+        def get_slot(self, name):
+            # returns first slot that has this item
 
-            if item in self.items:
-                return item
+            if name in self.items:
+                return name
             for i in self.items:
-                if i[0] == item:
+                if i[0] == name:
                     return i
             return None
 
 
-        def has_item(self, item):
+        def has_item(self, name):
             # returns True if inventory has this item
 
-            return item in [i[0] for i in self.items]
+            return name in [i[0] for i in self.items]
 
 
-        def count_item(self, item):
+        def count_item(self, name):
             # returns sum of score of this item
 
-            return sum([i[1] for i in self.items if i[0] == item])
+            return sum([i[1] for i in self.items if i[0] == name])
 
 
-        def add_item(self, item, score = None, merge = True):
+        def add_item(self, name, score = None):
             # add an item
-            # if score is given, this score is used insted of item's default value.
-            # if merge is True, score is summed when inventory has same item
+            # if score is given, this score is used instead of item's default value.
 
-            slot = self.get_slot(item)
-            score = score or self.get_item(item).score
-            if slot and merge:
+            slot = self.get_slot(name)
+            score = score or self.get_item(name).score
+            if slot and self.get_item(name).stack:
                 slot[1] += score
             else:
-                self.items.append([item, score])
+                self.items.append([name, score])
 
 
-        def remove_item(self, item):
+        def remove_item(self, name):
             # remove an item
 
-            slot = self.get_slot(item)
+            slot = self.get_slot(name)
             if slot:
                 self.items.remove(slot)
 
 
-        def score_item(self, item, score, remove = True, add = True):
-            # changes score of item
+        def score_item(self, slot, score, remove = True):
+            # changes score of item slot
             # if remove is True, item is removed when score reaches 0
-            # if add is True, an item is added when inventory hasn't this item
 
-            slot = self.get_slot(item)
+            slot = self.get_slot(slot)
             if slot:
                 slot[1] += score
-                if remove and self.slot[1]<=0:
+                if remove and slot[1]<=0:
                     self.remove_item(slot)
-            elif add:
-                self.add_item(self, [item, score])
 
 
-        def use_item(self, item, target):
-            # uses item on target
-
-            self.get_item(item).use(target)
-
-
-        def buy_item(self, item, score = None, merge=True):
+        def buy_item(self, name, score = None):
             # buy an item
             # return True if trade is succeeded
 
-            score = score or self.get_item(item).score
-            value = self.get_item(item).value*score
+            score = score or self.get_item(name).score
+            value = self.get_item(name).value*score
             if self.infinite:
                 return True
             elif self.currency >= value:
-                self.add_item(item, score, merge)
+                self.add_item(name, score)
                 self.currency -= value
                 return True
 
@@ -332,19 +298,23 @@ init -3 python:
         def sell_item(self, slot, buyer, merge=True):
             # remove an item slot then add this item to buyer for money
 
-            score = self.get_item(slot[0]).score if self.infinite else slot[1]
-            rv = buyer.buy_item(slot[0], score, merge)
+            slot = self.get_slot(slot)
+            name = slot[0]
+            score = self.get_item(name).score if self.infinite else slot[1]
+            rv = buyer.buy_item(name, score)
             if rv and not self.infinite:
-                value = self.get_item(slot[0]).value*score
+                value = self.get_item(name).value*score
                 self.currency += int(value*buyer.tradein)
                 self.items.remove(slot)
 
 
-        def give_item(self, slot, getter, merge=True):
-            # remove an item slot then add this item to getter
+        def give_item(self, slot, getter):
+            # remove an item slot then add this name to getter
 
-            if merge and getter.has_item(slot[0]):
-                getter.score_item(slot[0], slot[1])
+            slot = self.get_slot(slot)
+            name = slot[0]
+            if getter.has_item(name) and self.get_item(name).stack:
+                getter.score_item(name, slot[1])
             else:
                 getter.items.append(slot)
             self.items.remove(slot)
@@ -362,13 +332,13 @@ init -3 python:
             # sort slots
 
             if order == "name":
-                self.items.sort(key = lambda item: self.get_item(item[0]).name)
+                self.items.sort(key = lambda slot: self.get_item(slot[0]).name)
             elif order == "type":
-                self.items.sort(key = lambda item: gui.item_types.index(self.get_item(item[0]).type))
+                self.items.sort(key = lambda slot: self.item_types.index(self.get_item(slot[0]).type))
             elif order == "price":
-                self.items.sort(key = lambda item: self.get_item(item[0]).value, reverse=True)
+                self.items.sort(key = lambda slot: self.get_item(slot[0]).value, reverse=True)
             elif order == "amount":
-                self.items.sort(key = lambda item: self.get_item(item[1]), reverse=True)
+                self.items.sort(key = lambda slot: slot[1], reverse=True)
 
 
         def get_all_items(self, namespace=store):
@@ -379,9 +349,57 @@ init -3 python:
                     self.add_item(i)
 
 
+        def use_item(self, slot, target):
+            # uses item slot on target
+
+            slot = self.get_slot(slot)
+            name = slot[0]
+            obj = self.get_item(name)
+            obj.use(target)
+            if obj.cost:
+                self.score_item(slot, -obj.cost)
+
+
+##############################################################################
+## Item class.
+
+    class Item(object):
+
+        """
+        Class that represents item that is stored by inventory object. It has following fields:
+
+        name - item name that is shown on the screen
+        type - item category
+        value - price that is used for trading
+        score - default amount of item when it's added into inventory]
+        stack - if true, this item raises score insted when same item is added.
+        consume - if true, useing this item reduces one score.
+        info - description that is shown when an item is focused
+        """
+
+
+        def __init__(self, name="", type="", value=0, score=1, cost=1, stack=True, info=""):
+
+            self.name = name
+            self.type = type
+            self.value = int(value)
+            self.score = int(score)
+            self.cost = int(cost)
+            self.stack = True if stack else False
+            self.info = info
+
+
+        def use(self, target):
+
+            # write your own code
+
+            return
+
+
 ##############################################################################
 ## Create namespace
 
 init -999 python in item:
     pass
+
 

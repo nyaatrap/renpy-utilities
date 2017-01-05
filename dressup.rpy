@@ -54,7 +54,7 @@ label sample_doll:
 
 ## まずドールオブジェクトを Doll(フォルダー名、 レイヤーのリスト、装備タイプのリスト、デフォルトの画像)
 ## で定義します。装備タイプはレイヤー名を使う必要があります。
-default erin2 = Doll("erin", layers=["base", "bottom", "top", "face"], types = ["bottom", "top"], base="base", face="happy")
+default erin2 = Doll("erin", layers=["base", "bottom", "top", "face"], equip_types = ["bottom", "top"], base="base", face="happy")
 image erin2 = LayeredDisplayable("erin2")
 
 ## 次にアイテムの保管者を定義します。
@@ -99,7 +99,7 @@ screen dressup(im, doll, inv):
     # doll
     vbox:
         label "Equipped"
-        for i in doll.types:
+        for i in doll.equip_types:
             hbox:
                 text i yoffset 8
                 if doll.equips.get(i):
@@ -109,10 +109,9 @@ screen dressup(im, doll, inv):
     # inv
     vbox xalign 1.0:
         label "Closet"
-        for i in inv.items:
-            $ item = i[0]
-            $ name = inv.get_item(item).name
-            textbutton name action Function(doll.equip_item, i, inv)
+        for slot in inv.items:
+            $ name = inv.get_item(slot[0]).name
+            textbutton name action Function(doll.equip_item, slot, inv)
 
     textbutton "Return" action Return() yalign 1.0
 
@@ -133,7 +132,7 @@ init -3 python:
 
         folder - dolfer name that this doll's images are stored.
         layers - folder names that this doll's each layer images are stored.
-        types - layer and type names that can be equipped when inventory system is using.
+        equip_types - layer and type names that can be equipped when inventory system is using.
 
         It also has fields as same as layer names. For example, self.base=None
         These field values are filenames of each layer.
@@ -145,14 +144,14 @@ init -3 python:
 
         # Define default eqippable item types
         # デフォルトの装備できるアイテムのタイプを定義します。
-        _types = ["feet", "bottom", "top"]
+        _equip_types = ["feet", "bottom", "top"]
 
 
-        def __init__(self, folder="", layers = None, types = None, **kwargs):
+        def __init__(self, folder="", layers = None, equip_types = None, **kwargs):
 
             self.folder = folder
             self.layers = layers or self._layers
-            self.types = types or self._types
+            self.equip_types = equip_types or self._equip_types
 
             # set default image on each layer
             for i in self.layers:
@@ -163,7 +162,7 @@ init -3 python:
 
             # dictionary whose keys are item types and values are list [item, amount]
             self.equips = {}
-            for i in self.types:
+            for i in self.equip_types:
                 self.equips.setdefault(i, None)
 
             # dictionary whose keys are layer names and values are lists of images
@@ -205,45 +204,52 @@ init -3 python:
         ## If you don't use inventory, ignore them
 
 
-        def equip_item(self, slot, inv, merge=True):
-            # equip item slot in this type from inv
+        def equip_item(self, slot, inv):
+            # equip item slot from inv
 
-            if slot:
-                type = inv.get_item(slot[0]).type
-                if type in self.types:
-                    if self.equips.get(type):
-                        self.unequip_item(type, inv, merge)
-                    self.equips[type] = slot
-                    inv.items.remove(slot)
-                    self.update()
-            else:
-                raise Exception("Couldn't find this item in inventory")
+            type = inv.get_item(slot[0]).type
+            if type in self.equip_types:
+                if self.equips.get(type):
+                    self.unequip_item(type, inv,)
+                self.equips[type] = slot
+                inv.items.remove(slot)
+                self.update()
 
 
-        def unequip_item(self, type, inv, merge=True):
-            # remove item slot in this type then add this to inv
+        def unequip_item(self, type, inv):
+            # remove item in this equip type then add this to inv
 
             slot = self.equips.get(type)
             if slot:
                 self.equips[type] = None
-                inv.add_item(slot[0], slot[1], merge)
+                inv.add_item(slot[0], slot[1])
                 self.update()
-            else:
-                raise Exception("Couldn't find this item type in equips")
 
 
-        def unequip_all_items(self, inv, merge=True):
+        def equip_all_items(self, inv):
+            # equip all slot randomly
+            
+            items = inv.items[:]
+            renpy.random.shuffle(items)
+
+            for i in items:
+                obj = inv.get_item(i[0])
+                if obj.type in self.equip_types and not self.equips.get(obj.type):
+                    self.equip_item(i, inv)
+
+
+        def unequip_all_items(self, inv):
             # remove all items
 
-            for i in self.types:
-                self.unequip_item(i, inv, merge)
+            for i in self.equip_types:
+                self.unequip_item(i, inv)
 
 
         def update(self):
             # call this method each time to change layers
 
             for i in self.layers:
-                if i in self.types:
+                if i in self.equip_types:
                     slot = self.equips.get(i)
                     if slot:
                         setattr(self, i, slot[0])
@@ -262,4 +268,5 @@ init -3 python:
         """
 
         return DynamicDisplayable(Doll.draw_doll, doll, flatten, kwargs)
+
 
