@@ -13,7 +13,7 @@
 ## skill の名前空間も使えます。
 
 define skill.attack = Skill("Attack", type="attack", value=5, target="foe")
-define skill.heal = Skill("Heal", type="heal", value=5, target="friend")
+define skill.heal = Skill("Heal", type="heal", value=10, target="friend")
 
 ## 次にアクターを Actor(name, skills, hp) で定義します。
 ## skills は上で定義したオブジェクトそのままを使います。
@@ -43,9 +43,9 @@ label sample_combat:
     $ arena.foes = [pawn, pawn2, pawn3]
 
     ## ここから競争開始。
-    call combat(arena)
+    call _combat(arena)
 
-    ## 競争が終わると結果を arena.state で知ることができます。
+    ## 競争が終わると結果を _return で知ることができます。
     if arena.state == "win":
          "You win"
 
@@ -54,9 +54,6 @@ label sample_combat:
 
     else:
         "Draw"
-
-    ## arena.reset で参加者の特性値を元に戻せます。
-    $ arena.reset()
 
     return
 
@@ -68,12 +65,13 @@ label sample_combat:
 ##############################################################################
 ## Combat label
 
-label combat(arena):
-
-    $ _rollback = False
+label _combat(arena):
 
     # initialize
-    $ arena.init()
+    python:
+        arena.init()
+        _rollback = False
+                
     show screen combat_ui(arena)
 
     while arena.state not in ["win", "lose", "draw"]:
@@ -83,28 +81,29 @@ label combat(arena):
             # get current actor to perform
             _actor = arena.get_turn()
 
-            # get skill and target
+            # set skill and target
             if _actor in arena.friends:
-                _skill = renpy.call_screen("choose_skill", _actor)
-                _target_list = arena.friends if _skill.target=="friend" else arena.foes
-                _target = renpy.call_screen("choose_target", _target_list)
+                _actor.skill = renpy.call_screen("choose_skill", _actor)
+                _actor.target = renpy.call_screen("choose_target", targets = arena.get_targets(_actor))
             else:
-                _skill = _actor.choose_skill()
-                _target_list = arena.foes if _skill.target=="friend" else arena.friends
-                _target = _actor.choose_target(_target_list)
+                _actor.skill = _actor.choose_skill()
+                _actor.target = _actor.choose_target(arena.get_targets(_actor))
 
             # perform skill
-            _actor.use_skill(_skill, _target)
+            _actor.use_skill()
 
             # update arena's state
             arena.update_state()
 
     hide screen battle_ui
-
-    $ _rollback = False
-    $ renpy.block_rollback()
-
-    return
+    
+    python:
+        _return = arena.state
+        arena.reset()
+        _rollback = False
+        renpy.block_rollback()
+        
+    return _return
 
 
 ##############################################################################
@@ -141,7 +140,7 @@ screen choose_skill(actor):
             textbutton i.name action Return(i)
 
 
-screen choose_target(actors):
+screen choose_target(targets):
 
     tag menu
     modal True
@@ -151,142 +150,14 @@ screen choose_target(actors):
 
     # commands
     vbox align .5, .5:
-        for i in actors:
+        for i in targets:
             textbutton i.name action Return(i)
 
 
 ##############################################################################
-## Skill class.
+## Arena class.
 
 init -3 python:
-
-    class Skill(object):
-
-        """
-        Class that represents skill that is stored by actor object. It has follwing fields:
-
-        name - skill name that is shown on the screen
-        type - skill category
-        value - quality of skill
-        target - target of skill. if not "friend", "foe" is default
-        info - description that is shown when an skill is focused
-        """
-
-        types = ["attack", "heal"]
-
-
-        def __init__(self, name="", type=None, value=0, target="foe", info=""):
-
-            self.name = name
-            self.type = type
-            self.value = int(value)
-            self.target = target
-            self.info = info
-
-
-        def use(self, target):
-            # use skill on target.
-
-            if self.type == "attack":
-                target.hp -= self.value
-                narrator ("{} loses {} HP".format(target.name, self.value))
-
-            elif self.type == "heal":
-                target.hp += self.value
-                narrator ("{} gains {} HP".format(target.name, self.value))
-
-            # write your own code
-
-            return
-
-
-##############################################################################
-## Actor class.
-
-    class Actor(object):
-
-        """
-        Class that performs skills. It has follwing fields:
-
-        name - name of this actor
-        skills - list of skills
-        attribute - there are many values defined by self.attr = value form
-                attribute can be defined the blow
-        default_attrribute - default value of attribute. if it's positive number, attribute's value is limited to this value.
-        """
-
-        # This will create self.hp and self.default_hp
-        attributes = ["hp"]
-
-        def __init__(self, name="", skills=None, **kwargs):
-
-            self.name = name
-            self.skills = skills or []
-
-            # creates attributes as field value
-            for i in self.attributes:
-                if i in kwargs.keys():
-                    setattr(self, "default_"+i, kwargs[i])
-                    setattr(self, i, kwargs[i])
-                else:
-                    setattr(self, "default_"+i, None)
-                    setattr(self, i, None)
-
-
-        def copy(self, name=None):
-            # Returns copy of actor, changing its name.
-
-            from copy import copy
-
-            actor = copy(self)
-            if name:
-                actor.name = name
-
-            return copy(actor)
-
-
-        def update_state(self):
-            # call this each turn to amend invalid attributes
-
-            for i in self.attributes:
-                attr = getattr(self, i)
-                max = getattr(self, "default_"+i)
-                if max > 0 and attr > max:
-                    setattr(self, i, max)
-                if attr < 0:
-                    setattr(self, i, 0)
-
-
-        def reset(self):
-            # reset attributes
-
-            for i in self.attributes:
-                setattr(self, i, getattr(self, "default_"+i))
-
-
-        def use_skill(self, skill, target):
-            # use skill on target
-
-            skill.use(target)
-            self.update_state()
-            target.update_state()
-
-
-        def choose_skill(self):
-            # returns skill randomly
-
-            return renpy.random.choice(self.skills)
-
-
-        def choose_target(self, actors):
-            # returns target randomly
-
-            return renpy.random.choice([x for x in actors if x.hp>0])
-
-
-
-##############################################################################
-## Arena class.
 
     class Arena(object):
 
@@ -330,6 +201,17 @@ init -3 python:
                 self.order.append(actor)
                 if actor.hp > 0:
                     return actor
+            
+            
+        def get_targets(self, actor):
+            # returns list of targets.
+            
+            if not actor.skill or actor not in self.order:
+                return []
+            if actor in self.friends:
+                return self.foes if actor.skill.target=="foe" else self.friends 
+            if actor in self.foes:
+                return self.friends if actor.skill.target=="foe" else self.foes 
 
 
         def update_state(self):
@@ -348,6 +230,143 @@ init -3 python:
                 self.state = "win"
 
 
+##############################################################################
+## Actor class.
+
+    class Actor(object):
+
+        """
+        Class that performs skills. It has follwing fields:
+
+        name - name of this actor
+        skills - list of skills
+        attribute - there are many values defined by self.attr = value form
+                attribute can be defined the blow
+        default_attrribute - default value of attribute. if it's positive number, attribute's value is limited to this value.
+        """
+
+        # This will create self.hp and self.default_hp
+        attributes = ["hp"]
+
+        def __init__(self, name="", skills=None, **kwargs):
+
+            self.name = name
+            self.skills = skills or []
+            self.skill = None
+            self.target = None
+
+            # creates attributes as field value
+            for i in self.attributes:
+                if i in kwargs.keys():
+                    setattr(self, "default_"+i, kwargs[i])
+                    setattr(self, i, kwargs[i])
+                else:
+                    setattr(self, "default_"+i, None)
+                    setattr(self, i, None)
+
+
+        def copy(self, name=None):
+            # Returns copy of actor, changing its name.
+
+            from copy import deepcopy
+
+            actor = deepcopy(self)
+            if name:
+                actor.name = name
+
+            return actor
+
+
+        def update_state(self):
+            # call this each turn to amend invalid attributes
+
+            for i in self.attributes:
+                attr = getattr(self, i)
+                max = getattr(self, "default_"+i)
+                if max > 0 and attr > max:
+                    setattr(self, i, max)
+                if attr < 0:
+                    setattr(self, i, 0)
+
+
+        def reset(self):
+            # reset attributes
+
+            for i in self.attributes:
+                setattr(self, i, getattr(self, "default_"+i))
+
+            self.skill = None
+            self.target = None
+            
+
+        def use_skill(self, skill=None, target=None):
+            # use skill on target
+            
+            skill = skill or self.skill
+            target = target or self.target
+
+            skill.use(target)
+            
+            self.update_state()
+            target.update_state()
+
+
+        def choose_skill(self):
+            # returns skill randomly
+
+            return renpy.random.choice(self.skills)
+
+
+        def choose_target(self, targets):
+            # returns target randomly
+
+            return renpy.random.choice([x for x in targets if x.hp>0])
+
+
+
+##############################################################################
+## Skill class.
+
+    class Skill(object):
+
+        """
+        Class that represents skill that is stored by actor object. It has follwing fields:
+
+        name - skill name that is shown on the screen
+        type - skill category
+        value - quality of skill
+        target - target of skill. if not "friend", "foe" is default
+        info - description that is shown when an skill is focused
+        """
+
+        types = ["attack", "heal"]
+
+
+        def __init__(self, name="", type=None, value=0, target="foe", info=""):
+
+            self.name = name
+            self.type = type
+            self.value = int(value)
+            self.target = target
+            self.info = info
+
+
+        def use(self, target):
+            # use skill on target.
+
+            if self.type == "attack":
+                target.hp -= self.value
+                narrator ("{} loses {} HP".format(target.name, self.value))
+
+            elif self.type == "heal":
+                target.hp += self.value
+                narrator ("{} gains {} HP".format(target.name, self.value))
+
+            # write your own code
+
+            return
+            
+            
 ##############################################################################
 ## Create namespace
 
