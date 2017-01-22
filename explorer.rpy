@@ -95,14 +95,14 @@ label explore:
     $ explorer.after_interact = False
 
     # Play music
-    if explorer.lv.music:
-        if renpy.music.get_playing() != explorer.lv.music:
-            play music explorer.lv.music fadeout 1.0
+    if explorer.music:
+        if renpy.music.get_playing() != explorer.music:
+            play music explorer.music fadeout 1.0
 
     # Show background
-    if explorer.lv.image:
+    if explorer.image:
         scene black with Dissolve(.25)
-        scene expression explorer.lv.image
+        scene expression explorer.image
         with Dissolve(.25)
 
     jump explore_loop
@@ -226,7 +226,7 @@ init -3 python:
     class Event(object):
 
         """
-        Class that represents events that is places on level or place. It has the following fileds:
+        Class that represents events that is places on level or place. It has the following fields:
 
         level - String of level where this events placed onto.
         pos - (x, y) coordinate on the screen.
@@ -266,7 +266,13 @@ init -3 python:
     class Explorer(object):
 
         """
-        Class that stores various methods and data for explroring.
+        Class that stores various methods and data for explroring. It has the following fields:
+        
+        level - current level.
+        pos - current coordinate
+        image - image that is shown behind events
+        music - music that is played while explorer in this level
+        event - current event
         """
 
         def __init__(self, level=None, pos=None, **kwargs):
@@ -286,10 +292,13 @@ init -3 python:
 
 
         @property
-        def lv(self):
-            # shortcut to access the current level
-
-            return self.get_level(self.level)
+        def music(self):
+            return self.get_level(self.level).music
+            
+            
+        @property
+        def image(self):
+            return self.get_level(self.level).image
 
 
         def seen(self, ev):

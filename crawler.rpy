@@ -100,17 +100,17 @@ label crawl:
     $ crawler.after_interact = False
 
     # Play music
-    if crawler.lv.music:
-        if renpy.music.get_playing() != crawler.lv.music:
-            play music crawler.lv.music fadeout 1.0
+    if crawler.music:
+        if renpy.music.get_playing() != crawler.music:
+            play music crawler.music fadeout 1.0
 
     # Show background
-    if crawler.lv.image:
+    if crawler.image:
         scene black with Dissolve(.25)
         if crawler.in_dungeon():
             $ crawler.draw_dungeon()
         else:
-            scene expression crawler.lv.image
+            scene expression crawler.image
         with Dissolve(.25)
 
     jump crawl_loop
@@ -161,7 +161,7 @@ label crawl_loop:
                 jump crawl_loop
 
             # collision
-            elif isinstance(_return, Coordinate) and crawler.lv.map[_return.y][_return.x] in crawler.lv.collision:
+            elif isinstance(_return, Coordinate) and crawler.map[_return.y][_return.x] in crawler.collision:
 
                 # check passive events
                 $ block()
@@ -346,6 +346,18 @@ init -2 python:
         """
         Expanded Explorer Class that stores various methods and data for crawling.
         """
+            
+        @property
+        def map(self):
+            return self.get_level(self.level).map
+            
+        @property
+        def mapping(self):
+            return self.get_level(self.level).mapping
+            
+        @property
+        def collision(self):
+            return self.get_level(self.level).collision
 
 
         def in_dungeon(self):
@@ -359,14 +371,14 @@ init -2 python:
 
             if ev.pos == None or ev.pos == pos:
                 return True
-            if not isinstance(self.lv, Dungeon) and click:
+            if not self.in_dungeon() and click:
                 return True
             elif pos:
                 if len(ev.pos) == 2:
                     if ev.pos[0] == pos[0] and ev.pos[1] == pos[1]:
                         return True
                 else:
-                    if ev.pos == self.lv.map[pos[1]][pos[0]]:
+                    if ev.pos == self.map[pos[1]][pos[0]]:
                         return True
 
 
@@ -374,9 +386,9 @@ init -2 python:
             # Draw front view image on the coord on the master layer.
 
             coord = Coordinate(*self.pos)
-            tag = self.lv.image
-            map = self.lv.map
-            mapping = self.lv.mapping
+            tag = self.image
+            map = self.map
+            mapping = self.mapping
 
             # Calculate relative coordinates
             floor = coord
