@@ -286,17 +286,16 @@ init -3 python:
 
         def buy_item(self, name, score = None):
             # buy an item
-            # return True if trade is succeeded
 
             score = score or self.get_item(name).score
             value = self.get_item(name).value*score
             
-            if self.infinite or self.currency >= value:
+            if not self.infinite and self.currency >= value:
                 self.add_item(name, score)
                 self.currency -= value
 
 
-        def sell_item(self, slot, buyer, merge=True):
+        def sell_item(self, slot, buyer):
             # remove an item slot then add this item to buyer for money
 
             slot = self.get_slot(slot)
