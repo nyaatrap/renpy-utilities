@@ -61,12 +61,12 @@ image erin2 = LayeredDisplayable("erin2")
 ## inventory.rpy がなくてもエラーにならないように、コメントアウトしています。
 #default closet = Inventory()
 
-## 各アイテムを Item(名前、装備タイプ) で定義します。item の名前空間も使えます。
-## 名前がファイル名、タイプがフォルダ名になるようにします。
-#define item.pleated_skirt = Item("Pleated Skirt", type="bottom")
-#define item.buruma = Item("Buruma", type="bottom")
-#define item.school_sailor = Item("School Sailer", type="top")
-#define item.gym_shirt = Item("Gym Shirt", type="top")
+## 各アイテムを Item(名前、装備タイプ、効果) で定義します。item の名前空間も使えます。
+## 装備タイプがフォルダ名、効果がそのフォルダの画像ファイル名になるようにします。
+#define item.pleated_skirt = Item("Pleated Skirt", type="bottom", effect = "pleated_skirt")
+#define item.buruma = Item("Buruma", type="bottom", effect = "buruma")
+#define item.school_sailor = Item("School Sailer", type="top", effect = "school_sailor")
+#define item.gym_shirt = Item("Gym Shirt", type="top", effect = "gym_shirt")
 
 ## 以上で準備完了です。
 
@@ -75,7 +75,7 @@ image erin2 = LayeredDisplayable("erin2")
 
 label sample_dressup:
 
-    # it で定義された全てのアイテムを closet に追加
+    # item で定義された全てのアイテムを closet に追加
     $ closet.get_all_items(store.item)
 
     # dressup スクリーンを（"画像"、ドール、保管者）で呼び出します。
@@ -130,7 +130,7 @@ init -3 python:
         """
         class that stores equips and layer infomation. It has the following fields:
 
-        folder - dolfer name that this doll's images are stored.
+        folder - folder name that this doll's images are stored.
         layers - folder names that this doll's each layer images are stored.
         equip_types - layer and type names that can be equipped when inventory system is using.
 
@@ -160,7 +160,7 @@ init -3 python:
                 else:
                     setattr(self, i, None)
 
-            # dictionary whose keys are item types and values are list [item, amount]
+            # dictionary whose keys are item types and values are list [item, score]
             self.equips = {}
             for i in self.equip_types:
                 self.equips.setdefault(i, None)
@@ -210,9 +210,9 @@ init -3 python:
             type = inv.get_item(slot[0]).type
             if type in self.equip_types:
                 if self.equips.get(type):
-                    self.unequip_item(type, inv,)
+                    self.unequip_item(type, inv)
                 self.equips[type] = slot
-                inv.items.remove(slot)
+                inv.remove_item(slot)
                 self.update()
 
 
@@ -252,7 +252,7 @@ init -3 python:
                 if i in self.equip_types:
                     slot = self.equips.get(i)
                     if slot:
-                        setattr(self, i, slot[0])
+                        setattr(self, i, Inventory.get_item(slot[0]).effect)
                     else:
                         setattr(self, i, None)
 

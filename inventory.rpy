@@ -46,6 +46,8 @@ label sample_inventory:
     ## remove_item(item) - 所持していれば、そのアイテムを奪います。
     ## score_item(item, score) - 所持している個数を変更します。
     ## buy_item(item, score) - 所持金が足りていれば、それを消費してアイテムを追加します。
+    ## sell_item(item, buyer, score) - アイテムを buyer に売却し、所持金を受け取ります。
+    ## give_item(item, getter) - アイテムを getter に渡します。
 
 
     while True:
@@ -225,7 +227,8 @@ init -3 python:
             if isinstance(name, Item): return name
             elif name in dir(store.item): return getattr(store.item, name)
             elif name in dir(store): return getattr(store, name)
-
+            else: raise Exception("Item '{}' is not defined".format("name"))
+            
 
         def get_slot(self, name):
             # returns first slot that has this item
@@ -278,7 +281,7 @@ init -3 python:
             if slot:
                 slot[1] += score
                 if remove and slot[1]<=0:
-                    self.remove_item(slot)
+                    self.remove_item(slot)          
 
 
         def buy_item(self, name, score = None):
@@ -287,12 +290,10 @@ init -3 python:
 
             score = score or self.get_item(name).score
             value = self.get_item(name).value*score
-            if self.infinite:
-                return True
-            elif self.currency >= value:
+            
+            if self.infinite or self.currency >= value:
                 self.add_item(name, score)
                 self.currency -= value
-                return True
 
 
         def sell_item(self, slot, buyer, merge=True):
@@ -301,11 +302,14 @@ init -3 python:
             slot = self.get_slot(slot)
             name = slot[0]
             score = self.get_item(name).score if self.infinite else slot[1]
-            rv = buyer.buy_item(name, score)
-            if rv and not self.infinite:
-                value = self.get_item(name).value*score
-                self.currency += int(value*buyer.tradein)
-                self.items.remove(slot)
+            value = self.get_item(name).value*score
+            
+            buyer.buy_item(name, score)
+            
+            if buyer.infinite or buyer.currency >= value:
+                if not self.infinite:
+                    self.currency += int(value*buyer.tradein)
+                    self.items.remove(slot)
 
 
         def give_item(self, slot, getter):
@@ -370,18 +374,20 @@ init -3 python:
 
         name - item name that is shown on the screen
         type - item category
+        effect - effect on use.
         value - price that is used for trading
-        score - default amount of item when it's added into inventory]
-        stack - if true, this item raises score insted when same item is added.
-        consume - if true, useing this item reduces one score.
+        score - default amount of item when it's added into inventory
+        stack - if true, this item raises score instead of adding a new item slot.
+        cost - if not zero, useing this item reduces score.
         info - description that is shown when an item is focused
         """
 
 
-        def __init__(self, name="", type="", value=0, score=1, cost=1, stack=True, info=""):
+        def __init__(self, name="", type="", effect="", value=0, score=1, cost=1, stack=True, info=""):
 
             self.name = name
             self.type = type
+            self.effect = effect
             self.value = int(value)
             self.score = int(score)
             self.cost = int(cost)
@@ -391,7 +397,8 @@ init -3 python:
 
         def use(self, target):
 
-            # write your own code
+            # if self.effect == xxx:
+            #   do something
 
             return
 
