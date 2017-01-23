@@ -226,6 +226,8 @@ init -3 python:
 ##############################################################################
 ## Doll2 class
         
+init -2 python:
+    
     class Doll2(Doll):
         
         """
@@ -263,7 +265,7 @@ init -3 python:
                 self.equips[type] = name
                 inv.score_item(name, -1)
                 
-                self.update()
+                self.update(inv)
 
 
         def unequip_item(self, type, inv):
@@ -274,7 +276,7 @@ init -3 python:
                 inv.score_item(self.equips[type], 1)
                 self.equips[type] = None
                 
-                self.update()
+                self.update(inv)
 
 
         def equip_all_items(self, inv):
@@ -296,13 +298,13 @@ init -3 python:
                 self.unequip_item(i, inv)
 
 
-        def update(self):
+        def update(self, inv):
             # call this method each time to change layers
 
             for i in self.layers:
                 if i in self.equip_types:
                     if self.equips.get(i):
-                        obj = Inventory.get_item(self.equips.get(i))
+                        obj = inv.get_item(self.equips.get(i))
                         if obj.effect:
                             setattr(self, i, obj.effect)
                         else:
