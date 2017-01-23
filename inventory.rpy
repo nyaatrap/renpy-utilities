@@ -231,26 +231,31 @@ init -3 python:
             else: raise Exception("Item '{}' is not defined".format(name))
             
             
-        def get_items(self, types = None, check_score=False):
-            # returns list of item objects
-            # if types is given it only returns in this types
+        def get_items(self, score=None, types = None, obj=False):
+            # returns list of items in conditions
+            # if obj is True, it returns objects instead of names
             
-            items = [self.get_item(k) for k, v in self.items.items() if not check_score or v > 0]
+            items = [k for k,v in self.items.items() if score==None or v >= score]
             
-            return items if not type else  [i for i in items if i.type in types] 
+            if types:
+                items = [i for i in items if self.get_item(i).type in types]
+            if obj:
+                items = [self.get_item(i) for i in items]
+                
+            return items
             
 
-        def has_item(self, name, check_score=False):
-            # returns True if inventory has this item
+        def has_item(self, name, score=None):
+            # returns True if inventory has this item whose score is higher than give.
             
             # check valid name or not
             self.get_item(name)
 
-            return name in [k for k, v in self.items.items() if not check_score or v > 0]
+            return name in [k for k, v in self.items.items() if score==None or v > score]
 
 
         def count_item(self, name):
-            # returns sum of score of this item
+            # returns score of this item
             
             if self.has_item(name):
                 return self.items[name]
