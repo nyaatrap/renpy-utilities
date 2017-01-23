@@ -3,20 +3,26 @@
 # https://www.renpy.org/doc/html/keymap.html
 
 
-################################################################################
+################################################################################]
+# This block defines new functions for keymap.
+# You can only uncomment key names that will be bound to certain keys.
 # 次の init python ブロックは、デフォルトで用意されていない機能を定義しています。
 # 必要な機能のみアンコメントしてください。割り当てに使う名前を定義した場合は
 # 後で必ず何らかのキーを割り振る必要があります。
 
 init python:
 
+    # Add 'toggle_afm' key name.
     # 文字自動送り機能が使えるように、割り当てに使う名前 'toggle_afm' を追加します。
     config.underlay.append(renpy.Keymap(toggle_afm = Preference("auto-forward", "toggle")))
 
+    # Add 'history' key name.
     # ヒストリー機能が使えるように、割り当てに使う名前 'history' を追加します。
     # config.underlay.append(renpy.Keymap(history = ShowMenu("history")))
 
 
+    # To bind a new key name to a new function, define its function then bind it to key name.
+    # This example adds a function that changes Language from None to 'English'.
     # 独自の新しい機能を追加したい場合には、まず関数を定義してから割り当てに使う名前を追加します。
     # 次の例は、基本言語（None で定義された言語）と英語を入れ替える機能を追加しています。
 
@@ -33,50 +39,62 @@ init python:
 
 
 ################################################################################
+# This block overwrites ren'py's default keymaps
 # 次の init 1 python は、個々のキーと機能の割り当てを上書き・変更します。
 # 必要な機能があれば、アンコメント（冒頭の # を削除）して有効化してください。
 
 init 1 python:
 
+    # Allow reading game with mouse wheel down
     # マウスホイール下回転で読み進められるようにします。
     config.keymap['dismiss'].append('mousedown_5')
 
+    # Allow viewport scrolling by pageup/pagedown
     # viewport を pageup や pagedown でスクロールできるようにします。
     config.keymap['viewport_up'].extend(['K_PAGEUP', 'repeat_K_PAGEUP'])
     config.keymap['viewport_down'].extend(['K_PAGEDOWN', 'repeat_K_PAGEDOWN'])
 
+    # Replace rollback with history
     # ロールバックをヒストリーと置き換えます。
     # config.keymap["rollback"] = []
     # config.keymap["history"] = [ 'K_PAGEUP', 'repeat_K_PAGEUP', 'K_AC_BACK', 'mousedown_4' ]
 
+    # Bind 'a' to toggle_afm
     # オート機能を a に割り当てます。
     config.keymap["toggle_afm"] = ['a']
 
+    # Bind 's' to toggle_skip
     # スキップ機能を s に追加します。
     # config.keymap['toggle_skip'].append('s')
 
+    # Bind 'F12' to screenshot
     # スクリーンショット機能を F12 に追加します。
     # config.keymap['screenshot'].append('K_F12')
 
+    # Bind 'toggle_language' to F2
     # 上で定義した言語入れ替え機能を F2 に割り当てます。
     # config.keymap["toggle_language"] = 'K_F2'
 
+    # Change the space key from 'dismiss' into 'hide windows'
     # スペースキーを、読み進めからウィンドウ非表示に変更します。
     # config.keymap['dismiss'].remove('K_SPACE')
     # config.keymap['hide_windows'].append('K_SPACE')
 
+    # Swap right click and middle click
     # 右クリックのメニュー表示機能と、中クリックのウィンドウ非表示機能を入れ替えます。
     # config.keymap['hide_windows'].remove('mouseup_2')
     # config.keymap['game_menu'].remove('mouseup_3')
     # config.keymap['game_menu'].append('mouseup_2')
     # config.keymap['hide_windows'].append('mouseup_3')
 
+    # Disable key bindings that is not used a lot.
     # 打ち間違えしやすいキーの割り当てを解除します。
     # config.keymap['self_voicing'].remove('v')
     # config.keymap['toggle_fullscreen'].remove('f')
     # config.keymap['screenshot'].remove('s')
     # config.keymap['hide_windows'].remove('h')
 
+    # Make button action immediately when pressed.
     # 以下は、マウスボタンが離したときではなく、押した時に即反応するようにします。
     # 一般的には推奨されません。
     # config.keymap['button_ignore'].remove('mousedown_1')
@@ -85,6 +103,7 @@ init 1 python:
     # config.keymap['dismiss'].remove('mouseup_1')
     # config.keymap['dismiss'].append('mousedown_1')
 
+    # These bind functions into gemepads.
     # 以下は、ゲームパッドにデフォルトで定義されていない機能を割り当てます。
     config.pad_bindings["pad_a_press"] = [ "dismiss", "button_select", "bar_activate", "bar_deactivate"]
     config.pad_bindings["pad_b_press"] = [ "button_alternate", "game_menu", "bar_deactivate" ]
