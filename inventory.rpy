@@ -48,6 +48,7 @@ label sample_inventory:
     ## buy_item(item, score) - 所持金が足りていれば、それを消費してアイテムを追加します。
     ## sell_item(item, buyer) - アイテムを buyer に売却し、所持金を受け取ります。
     ## give_item(item, getter) - アイテムを getter に渡します。
+    ## use_item(item, target) - アイテムを target に使用します。効果は各アイテムごと定義してください。
 
 
     while True:
