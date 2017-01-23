@@ -230,13 +230,16 @@ init -3 python:
             else: raise Exception("Item '{}' is not defined".format(name))
             
             
-        def get_items(self, check_score=True):
+        def get_items(self, types = None, check_score=False):
             # returns list of item objects
+            # if types is given it only returns in this types
             
-            return [self.get_item(k) for k, v in self.items.items() if not check_score or v > 0]
+            items = [self.get_item(k) for k, v in self.items.items() if not check_score or v > 0]
+            
+            return items if not type else  [i for i in items if i.type in types] 
             
 
-        def has_item(self, name, check_score=True):
+        def has_item(self, name, check_score=False):
             # returns True if inventory has this item
             
             # check valid name or not
