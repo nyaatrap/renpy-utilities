@@ -425,28 +425,39 @@ init -3 python:
         def get_level(self, name):
             # returns level object from name
 
-            if isinstance(name, Level): return name
-            elif name in dir(store.level): return getattr(store.level, name)
-            elif name in dir(store): return getattr(store, name)
+            if isinstance(name, Level):
+                return name
+                
+            elif isinstance(name, basestring):
+                obj = getattr(store.level, name, None) or getattr(store, name, None)
+                if obj: 
+                    return obj
 
 
         @classmethod
         def get_place(self, name):
             # make place object from name
 
-            if isinstance(name, Place): return name
-            elif name in dir(store.place): return getattr(store.place, name)
-            elif name in dir(store): return getattr(store, name)
+            if isinstance(name, Place): 
+                return name
+                
+            elif isinstance(name, basestring):
+                obj = getattr(store.place, name, None) or getattr(store, name, None)
+                if obj: 
+                    return obj
 
 
         @classmethod
         def get_event(self, name):
             # make event object from name
 
-            if isinstance(name, Event): return name
-            elif name in dir(store.event): return getattr(store.event, name)
-            elif name in dir(store.ev): return getattr(store.ev, name)
-            elif name in dir(store): return getattr(store, name)
+            if isinstance(name, Event): 
+                return name
+                
+            elif isinstance(name, basestring):
+                obj = getattr(store.event, name, None) or getattr(store.ev, name, None) or getattr(store, name, None)
+                if obj: 
+                    return obj
 
 
 ##############################################################################

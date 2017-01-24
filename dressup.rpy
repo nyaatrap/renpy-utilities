@@ -62,15 +62,17 @@ default erin2 = Doll2("erin", layers=["base", "bottom", "top", "face"], equip_ty
 image erin2 = LayeredDisplayable("erin2")
 
 ## 次にアイテムの保管者を定義します。
-## inventory.rpy がなくてもエラーにならないように、コメントアウトしています。
-#default closet = Inventory()
+## getattr は Inventory が見つからない場合にエラーが起きないようにしています。
+default closet = Inventory() if getattr(store, "Inventory", None) else None
 
 ## 各アイテムを Item(名前、装備タイプ、効果) で定義します。item の名前空間も使えます。
 ## 装備タイプがフォルダ名、効果がそのフォルダの画像ファイル名になるようにします。
-#define item.pleated_skirt = Item("Pleated Skirt", type="bottom", effect = "pleated_skirt")
-#define item.buruma = Item("Buruma", type="bottom", effect = "buruma")
-#define item.school_sailor = Item("School Sailer", type="top", effect = "school_sailor")
-#define item.gym_shirt = Item("Gym Shirt", type="top", effect = "gym_shirt")
+init python:
+    if getattr(store, "Item", None):
+        item.pleated_skirt = Item("Pleated Skirt", type="bottom", effect = "pleated_skirt")
+        item.buruma = Item("Buruma", type="bottom", effect = "buruma")
+        item.school_sailor = Item("School Sailer", type="top", effect = "school_sailor")
+        item.gym_shirt = Item("Gym Shirt", type="top", effect = "gym_shirt")
 
 ## 以上で準備完了です。
 
@@ -188,21 +190,23 @@ init -3 python:
         def draw_doll(st, at, doll, flatten=False, kwargs=None):
             # Function that is used for dynamic displayable.
 
-            layers=[]
+            doll = getattr(store, doll, None)
             
-            if doll in dir(store) :
-                doll = getattr(store, doll)
-                folder = doll.folder
+            if not doll:
+                return Null(), None
 
-                for layer in doll.layers:
-                    if kwargs:
-                        item = kwargs.get(layer) or getattr(doll, layer)
-                    else:
-                        item = getattr(doll, layer)
-                    if item:
-                        image = "{}/{}/{}.png".format(folder, layer, item)
-                        if renpy.loadable(image):
-                            layers.append(image)
+            layers=[]
+            folder = doll.folder
+
+            for layer in doll.layers:
+                if kwargs:
+                    item = kwargs.get(layer) or getattr(doll, layer)
+                else:
+                    item = getattr(doll, layer)
+                if item:
+                    image = "{}/{}/{}.png".format(folder, layer, item)
+                    if renpy.loadable(image):
+                        layers.append(image)
 
             if flatten:
                 return Flatten(Fixed(*layers, fit_first=True)), None

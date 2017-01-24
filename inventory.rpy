@@ -225,10 +225,15 @@ init -3 python:
         def get_item(self, name):
             # returns item object from name
 
-            if isinstance(name, Item): return name
-            elif name in dir(store.item): return getattr(store.item, name)
-            elif name in dir(store): return getattr(store, name)
-            else: raise Exception("Item '{}' is not defined".format(name))
+            if isinstance(name, Item): 
+                return name
+                
+            elif isinstance(name, basestring):
+                obj = getattr(store.item, name, None) or getattr(store, name, None)
+                if obj: 
+                    return obj
+                
+            raise Exception("Item '{}' is not defined".format(name))
             
             
         def get_items(self, score=None, types = None, obj=False):
