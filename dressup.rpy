@@ -43,8 +43,8 @@ label sample_doll:
     $ erin.face = "angry"
     pause
     
-    ## reset() でデフォルトの状態に戻します。
-    $ erin.reset()
+    ## reset_layers() でデフォルトの状態に戻します。
+    $ erin.reset_layers()
     pause
 
     return
@@ -179,7 +179,7 @@ init -3 python:
                         self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace(".png", ""))
                         
                         
-        def reset(self):
+        def reset_layers(self):
             # reset layers to the default
             
             for i in self.layers:
@@ -269,7 +269,7 @@ init -2 python:
                 self.equips[type] = name
                 inv.score_item(name, -1)
                 
-                self.update(inv)
+                self.update_layers(inv)
 
 
         def unequip_item(self, type, inv):
@@ -280,7 +280,7 @@ init -2 python:
                 inv.score_item(self.equips[type], 1)
                 self.equips[type] = None
                 
-                self.update(inv)
+                self.update_layers(inv)
 
 
         def equip_all_items(self, inv):
@@ -302,7 +302,7 @@ init -2 python:
                 self.unequip_item(i, inv)
 
 
-        def update(self, inv):
+        def update_layers(self, inv):
             # call this method each time to change layers
 
             for i in self.layers:
