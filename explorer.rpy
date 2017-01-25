@@ -245,9 +245,9 @@ init -3 python:
         def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False, 
             precede=False, click=False, image=None, label=None, info=""):
 
-            place = Explorer.get_place(level)
-            self.level = place.level if place else level
-            self.pos = place.pos if place else pos
+            self.place = level if Explorer.get_place(level) else None
+            self._level = None if self.place else level
+            self._pos = None if self.place else pos
             self.cond = cond
             self.priority = int(priority)
             self.once = once
@@ -258,6 +258,22 @@ init -3 python:
             self.label = label
             self.info = info
             self.name = ""
+            
+        @property
+        def level(self):
+            return Explorer.get_place(self.place).level if self.place else self._level
+            
+        @level.setter
+        def level(self, value):
+            self._level = value
+            
+        @property
+        def pos(self):
+            return Explorer.get_place(self.place).pos if self.place else self._pos
+            
+        @pos.setter
+        def pos(self, value):
+            self._pos = value
 
 
 ##############################################################################
