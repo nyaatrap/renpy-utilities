@@ -6,22 +6,24 @@
 ## How to Use
 ##############################################################################
 
-## まずアクターが使用するスキルを Skill(name, type, value、target) で定義します。
-## type は使用した時の効果です。"attack", "heal" 以外は Skill クラスに書き加えます。
-## value は効果のスキルを使用した時の効果の強さです。
+## まずアクターが使用するスキルを Skill(name, type, effect, target, value, score, cost) で定義します。
+## type は表示されるスキルのカテゴリーです。
+## effect は使用した時の効果です。"attack", "heal" 以外は Skill クラスに書き加えます。
 ## target はスキルを使う相手で "friend" か "foe" があります。
+## value は効果のスキルを使用した時の効果の強さです。
+## score, cost は使用回数があるスキルに使います。デフォルトは1と0です。
 ## skill の名前空間も使えます。
 
-define skill.attack = Skill("Attack", type="attack", value=5, target="foe")
-define skill.heal = Skill("Heal", type="heal", value=10, target="friend")
+define skill.attack = Skill("Attack", type="active", effect="attack", target="foe", value=5)
+define skill.heal = Skill("Heal", type="active", effect="heal", target="friend", value=10, score=5, cost=1)
 
 ## 次にアクターを Actor(name, skills, hp) で定義します。
-## skills は上で定義したオブジェクトそのままを使います。
+## skills は skill. を外した文字列です。
 ## hp 以外の特性値は Actor クラスを書き換えることで追加します。
 
-default knight = Actor("Knight", [skill.attack], hp=20)
-default bishop = Actor("Bishop", [skill.attack, skill.heal], hp=15)
-default pawn = Actor("Pawn A", [skill.attack], hp=10)
+default knight = Actor("Knight", skills=["attack"], hp=20)
+default bishop = Actor("Bishop", skills=["attack", "heal"], hp=15)
+default pawn = Actor("Pawn A", skills=["attack"], hp=10)
 
 ## actor.copy(name) で同じ能力のアクターを名前を変えてコピーします。
 default pawn2 = pawn.copy("Pawn B")
@@ -99,7 +101,7 @@ label _combat(arena):
     
     python:
         _return = arena.state
-        arena.reset()
+        arena.reset_state()
         _rollback = False
         renpy.block_rollback()
         
@@ -136,8 +138,9 @@ screen choose_skill(actor):
 
     # commands
     vbox align .5, .5:
-        for i in actor.skills:
-            textbutton i.name action Return(i)
+        for name, score, obj in actor.get_skills(types=["active"]):
+            $ score_text = " ({}/{})".format(score, obj.score) if obj.cost else "" 
+            textbutton "[obj.name][score_text]" action [Return(name) if score else NullAction()]
 
 
 screen choose_target(targets):
@@ -186,32 +189,11 @@ init -3 python:
             renpy.random.shuffle(self.order)
 
 
-        def reset(self):
-            # reset actors
+        def reset_state(self):
+            # reset actors's states
 
             for i in self.friends + self.foes:
-                i.reset()
-
-
-        def get_turn(self):
-            # returns the next performer
-
-            while True:
-                actor = self.order.pop(0)
-                self.order.append(actor)
-                if actor.hp > 0:
-                    return actor
-            
-            
-        def get_targets(self, actor):
-            # returns list of targets.
-            
-            if not actor.skill or actor not in self.order:
-                return []
-            if actor in self.friends:
-                return self.foes if actor.skill.target=="foe" else self.friends 
-            if actor in self.foes:
-                return self.friends if actor.skill.target=="foe" else self.foes 
+                i.reset_state()
 
 
         def update_state(self):
@@ -230,8 +212,34 @@ init -3 python:
                 self.state = "win"
 
 
+        def get_turn(self):
+            # returns the next performer
+
+            while True:
+                actor = self.order.pop(0)
+                self.order.append(actor)
+                if actor.hp > 0:
+                    return actor
+            
+            
+        def get_targets(self, actor):
+            # returns list of targets.
+            
+            obj = actor.get_skill(actor.skill)
+            
+            if not actor.skill or actor not in self.order:
+                return []
+            if actor in self.friends:
+                return self.foes if obj.target=="foe" else self.friends 
+            if actor in self.foes:
+                return self.friends if obj.target=="foe" else self.foes 
+
+                
+
 ##############################################################################
 ## Actor class.
+
+    from collections import OrderedDict
 
     class Actor(object):
 
@@ -239,24 +247,32 @@ init -3 python:
         Class that performs skills. It has follwing fields:
 
         name - name of this actor
-        skills - list of skills
+        skills - dict of {"skillname", score}
         attribute - there are many values defined by self.attr = value form
                 attribute can be defined the blow
         default_attrribute - default value of attribute. if it's positive number, attribute's value is limited to this value.
         """
 
         # This will create self.hp and self.default_hp
-        attributes = ["hp"]
+        _attributes = ["hp"]
+        
+        # Define default skill categories
+        _skill_types = ["active"]
 
-        def __init__(self, name="", skills=None, **kwargs):
+        def __init__(self, name="", skills=None, skill_types = None, **kwargs):
 
             self.name = name
-            self.skills = skills or []
+            self.skills = OrderedDict()
+            if skills:
+                for i in skills:
+                    self.add_skill(i)            
+            self.skill_types = skill_types or self._skill_types
+            
             self.skill = None
             self.target = None
 
             # creates attributes as field value
-            for i in self.attributes:
+            for i in self._attributes:
                 if i in kwargs.keys():
                     setattr(self, "default_"+i, kwargs[i])
                     setattr(self, i, kwargs[i])
@@ -277,44 +293,159 @@ init -3 python:
             return actor
 
 
+        def reset_state(self):
+            # reset attributes
+
+            for i in self._attributes:
+                setattr(self, i, getattr(self, "default_"+i))
+
+            self.skill = None
+            self.target = None
+
+
         def update_state(self):
             # call this each turn to amend invalid attributes
 
-            for i in self.attributes:
+            for i in self._attributes:
                 attr = getattr(self, i)
                 max = getattr(self, "default_"+i)
                 if max > 0 and attr > max:
                     setattr(self, i, max)
                 if attr < 0:
                     setattr(self, i, 0)
-
-
-        def reset(self):
-            # reset attributes
-
-            for i in self.attributes:
-                setattr(self, i, getattr(self, "default_"+i))
-
-            self.skill = None
-            self.target = None
             
 
-        def use_skill(self, skill=None, target=None):
+        @classmethod
+        def get_skill(self, name):
+            # returns skill object from name
+
+            if isinstance(name, Item): 
+                return name
+                
+            elif isinstance(name, basestring):
+                obj = getattr(store.skill, name, None) or getattr(store, name, None)
+                if obj: 
+                    return obj
+                
+            raise Exception("Skill '{}' is not defined".format(name))
+                        
+
+        def has_skill(self, name, score=None):
+            # returns True if inventory has this skill whose score is higher than give.
+            
+            # check valid name or not
+            self.get_skill(name)
+
+            return name in [k for k, v in self.skills.items() if score==None or v > score]
+
+
+        def count_skill(self, name):
+            # returns score of this skill
+            
+            if self.has_skill(name):
+                return self.skills[name]
+                
+            
+        def get_skills(self, score=None, types = None, rv=None):
+            # returns list of (name, score, object) tuple in conditions
+            # if rv is "name" or "obj", it returns them.
+            
+            skills = [k for k, v in self.skills.items() if score==None or v >= score]
+            
+            if types:
+                skills = [i for i in skills if self.get_skill(i).type in types]
+                
+            if rv == "name":
+                return skills
+                
+            elif rv == "obj":
+                return [self.get_skill(i) for i in skills]
+                
+            return  [(i, self.skills[i], self.get_skill(i)) for i in skills]
+
+
+        def add_skill(self, name, score = None):
+            # add an skill
+            # if score is given, this score is used instead of skill's default value.
+            
+            score = score or self.get_skill(name).score
+
+            if self.has_skill(name):
+                self.skills[name] += score
+            else:
+                self.skills[name] = score
+
+
+        def remove_skill(self, name):
+            # remove an skill
+
+            if self.has_skill(name):
+                del self.skills[name]
+
+
+        def score_skill(self, name, score, remove = True):
+            # changes score of name
+            # if remove is True, skill is removed when score reaches 0
+
+            self.add_skill(name, score)
+            if remove and self.skills[name] <= 0:
+                self.remove_skill(name)  
+
+
+        def replace_skills(self, first, second):
+            # swap order of two slots
+
+            keys = list(self.skills.keys())
+            values = list(self.skills.values())
+            i1 = keys.index(first)
+            i2 = keys.index(second)
+            keys[i1], keys[i2] = keys[i2], keys[i1]
+            values[i1], values[i2] = values[i2], values[i1]
+            
+            self.skills = OrderedDict(zip(keys, values))
+
+
+        def sort_skills(self, order="name"):
+            # sort slots
+            
+            skills = self.skills.items()
+
+            if order == "name":
+                skills.sort(key = lambda i: self.get_skill(i[0]).name)
+            elif order == "type":
+                skills.sort(key = lambda i: self.skill_types.index(self.get_skill(i[0]).type))
+            elif order == "value":
+                skills.sort(key = lambda i: self.get_skill(i[0]).value, reverse=True)
+            elif order == "amount":
+                skills.sort(key = lambda i: i[1], reverse=True)
+                
+            self.skills = OrderedDict(skills)
+
+
+        def get_all_skills(self, namespace=store):
+            # get all Item objects defined under namespace
+
+            for i in dir(namespace):
+                if isinstance(getattr(namespace, i), Skill):
+                    self.add_skill(i)
+
+
+        def use_skill(self):
             # use skill on target
             
-            skill = skill or self.skill
-            target = target or self.target
+            obj = self.get_skill(self.skill)
+            target = self.target
 
-            skill.use(target)
+            obj.use(target)
             
-            self.update_state()
-            target.update_state()
+            if obj.cost:
+                self.score_skill(self.skill, - obj.cost, remove=False)
 
-
+                
         def choose_skill(self):
             # returns skill randomly
 
-            return renpy.random.choice(self.skills)
+            return renpy.random.choice(self.get_skills(score=1, types=["active"], rv="name"))
 
 
         def choose_target(self, targets):
@@ -334,35 +465,39 @@ init -3 python:
 
         name - skill name that is shown on the screen
         type - skill category
-        value - quality of skill
+        effect - effect on use.
         target - target of skill. if not "friend", "foe" is default
+        value - quality of skill
+        score - default amount of skill when it's added into actor
+        cost - if not zero, using this skill reduces score.
         info - description that is shown when an skill is focused
         """
 
-        types = ["attack", "heal"]
 
-
-        def __init__(self, name="", type=None, value=0, target="foe", info=""):
+        def __init__(self, name="", type="", effect="", target="foe", value=0, score=1, cost=0, info=""):
 
             self.name = name
             self.type = type
-            self.value = int(value)
+            self.effect = effect
             self.target = target
+            self.value = int(value)
+            self.score = int(score)
+            self.cost = int(cost)
             self.info = info
-
+            
 
         def use(self, target):
             # use skill on target.
-
-            if self.type == "attack":
+            
+            if self.effect == "attack":
                 target.hp -= self.value
+                target.update_state()
                 narrator ("{} loses {} HP".format(target.name, self.value))
 
-            elif self.type == "heal":
+            elif self.effect == "heal":
                 target.hp += self.value
+                target.update_state()
                 narrator ("{} gains {} HP".format(target.name, self.value))
-
-            # write your own code
 
             return
             

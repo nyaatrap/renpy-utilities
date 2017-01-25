@@ -49,6 +49,7 @@ label sample_inventory:
     ## sell_item(item, buyer) - アイテムを buyer に売却し、所持金を受け取ります。
     ## give_item(item, getter) - アイテムを getter に渡します。
     ## use_item(item, target) - アイテムを target に使用します。効果は各アイテムごと定義してください。
+    ## get_items(item, score, types) -  score 以上で types に含まれるアイテムのリストを (name, score, obj) のタプルで返します。
 
 
     while True:
@@ -126,7 +127,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
         # sort buttons
         text "Sort by"
-        for i in ["name", "type", "price", "amount"]:
+        for i in ["name", "type", "value", "amount"]:
             textbutton i.capitalize():
                 action Function(inv.sort_items, order=i)
 
@@ -145,32 +146,29 @@ screen inventory(inv, buyer=None, title="Inventory"):
             vpgrid style_prefix "item":
                 cols 4 mousewheel True draggable True scrollbars "vertical"
 
-                for i, v in inv.items.items():
+                for name, score, obj in inv.get_items(types=[tab] if tab != "all" else None):
                         
-                    $ obj = inv.get_item(i)
-                    $ price = int(obj.value*v*(buyer.tradein if buyer else inv.tradein))
-
-                    if tab in [obj.type, "all"]:
+                    $ price = int(obj.value*score*(buyer.tradein if buyer else inv.tradein))
                         
-                        textbutton "[obj.name] x[v] ([price])":
-                            selected inv.selected == i
-                            hovered tt.Action(obj.info)
+                    textbutton "[obj.name] x[score] ([price])":
+                        selected inv.selected == name
+                        hovered tt.Action(obj.info)
 
-                            # sell/buy
-                            if buyer:
-                                action Function(inv.sell_item, name=i, buyer=buyer)
+                        # sell/buy
+                        if buyer:
+                            action Function(inv.sell_item, name=name, buyer=buyer)
 
-                            # reorder after selected
-                            elif inv.selected:
-                                action [Function(inv.replace_items, first=i, second=inv.selected),
-                                        SetField(inv, "selected", None)]
+                        # reorder after selected
+                        elif inv.selected:
+                            action [Function(inv.replace_items, first=name, second=inv.selected),
+                                    SetField(inv, "selected", None)]
 
-                            # reorder before selecting
-                            else:
-                                action SetField(inv, "selected", i)
+                        # reorder before selecting
+                        else:
+                            action SetField(inv, "selected", name)
 
-                            # This action uses item.
-                            # action Function(inv.use_item, name=i, target=?)
+                        # This action uses item.
+                        # action Function(inv.use_item, name=name, target=?)
 
         # information window
         frame xysize width, height//2:
@@ -208,16 +206,17 @@ init -3 python:
         # Define default item categories
         _item_types = []
 
-        def __init__(self, currency = 0, tradein = 1.0, infinite = False, item_types=None, items=None):
+        def __init__(self, currency = 0, tradein = 1.0, infinite = False, items=None, item_types=None):
 
             self.currency = int(currency)
             self.tradein = float(tradein)
             self.infinite = infinite
-            self.item_types = item_types or self._item_types
             self.items = OrderedDict()
             if items:
                 for i in items:
                     self.add_item(i)
+            self.item_types = item_types or self._item_types
+            
             self.selected = None
 
 
@@ -235,20 +234,6 @@ init -3 python:
                 
             raise Exception("Item '{}' is not defined".format(name))
             
-            
-        def get_items(self, score=None, types = None, obj=False):
-            # returns list of items in conditions
-            # if obj is True, it returns objects instead of names
-            
-            items = [k for k,v in self.items.items() if score==None or v >= score]
-            
-            if types:
-                items = [i for i in items if self.get_item(i).type in types]
-            if obj:
-                items = [self.get_item(i) for i in items]
-                
-            return items
-            
 
         def has_item(self, name, score=None):
             # returns True if inventory has this item whose score is higher than give.
@@ -264,6 +249,24 @@ init -3 python:
             
             if self.has_item(name):
                 return self.items[name]
+            
+            
+        def get_items(self, score=None, types = None, rv=None):
+            # returns list of (name, score, object) tuple in conditions
+            # if rv is "name" or "obj", it returns them.
+            
+            items = [k for k, v in self.items.items() if score==None or v >= score]
+            
+            if types:
+                items = [i for i in items if self.get_item(i).type in types]
+                
+            if rv == "name":
+                return items
+                
+            elif rv == "obj":
+                return [self.get_item(i) for i in items]
+                
+            return  [(i, self.items[i], self.get_item(i)) for i in items]
 
 
         def add_item(self, name, score = None):
@@ -352,7 +355,7 @@ init -3 python:
                 items.sort(key = lambda i: self.get_item(i[0]).name)
             elif order == "type":
                 items.sort(key = lambda i: self.item_types.index(self.get_item(i[0]).type))
-            elif order == "price":
+            elif order == "value":
                 items.sort(key = lambda i: self.get_item(i[0]).value, reverse=True)
             elif order == "amount":
                 items.sort(key = lambda i: i[1], reverse=True)
@@ -392,7 +395,7 @@ init -3 python:
         effect - effect on use.
         value - price that is used for trading
         score - default amount of item when it's added into inventory
-        cost - if not zero, useing this item reduces score.
+        cost - if not zero, using this item reduces score.
         info - description that is shown when an item is focused
         """
 
