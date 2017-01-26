@@ -252,9 +252,9 @@ init -2 python:
         # tuple of collision on dungeon map.
         _collision = ("1", "2", "3", "4")
 
-        def __init__(self, image=None, music=None, map = None, mapping=None, collision=None):
+        def __init__(self, image=None, music=None, map = None, mapping=None, collision=None, info=""):
 
-            super(Dungeon, self).__init__(image, music)
+            super(Dungeon, self).__init__(image, music, info)
             self.map = self.read_map(map) if map and isinstance(map, basestring) else map
             self.mapping = mapping or self._mapping
             self.collision = collision or self._collision

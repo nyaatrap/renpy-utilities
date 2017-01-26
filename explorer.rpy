@@ -193,12 +193,14 @@ init -3 python:
 
         image - image that is shown behind events
         music - music that is played while explorer in this level
+        info - Information text to be shown on event map screen.
         """
 
-        def __init__(self, image=None, music=None):
+        def __init__(self, image=None, music=None, info=""):
 
             self.image = image
             self.music = music
+            self.info = info
 
 
 ##############################################################################
@@ -315,6 +317,11 @@ init -3 python:
         @property
         def image(self):
             return self.get_level(self.level).image
+            
+            
+        @property
+        def info(self):
+            return self.get_level(self.level).info
 
 
         def seen(self, ev):

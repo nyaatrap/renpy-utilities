@@ -379,7 +379,7 @@ init -3 python:
             obj.use(target)
             
             if obj.cost:
-                self.score_item(slot, -obj.cost)
+                self.score_item(name, -obj.cost)
 
 
 ##############################################################################
