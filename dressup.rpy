@@ -187,7 +187,7 @@ init -3 python:
 
 
         @staticmethod
-        def draw_doll(st, at, doll, flatten=False, kwargs=None):
+        def draw_doll(st, at, doll, flatten=False, **kwargs):
             # Function that is used for dynamic displayable.
 
             doll = getattr(store, doll, None)
@@ -199,10 +199,7 @@ init -3 python:
             folder = doll.folder
 
             for layer in doll.layers:
-                if kwargs:
-                    item = kwargs.get(layer) or getattr(doll, layer)
-                else:
-                    item = getattr(doll, layer)
+                item = kwargs.get(layer) or getattr(doll, layer)
                 if item:
                     image = "{}/{}/{}.png".format(folder, layer, item)
                     if renpy.loadable(image):
@@ -224,7 +221,7 @@ init -3 python:
         If kwargs is given, given file is always used.
         """
 
-        return DynamicDisplayable(Doll.draw_doll, doll, flatten, kwargs)
+        return DynamicDisplayable(Doll.draw_doll, doll, flatten, **kwargs)
 
 
 ##############################################################################

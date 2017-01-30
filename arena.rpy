@@ -319,7 +319,7 @@ init -3 python:
         def get_skill(self, name):
             # returns skill object from name
 
-            if isinstance(name, Item): 
+            if isinstance(name, Skill): 
                 return name
                 
             elif isinstance(name, basestring):
@@ -423,7 +423,7 @@ init -3 python:
 
 
         def get_all_skills(self, namespace=store):
-            # get all Item objects defined under namespace
+            # get all skill objects defined under namespace
 
             for i in dir(namespace):
                 if isinstance(getattr(namespace, i), Skill):
