@@ -5,27 +5,35 @@
 
 ################################################################################]
 # This block defines new functions for keymap.
-# You can only uncomment key names that will be bound to certain keys.
+# To bind a new key name to a new function, define its function then bind it to key name.
+# When You added a key name into config.underlay, you always have to assign keys later.
 # 次の init python ブロックは、デフォルトで用意されていない機能を定義しています。
-# 必要な機能のみアンコメントしてください。割り当てに使う名前を定義した場合は
-# 後で必ず何らかのキーを割り振る必要があります。
+# まず関数を定義してから、キーとして使うの名前に割り当てます。
+# config.underlay に追加した名前は、後で必ず何らかのキーを割り振る必要があります。
 
 init python:
 
     # Add 'toggle_afm' key name.
     # 文字自動送り機能が使えるように、割り当てに使う名前 'toggle_afm' を追加します。
-    config.underlay.append(renpy.Keymap(toggle_afm = Preference("auto-forward", "toggle")))
+    def _toggle_afm():
+        if not renpy.context()._menu:
+            _preferences.afm_enable = not _preferences.afm_enable
+            renpy.restart_interaction()
+            
+    config.underlay.append(renpy.Keymap(toggle_afm = _toggle_afm))
+    
 
     # Add 'history' key name.
     # ヒストリー機能が使えるように、割り当てに使う名前 'history' を追加します。
-    # config.underlay.append(renpy.Keymap(history = ShowMenu("history")))
+    def _show_history():
+        if not renpy.context()._menu:
+            renpy.call_in_new_context("_game_menu", _game_menu_screen="history")
+                
+    #config.underlay.append(renpy.Keymap(history = _show_history))
 
 
-    # To bind a new key name to a new function, define its function then bind it to key name.
     # This example adds a function that changes Language from None to 'English'.
-    # 独自の新しい機能を追加したい場合には、まず関数を定義してから割り当てに使う名前を追加します。
     # 次の例は、基本言語（None で定義された言語）と英語を入れ替える機能を追加しています。
-
     def _toggle_language():
         if _preferences.language=="english":
             renpy.music.play("click", channel="audio")
