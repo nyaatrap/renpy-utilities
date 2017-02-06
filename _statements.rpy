@@ -99,4 +99,44 @@ python early:
     renpy.register_statement("hide", parse=parse_hide, lint=lint_hide, execute=execute_hide)
 
 
+##############################################################################
+## showith
+
+## The showith statement causes dissolve transition at the next interaction.
+## The following statement moves girl, then changes her face with dissolve.
+## showith girl at move
+## girl happy "message"
+## 直後のセリフでの表情変化が dissolve になります。
+## trans を間に挟むのと同じ効果です。
+
+    def parse_showith(lex):
+        import renpy.parser
+        image_name, expression, tag, at_list, layer, zorder, behind = renpy.parser.parse_image_specifier(lex)
+        return (image_name,expression, tag, at_list, layer, zorder, behind)
+
+    def execute_showith(imspec):
+        image_name, expression, tag, at_list, layer, zorder, behind = imspec
+
+        if at_list:
+            _at_list = [eval(i) for i in at_list]
+        else:
+            _at_list = None
+        renpy.show(image_name, at_list=_at_list, layer=layer, what=expression, tag=tag)
+        renpy.with_statement(None)
+        renpy.transition(Dissolve(.25), layer="master")
+
+    def lint_showith(imspec):
+        image_name, expression, tag, at_list, layer, zorder, behind = imspec
+        if at_list:
+            for i in at_list:
+               try:
+                   eval(i)
+               except:
+                   renpy.error("Transform %s is not defined" % i)
+        if not renpy.has_image(image_name):
+            renpy.error("Image %s is not defined" % image_name)
+
+    renpy.register_statement("showith", parse=parse_showith, lint=lint_showith, execute=execute_showith)
+    
+
 
