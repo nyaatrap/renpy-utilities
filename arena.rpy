@@ -6,24 +6,24 @@
 ## How to Use
 ##############################################################################
 
-## まずアクターが使用するスキルを Skill(name, type, effect, target, value, score, cost) で定義します。
-## type は表示されるスキルのカテゴリーです。
-## effect は使用した時の効果です。"attack", "heal" 以外は Skill クラスに書き加えます。
-## target はスキルを使う相手で "friend" か "foe" があります。
-## value は効果のスキルを使用した時の効果の強さです。
-## score, cost は使用回数があるスキルに使います。デフォルトは1と0です。
-## skill の名前空間も使えます。
+## まずアクターが使用する能力を Trait(name, type, effect, target, value, score, cost) で定義します。
+## type は表示される能力のカテゴリーです。このデモでは "active" のみ有効です。
+## effect は使用した時の効果です。"attack", "heal" 以外は Trait クラスに書き加えます。
+## target は能力を使う相手で "friend" か "foe" があります。
+## value は効果の能力を使用した時の効果の強さです。
+## score, cost は使用回数がある能力に使います。デフォルトは1と0です。
+## trait の名前空間も使えます。
 
-define skill.attack = Skill("Attack", type="active", effect="attack", target="foe", value=5)
-define skill.heal = Skill("Heal", type="active", effect="heal", target="friend", value=10, score=5, cost=1)
+define trait.attack = Trait("Attack", type="active", effect="attack", target="foe", value=5)
+define trait.heal = Trait("Heal", type="active", effect="heal", target="friend", value=10, score=5, cost=1)
 
-## 次にアクターを Actor(name, skills, hp) で定義します。
-## skills は skill. を外した文字列です。
-## hp 以外の特性値は Actor クラスを書き換えることで追加します。
+## 次にアクターを Actor(name, traits, hp) で定義します。
+## traits は能力のリストで、trait. を外した文字列です。
+## hp は能力値です。Actor クラスを書き換えることで追加できます。
 
-default knight = Actor("Knight", skills=["attack"], hp=20)
-default bishop = Actor("Bishop", skills=["attack", "heal"], hp=15)
-default pawn = Actor("Pawn A", skills=["attack"], hp=10)
+default knight = Actor("Knight", traits=["attack"], hp=20)
+default bishop = Actor("Bishop", traits=["attack", "heal"], hp=15)
+default pawn = Actor("Pawn A", traits=["attack"], hp=10)
 
 ## actor.copy(name) で同じ能力のアクターを名前を変えてコピーします。
 default pawn2 = pawn.copy("Pawn B")
@@ -83,26 +83,26 @@ label _combat(arena):
             # get current actor to perform
             _actor = arena.get_turn()
 
-            # set skill and target
+            # set trait and target
             if _actor in arena.friends:
-                _actor.skill = renpy.call_screen("choose_skill", _actor)
+                _actor.trait = renpy.call_screen("choose_trait", _actor)
                 _actor.target = renpy.call_screen("choose_target", targets = arena.get_targets(_actor))
             else:
-                _actor.skill = _actor.choose_skill()
+                _actor.trait = _actor.choose_trait()
                 _actor.target = _actor.choose_target(arena.get_targets(_actor))
 
-            # perform skill
-            _actor.use_skill()
+            # perform trait
+            _actor.use_trait()
 
             # update arena's state
             arena.update_state()
 
-    hide screen battle_ui
+    hide screen combat_ui
     
     python:
         _return = arena.state
         arena.reset_state()
-        _rollback = False
+        _rollback = True
         renpy.block_rollback()
         
     return _return
@@ -128,7 +128,7 @@ screen combat_ui(arena):
                 text "[i.name]: HP [i.hp]"
 
 
-screen choose_skill(actor):
+screen choose_trait(actor):
 
     tag menu
     modal True
@@ -138,7 +138,7 @@ screen choose_skill(actor):
 
     # commands
     vbox align .5, .5:
-        for name, score, obj in actor.get_skills(types=["active"]):
+        for name, score, obj in actor.get_traits(types=["active"]):
             $ score_text = " ({}/{})".format(score, obj.score) if obj.cost else "" 
             textbutton "[obj.name][score_text]" action [Return(name) if score else NullAction()]
 
@@ -225,9 +225,9 @@ init -3 python:
         def get_targets(self, actor):
             # returns list of targets.
             
-            obj = actor.get_skill(actor.skill)
+            obj = actor.get_trait(actor.trait)
             
-            if not actor.skill or actor not in self.order:
+            if not actor.trait or actor not in self.order:
                 return []
             if actor in self.friends:
                 return self.foes if obj.target=="foe" else self.friends 
@@ -244,10 +244,10 @@ init -3 python:
     class Actor(object):
 
         """
-        Class that performs skills. It has follwing fields:
+        Class that performs traits. It has follwing fields:
 
         name - name of this actor
-        skills - dict of {"skillname", score}
+        traits - dict of {"traitname", score}
         attribute - there are many values defined by self.attr = value form
                 attribute can be defined the blow
         default_attrribute - default value of attribute. if it's positive number, attribute's value is limited to this value.
@@ -256,19 +256,19 @@ init -3 python:
         # This will create self.hp and self.default_hp
         _attributes = ["hp"]
         
-        # Define default skill categories
-        _skill_types = ["active"]
+        # Define default trait categories
+        _trait_types = ["active"]
 
-        def __init__(self, name="", skills=None, skill_types = None, **kwargs):
+        def __init__(self, name="", traits=None, trait_types = None, **kwargs):
 
             self.name = name
-            self.skills = OrderedDict()
-            if skills:
-                for i in skills:
-                    self.add_skill(i)            
-            self.skill_types = skill_types or self._skill_types
+            self.traits = OrderedDict()
+            if traits:
+                for i in traits:
+                    self.add_trait(i)            
+            self.trait_types = trait_types or self._trait_types
             
-            self.skill = None
+            self.trait = None
             self.target = None
 
             # creates attributes as field value
@@ -299,7 +299,7 @@ init -3 python:
             for i in self._attributes:
                 setattr(self, i, getattr(self, "default_"+i))
 
-            self.skill = None
+            self.trait = None
             self.target = None
 
 
@@ -316,136 +316,136 @@ init -3 python:
             
 
         @classmethod
-        def get_skill(self, name):
-            # returns skill object from name
+        def get_trait(self, name):
+            # returns trait object from name
 
-            if isinstance(name, Skill): 
+            if isinstance(name, Trait): 
                 return name
                 
             elif isinstance(name, basestring):
-                obj = getattr(store.skill, name, None) or getattr(store, name, None)
+                obj = getattr(store.trait, name, None) or getattr(store, name, None)
                 if obj: 
                     return obj
                 
-            raise Exception("Skill '{}' is not defined".format(name))
+            raise Exception("Trait '{}' is not defined".format(name))
                         
 
-        def has_skill(self, name, score=None):
-            # returns True if inventory has this skill whose score is higher than give.
+        def has_trait(self, name, score=None):
+            # returns True if inventory has this trait whose score is higher than give.
             
             # check valid name or not
-            self.get_skill(name)
+            self.get_trait(name)
 
-            return name in [k for k, v in self.skills.items() if score==None or v > score]
+            return name in [k for k, v in self.traits.items() if score==None or v > score]
 
 
-        def count_skill(self, name):
-            # returns score of this skill
+        def count_trait(self, name):
+            # returns score of this trait
             
-            if self.has_skill(name):
-                return self.skills[name]
+            if self.has_trait(name):
+                return self.traits[name]
                 
             
-        def get_skills(self, score=None, types = None, rv=None):
+        def get_traits(self, score=None, types = None, rv=None):
             # returns list of (name, score, object) tuple in conditions
             # if rv is "name" or "obj", it returns them.
             
-            skills = [k for k, v in self.skills.items() if score==None or v >= score]
+            traits = [k for k, v in self.traits.items() if score==None or v >= score]
             
             if types:
-                skills = [i for i in skills if self.get_skill(i).type in types]
+                traits = [i for i in traits if self.get_trait(i).type in types]
                 
             if rv == "name":
-                return skills
+                return traits
                 
             elif rv == "obj":
-                return [self.get_skill(i) for i in skills]
+                return [self.get_trait(i) for i in traits]
                 
-            return  [(i, self.skills[i], self.get_skill(i)) for i in skills]
+            return  [(i, self.traits[i], self.get_trait(i)) for i in traits]
 
 
-        def add_skill(self, name, score = None):
-            # add an skill
-            # if score is given, this score is used instead of skill's default value.
+        def add_trait(self, name, score = None):
+            # add an trait
+            # if score is given, this score is used instead of trait's default value.
             
-            score = score or self.get_skill(name).score
+            score = score or self.get_trait(name).score
 
-            if self.has_skill(name):
-                self.skills[name] += score
+            if self.has_trait(name):
+                self.traits[name] += score
             else:
-                self.skills[name] = score
+                self.traits[name] = score
 
 
-        def remove_skill(self, name):
-            # remove an skill
+        def remove_trait(self, name):
+            # remove an trait
 
-            if self.has_skill(name):
-                del self.skills[name]
+            if self.has_trait(name):
+                del self.traits[name]
 
 
-        def score_skill(self, name, score, remove = True):
+        def score_trait(self, name, score, remove = True):
             # changes score of name
-            # if remove is True, skill is removed when score reaches 0
+            # if remove is True, trait is removed when score reaches 0
 
-            self.add_skill(name, score)
-            if remove and self.skills[name] <= 0:
-                self.remove_skill(name)  
+            self.add_trait(name, score)
+            if remove and self.traits[name] <= 0:
+                self.remove_trait(name)  
 
 
-        def replace_skills(self, first, second):
+        def replace_traits(self, first, second):
             # swap order of two slots
 
-            keys = list(self.skills.keys())
-            values = list(self.skills.values())
+            keys = list(self.traits.keys())
+            values = list(self.traits.values())
             i1 = keys.index(first)
             i2 = keys.index(second)
             keys[i1], keys[i2] = keys[i2], keys[i1]
             values[i1], values[i2] = values[i2], values[i1]
             
-            self.skills = OrderedDict(zip(keys, values))
+            self.traits = OrderedDict(zip(keys, values))
 
 
-        def sort_skills(self, order="name"):
+        def sort_traits(self, order="name"):
             # sort slots
             
-            skills = self.skills.items()
+            traits = self.traits.items()
 
             if order == "name":
-                skills.sort(key = lambda i: self.get_skill(i[0]).name)
+                traits.sort(key = lambda i: self.get_trait(i[0]).name)
             elif order == "type":
-                skills.sort(key = lambda i: self.skill_types.index(self.get_skill(i[0]).type))
+                traits.sort(key = lambda i: self.trait_types.index(self.get_trait(i[0]).type))
             elif order == "value":
-                skills.sort(key = lambda i: self.get_skill(i[0]).value, reverse=True)
+                traits.sort(key = lambda i: self.get_trait(i[0]).value, reverse=True)
             elif order == "amount":
-                skills.sort(key = lambda i: i[1], reverse=True)
+                traits.sort(key = lambda i: i[1], reverse=True)
                 
-            self.skills = OrderedDict(skills)
+            self.traits = OrderedDict(traits)
 
 
-        def get_all_skills(self, namespace=store):
-            # get all skill objects defined under namespace
+        def get_all_traits(self, namespace=store):
+            # get all trait objects defined under namespace
 
             for i in dir(namespace):
-                if isinstance(getattr(namespace, i), Skill):
-                    self.add_skill(i)
+                if isinstance(getattr(namespace, i), Trait):
+                    self.add_trait(i)
 
 
-        def use_skill(self):
-            # use skill on target
+        def use_trait(self):
+            # use trait on target
             
-            obj = self.get_skill(self.skill)
+            obj = self.get_trait(self.trait)
             target = self.target
 
             obj.use(target)
             
             if obj.cost:
-                self.score_skill(self.skill, - obj.cost, remove=False)
+                self.score_trait(self.trait, - obj.cost, remove=False)
 
                 
-        def choose_skill(self):
-            # returns skill randomly
+        def choose_trait(self):
+            # returns trait randomly
 
-            return renpy.random.choice(self.get_skills(score=1, types=["active"], rv="name"))
+            return renpy.random.choice(self.get_traits(score=1, types=["active"], rv="name"))
 
 
         def choose_target(self, targets):
@@ -456,21 +456,21 @@ init -3 python:
 
 
 ##############################################################################
-## Skill class.
+## Trait class.
 
-    class Skill(object):
+    class Trait(object):
 
         """
-        Class that represents skill that is stored by actor object. It has follwing fields:
+        Class that represents trait that is stored by actor object. It has follwing fields:
 
-        name - skill name that is shown on the screen
-        type - skill category
+        name - trait name that is shown on the screen
+        type - trait category
         effect - effect on use.
-        target - target of skill. if not "friend", "foe" is default
-        value - quality of skill
-        score - default amount of skill when it's added into actor
-        cost - if not zero, using this skill reduces score.
-        info - description that is shown when an skill is focused
+        target - target of trait. if not "friend", "foe" is default
+        value - quality of trait
+        score - default amount of trait when it's added into actor
+        cost - if not zero, using this trait reduces score.
+        info - description that is shown when an trait is focused
         """
 
 
@@ -487,7 +487,7 @@ init -3 python:
             
 
         def use(self, target):
-            # use skill on target.
+            # use trait on target.
             
             if self.effect == "attack":
                 target.hp -= self.value
@@ -505,7 +505,7 @@ init -3 python:
 ##############################################################################
 ## Create namespace
 
-init -999 python in skill:
+init -999 python in trait:
     pass
 
 
