@@ -3,49 +3,6 @@
 # https://www.renpy.org/doc/html/keymap.html
 
 
-################################################################################]
-# This block defines new functions for keymap.
-# To bind a new key name to a new function, define its function then bind it to key name.
-# When You added a key name into config.underlay, you always have to assign keys later.
-# 次の init python ブロックは、デフォルトで用意されていない機能を定義しています。
-# まず関数を定義してから、キーとして使うの名前に割り当てます。
-# config.underlay に追加した名前は、後で必ず何らかのキーを割り振る必要があります。
-
-init python:
-
-    # Add 'toggle_afm' key name.
-    # 文字自動送り機能が使えるように、割り当てに使う名前 'toggle_afm' を追加します。
-    def _toggle_afm():
-        if not renpy.context()._menu:
-            _preferences.afm_enable = not _preferences.afm_enable
-            renpy.restart_interaction()
-            
-    config.underlay.append(renpy.Keymap(toggle_afm = _toggle_afm))
-    
-
-    # Add 'history' key name.
-    # ヒストリー機能が使えるように、割り当てに使う名前 'history' を追加します。
-    def _show_history():
-        if not renpy.context()._menu:
-            renpy.call_in_new_context("_game_menu", _game_menu_screen="history")
-                
-    #config.underlay.append(renpy.Keymap(history = _show_history))
-
-
-    # This example adds a function that changes Language from None to 'English'.
-    # 次の例は、基本言語（None で定義された言語）と英語を入れ替える機能を追加しています。
-    def _toggle_language():
-        if _preferences.language=="english":
-            renpy.music.play("click", channel="audio")
-            renpy.change_language(None)
-        else:
-            renpy.music.play("click", channel="audio")
-            renpy.change_language("english")
-        return
-
-    # config.underlay.append(renpy.Keymap(toggle_language = _toggle_language))
-
-
 ################################################################################
 # This block overwrites ren'py's default keymaps
 # 次の init 1 python は、個々のキーと機能の割り当てを上書き・変更します。
@@ -62,11 +19,6 @@ init 1 python:
     config.keymap['viewport_up'].extend(['K_PAGEUP', 'repeat_K_PAGEUP'])
     config.keymap['viewport_down'].extend(['K_PAGEDOWN', 'repeat_K_PAGEDOWN'])
 
-    # Replace rollback with history
-    # ロールバックをヒストリーと置き換えます。
-    # config.keymap["rollback"] = []
-    # config.keymap["history"] = [ 'K_PAGEUP', 'repeat_K_PAGEUP', 'K_AC_BACK', 'mousedown_4' ]
-
     # Bind 'a' to toggle_afm
     # オート機能を a に割り当てます。
     config.keymap["toggle_afm"] = ['a']
@@ -78,10 +30,6 @@ init 1 python:
     # Bind 'F12' to screenshot
     # スクリーンショット機能を F12 に追加します。
     # config.keymap['screenshot'].append('K_F12')
-
-    # Bind 'toggle_language' to F2
-    # 上で定義した言語入れ替え機能を F2 に割り当てます。
-    # config.keymap["toggle_language"] = 'K_F2'
 
     # Change the space key from 'dismiss' into 'hide windows'
     # スペースキーを、読み進めからウィンドウ非表示に変更します。
@@ -122,4 +70,40 @@ init 1 python:
     config.pad_bindings["pad_lefttrigger_pos"] = [ "skip" ]
     config.pad_bindings["pad_lefttrigger_zero"] = [ "stop_skipping" ]
     config.pad_bindings["pad_righttrigger_pos"] = [ "dismiss" ]
+
+
+################################################################################]
+# This block defines new functions for keymap.
+# To bind a new key name to a new function, define its function then bind it to key name.
+# 次の init python ブロックは、デフォルトで用意されていない機能を定義しています。
+# まず関数を定義してから、キーとして使う名前に割り当てます。
+
+init 1 python:
+
+    # Add 'history' key name.
+    # ヒストリー機能が使えるように、割り当てに使う名前 'history' を追加します。
+    def _show_history():
+        if not renpy.context()._menu:
+            renpy.call_in_new_context("_game_menu", _game_menu_screen="history")
+                
+    config.underlay.append(renpy.Keymap(history = _show_history))
+    config.keymap["history"] = []
+
+    # Replace rollback with history
+    # ロールバックをヒストリーと置き換えます。
+    # config.keymap["rollback"] = []
+    # config.keymap["history"] = [ 'K_PAGEUP', 'repeat_K_PAGEUP', 'K_AC_BACK', 'mousedown_4' ]
+
+
+    # This example adds a function that changes Language from None to 'English'.
+    # 次の例は、基本言語（None で定義された言語）と英語を入れ替える機能を追加しています。
+    def _toggle_language():
+        if _preferences.language=="english":
+            renpy.change_language(None)
+        else:
+            renpy.change_language("english")
+        return
+
+    config.underlay.append(renpy.Keymap(toggle_language = _toggle_language))
+    config.keymap["toggle_language"] = []
 
