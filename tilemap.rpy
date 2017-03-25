@@ -37,9 +37,9 @@ init python:
     ## 対応するか定めます。
     # tile_mapping = {"0":0, "1":1, "2":2}
 
-    ## 最後にタイルマップの displayable を Tilemap(map, tileset, tile_width, tile_height, tile_mapping)
+    ## 最後にタイルマップの displayable を Tilemap(map, tileset, tile_width, tile_height, tile_mapping, click)
     ## の形で定義します。
-    tilemap = Tilemap(map1, tileset, 32,32)
+    tilemap = Tilemap(map1, tileset, 32, 32)
 
 # 画像タグに関連付けても使えます。
 image map = tilemap
@@ -58,8 +58,20 @@ label sample_tilemap:
     ## tilemap.area を None 以外にすると、その範囲のみ描画します。
     $ tilemap.area = (64,64,256,256)
     pause
+    
+    ## スクリーン上に表示ことも出来ます。
+    ## click を True にすると、クリックした時に座標を返すようになります。
+    $ tilemap.area = None
+    $ tilemap.click = True
+    call screen tilemapscreen
+    "[_return]"
 
     return
+    
+    
+screen tilemapscreen():
+    text "Cick a tile to get its coodinate" align .5, .9
+    add tilemap at truecenter
 
 
 ##############################################################################
@@ -79,11 +91,12 @@ init -3 python:
         tile_height - height of each tile.
         tile_mapping - a dictionaly that maps string of map to index of tileset.
            If None, each corrdinate of map should be integer.
+        click - If true, it returns coodinate when you clicked this displayable on screens. 
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
         mask - 2-dimentional list of 0 or 1. If it's 0, tile will no be rendered.
         """
 
-        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, area = None, mask = None, **properties):
+        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, click = False, area = None, mask = None, **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
@@ -91,6 +104,7 @@ init -3 python:
             self.tile_width = tile_width
             self.tile_height = tile_height or tile_width
             self.tile_mapping = tile_mapping
+            self.click = click
             self.area = area
             self.mask = mask
 
@@ -160,6 +174,15 @@ init -3 python:
             # renpy.redraw(self, 1.0/30)
 
             return render
+            
+            
+        def event(self, ev, x, y, st):
+            
+            # Returns coodinate of displayable when it's clicked  
+            # If you want to pass coordinate into a screen, change store variables instead of return.
+            if self.click:
+                if renpy.map_event(ev, "button_select") and 0<x< len(self.map[0])*self.tile_width and 0<y< len(self.map)*self.tile_height:
+                    return int(x/self.tile_width), int(y/self.tile_height)
 
 
         def per_interact(self):
