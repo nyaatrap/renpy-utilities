@@ -14,7 +14,7 @@ init python:
     # tileset = read_spritesheet(filename, sprite_width, sprite_height, columns=1, rows=1)
 
 
-    ## 次に整数の二次元配列を定義します。。値は tileset のインデックスで 0 は tileset[0] を表します。
+    ## 次に整数の二次元配列を定義します。値は tileset のインデックスで 0 は tileset[0] を表します。
 
     map1 = [
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -37,7 +37,7 @@ init python:
     ## 対応するか定めます。
     # tile_mapping = {"0":0, "1":1, "2":2}
 
-    ## 最後にタイルマップの displayable を Tilemap(map, tileset, tile_width, tile_height, tile_mapping, click)
+    ## 最後にタイルマップの displayable を Tilemap(map, tileset, tile_width, tile_height, tile_mapping)
     ## の形で定義します。
     tilemap = Tilemap(map1, tileset, 32, 32)
 
@@ -50,8 +50,6 @@ image map = tilemap
 label sample_tilemap:
 
     ## イメージで定義した画像を表示します。
-    ## tilemap.area を None にすると、画像全てを描画します。
-    $ tilemap.area = None
     show map at truecenter
     pause
 
@@ -59,19 +57,28 @@ label sample_tilemap:
     $ tilemap.area = (64,64,256,256)
     pause
     
-    ## スクリーン上に表示ことも出来ます。
-    ## click を True にすると、クリックした時に座標を返すようになります。
+    ## tilemap.area を None にすると、画像全てを描画します。
     $ tilemap.area = None
-    $ tilemap.click = True
-    call screen tilemapscreen
+    
+    ## tilemap.coordinate でマウスがホバーしているタイルの座標を取得する事ができます。
+    call screen tilemap_coordinate
     "[_return]"
 
     return
     
     
-screen tilemapscreen():
-    text "Cick a tile to get its coodinate" align .5, .9
-    add tilemap at truecenter
+##############################################################################
+## Screen that shows coordinate of tilemap
+    
+screen tilemap_coordinate():
+    
+    text "Cick a tile to return its coodinate" align .5, .9
+    
+    # show coordinate
+    if tilemap.coordinate:
+        text "[tilemap.coordinate]"
+        
+        key "button_select" action Return(tilemap.coordinate)
 
 
 ##############################################################################
@@ -91,12 +98,13 @@ init -3 python:
         tile_height - height of each tile.
         tile_mapping - a dictionaly that maps string of map to index of tileset.
            If None, each corrdinate of map should be integer.
-        click - If true, it returns coodinate when you clicked this displayable on screens. 
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
         mask - 2-dimentional list of 0 or 1. If it's 0, tile will no be rendered.
+        interact - If true, it restarts interaction when mouse position is changed onto another tile. 
+        coordinate - (x, y) coordinate of a tile  where mouse is hovering.
         """
 
-        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, click = False, area = None, mask = None, **properties):
+        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, area = None, mask = None, interact = True, **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
@@ -104,9 +112,10 @@ init -3 python:
             self.tile_width = tile_width
             self.tile_height = tile_height or tile_width
             self.tile_mapping = tile_mapping
-            self.click = click
             self.area = area
             self.mask = mask
+            self.interact = interact
+            self.coordinate = None
 
 
         def render(self, width, height, st, at):
@@ -129,7 +138,7 @@ init -3 python:
                                     tile = 0
                             else:
                                 tile = self.map[y][x]
-
+                                
                             # Blit
                             render.blit(
                                 renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
@@ -155,15 +164,15 @@ init -3 python:
                                 # Get index of tileset
                                 if self.tile_mapping:
                                     if self.map[y][x] in self.tile_mapping.keys():
-                                            tile = self.tile_mapping[self.map[y][x]]
+                                        tile = self.tile_mapping[self.map[y][x]]
                                     else:
-                                            tile = 0
+                                        tile = 0
                                 else:
                                     tile = self.map[y][x]
 
                                 # Blit
                                 render.blit(
-                                    renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
+                                    renpy.render( self.tileset[tile], self.tile_width, self.tile_height, st, at),
                                     (x*self.tile_width, y*self.tile_height)
                                     )
 
@@ -178,12 +187,22 @@ init -3 python:
             
         def event(self, ev, x, y, st):
             
-            # Returns coodinate of displayable when it's clicked  
-            # If you want to pass coordinate into a screen, change store variables instead of return.
-            if self.click:
-                if renpy.map_event(ev, "button_select") and 0<x< len(self.map[0])*self.tile_width and 0<y< len(self.map)*self.tile_height:
-                    return int(x/self.tile_width), int(y/self.tile_height)
-
+            # record coordinate of mouse position
+            if 0<x< len(self.map[0])*self.tile_width and 0<y< len(self.map)*self.tile_height:
+                coordinate = (int(x/self.tile_width), int(y/self.tile_height))                    
+            else:
+                coordinate = None          
+                
+            # restat interaction only if coordinate has changed
+            if self.coordinate != coordinate:
+                self.coordinate = coordinate
+                
+                if self.interact:
+                    renpy.restart_interaction()          
+            
+            # call event regularly
+            renpy.timeout(1.0/60)
+            
 
         def per_interact(self):
 
