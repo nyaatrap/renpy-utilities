@@ -56,28 +56,28 @@ label sample_tilemap:
     ## tilemap.area を None 以外にすると、その範囲のみ描画します。
     $ tilemap.area = (64,64,256,256)
     pause
-    
+
     ## tilemap.area を None にすると、画像全てを描画します。
     $ tilemap.area = None
-    
+
     ## tilemap.coordinate でマウスがホバーしているタイルの座標を取得する事ができます。
     call screen tilemap_coordinate
     "[_return]"
 
     return
-    
-    
+
+
 ##############################################################################
 ## Screen that shows coordinate of tilemap
-    
+
 screen tilemap_coordinate():
-    
+
     text "Cick a tile to return its coodinate" align .5, .9
-    
+
     # show coordinate
     if tilemap.coordinate:
         text "[tilemap.coordinate]"
-        
+
         key "button_select" action Return(tilemap.coordinate)
 
 
@@ -100,7 +100,7 @@ init -3 python:
            If None, each corrdinate of map should be integer.
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
         mask - 2-dimentional list of 0 or 1. If it's 0, tile will no be rendered.
-        interact - If true, it restarts interaction when mouse position is changed onto another tile. 
+        interact - If true, it restarts interaction when mouse position is changed onto another tile.
         coordinate - (x, y) coordinate of a tile  where mouse is hovering.
         """
 
@@ -138,7 +138,7 @@ init -3 python:
                                     tile = 0
                             else:
                                 tile = self.map[y][x]
-                                
+
                             # Blit
                             render.blit(
                                 renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
@@ -172,7 +172,7 @@ init -3 python:
 
                                 # Blit
                                 render.blit(
-                                    renpy.render( self.tileset[tile], self.tile_width, self.tile_height, st, at),
+                                    renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
                                     (x*self.tile_width, y*self.tile_height)
                                     )
 
@@ -183,26 +183,26 @@ init -3 python:
             # renpy.redraw(self, 1.0/30)
 
             return render
-            
-            
+
+
         def event(self, ev, x, y, st):
-            
+
             # record coordinate of mouse position
             if 0<x< len(self.map[0])*self.tile_width and 0<y< len(self.map)*self.tile_height:
-                coordinate = (int(x/self.tile_width), int(y/self.tile_height))                    
+                coordinate = (int(x/self.tile_width), int(y/self.tile_height))
             else:
-                coordinate = None          
-                
-            # restat interaction only if coordinate has changed
+                coordinate = None
+
+            # restart interaction only if coordinate has changed
             if self.coordinate != coordinate:
                 self.coordinate = coordinate
-                
+
                 if self.interact:
-                    renpy.restart_interaction()          
-            
+                    renpy.restart_interaction()
+
             # call event regularly
             renpy.timeout(1.0/60)
-            
+
 
         def per_interact(self):
 
