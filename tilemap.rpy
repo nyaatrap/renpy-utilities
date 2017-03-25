@@ -51,7 +51,6 @@ label sample_tilemap:
 
     ## イメージで定義した画像を表示します。
     show map at truecenter
-    pause
 
     ## tilemap.area を None 以外にすると、その範囲のみ描画します。
     $ tilemap.area = (64,64,256,256)
@@ -70,16 +69,15 @@ label sample_tilemap:
 ##############################################################################
 ## Screen that shows coordinate of tilemap
 
-screen tilemap_coordinate():
+screen tilemap_coordinate():    
 
     text "Cick a tile to return its coodinate" align .5, .9
 
     # show coordinate
     if tilemap.coordinate:
         text "[tilemap.coordinate]"
-
         key "button_select" action Return(tilemap.coordinate)
-
+    
 
 ##############################################################################
 ## Definitions
@@ -98,13 +96,15 @@ init -3 python:
         tile_height - height of each tile.
         tile_mapping - a dictionaly that maps string of map to index of tileset.
            If None, each corrdinate of map should be integer.
+        isometric - if true, isometric tile is used. 
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
         mask - 2-dimentional list of 0 or 1. If it's 0, tile will no be rendered.
         interact - If true, it restarts interaction when mouse position is changed onto another tile.
         coordinate - (x, y) coordinate of a tile  where mouse is hovering.
         """
 
-        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, area = None, mask = None, interact = True, **properties):
+        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, isometric = False, 
+            area = None, mask = None, interact = True, **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
@@ -112,6 +112,7 @@ init -3 python:
             self.tile_width = tile_width
             self.tile_height = tile_height or tile_width
             self.tile_mapping = tile_mapping
+            self.isometric = isometric
             self.area = area
             self.mask = mask
             self.interact = interact
@@ -128,25 +129,22 @@ init -3 python:
                 # Get tile position
                 for y in xrange(len(self.map)):
                     for x in xrange(len(self.map[y])):
-                        if not self.mask or self.mask[y][x] == 1:
-
-                            # Get index of tileset
-                            if self.tile_mapping:
-                                if self.map[y][x] in self.tile_mapping.keys():
-                                    tile = self.tile_mapping[self.map[y][x]]
-                                else:
-                                    tile = 0
-                            else:
-                                tile = self.map[y][x]
-
-                            # Blit
-                            render.blit(
-                                renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
-                                (x*self.tile_width, y*self.tile_height)
-                                )
+                        
+                        # render
+                        self._render(render, st, at, x, y)
 
                 # Adjust the render size.
-                render = render.subsurface((0, 0, len(self.map[0])*self.tile_width, len(self.map)*self.tile_height))
+                if self.isometric:
+                    area = (
+                        -len(self.map)*self.tile_width/2, 
+                        0, 
+                        (len(self.map) + len(self.map[0]))*self.tile_width/2,
+                        (max(len(self.map[0]), len(self.map)) + 1)*self.tile_height
+                        )
+                else:
+                    area = (0, 0, len(self.map[0])*self.tile_width, len(self.map)*self.tile_height)
+                    
+                render = render.subsurface(area)
 
             # Blit only tiles around the area into the render
             else:
@@ -159,23 +157,10 @@ init -3 python:
                 for y in xrange(self.yoffset[0], min(len(self.map), self.area[3]//self.tile_height+self.yoffset[0]+1)):
                     for x in xrange(self.xoffset[0], min(len(self.map[y]), self.area[2]//self.tile_width+self.xoffset[0]+1)):
                         if 0 <=  y < len(self.map) and 0 <= x < len(self.map[0]):
-                            if not self.mask or self.mask[y][x] == 1:
-
-                                # Get index of tileset
-                                if self.tile_mapping:
-                                    if self.map[y][x] in self.tile_mapping.keys():
-                                        tile = self.tile_mapping[self.map[y][x]]
-                                    else:
-                                        tile = 0
-                                else:
-                                    tile = self.map[y][x]
-
-                                # Blit
-                                render.blit(
-                                    renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at),
-                                    (x*self.tile_width, y*self.tile_height)
-                                    )
-
+                            
+                            # render
+                            self._render(render, st, at, x, y)
+                                
                 # Crop the render.
                 render = render.subsurface(self.area)
 
@@ -183,24 +168,57 @@ init -3 python:
             # renpy.redraw(self, 1.0/30)
 
             return render
+            
+            
+        def _render(self, render, st, at, x, y):
+            
+            # don't render if mask is given
+            if self.mask and not self.mask[y][x]:
+                return
 
+            # Get index of tileset
+            if self.tile_mapping:
+                if self.map[y][x] in self.tile_mapping.keys():
+                    tile = self.tile_mapping[self.map[y][x]]
+                else:
+                    tile = 0
+            else:
+                tile = self.map[y][x]
+
+            # Get tile position
+            if self.isometric:
+                tile_pos = (x-y-1)*self.tile_width/2, (x+y)*self.tile_height/2
+            else:
+                tile_pos = x*self.tile_width, y*self.tile_height
+                
+            # Blit
+            render.blit(renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at), tile_pos)
+                
 
         def event(self, ev, x, y, st):
 
-            # record coordinate of mouse position
-            if 0<x< len(self.map[0])*self.tile_width and 0<y< len(self.map)*self.tile_height:
-                coordinate = (int(x/self.tile_width), int(y/self.tile_height))
+            # Get index of tile where mouse is hovered. 
+            if self.isometric:
+                tile_x = x/self.tile_width + y/self.tile_height - len(self.map)/2
+                tile_y = - x/self.tile_width + y/self.tile_height + len(self.map)/2
             else:
+                tile_x = x/self.tile_width
+                tile_y = y/self.tile_height
+                
+            # Make coordinate None if it's out of displayable
+            if tile_x < 0 or tile_y < 0 or tile_x >= len(self.map[0]) or tile_y >= len(self.map):
                 coordinate = None
+            else:
+                coordinate = int(tile_x), int(tile_y)
 
-            # restart interaction only if coordinate has changed
+            # Restart interaction only if coordinate has changed
             if self.coordinate != coordinate:
                 self.coordinate = coordinate
 
                 if self.interact:
                     renpy.restart_interaction()
 
-            # call event regularly
+            # Call event regularly
             renpy.timeout(1.0/60)
 
 
