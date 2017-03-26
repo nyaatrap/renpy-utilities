@@ -139,4 +139,44 @@ python early:
     renpy.register_statement("showith", parse=parse_showith, lint=lint_showith, execute=execute_showith)
     
 
+##############################################################################
+## scene 
+
+## By default, the scene statement clears only the master layer.
+## This makes the scene statement clears all layers except ovelay.
+## scene ステートメントが overlay 以外の全ての消去するように拡張します。
+
+
+init -999 python:
+    
+    def _scene_all_layers(layer = None):
+        
+        if layer:
+            renpy.scene(layer)
+        else:
+            for i in config.layers[:-1]:
+                renpy.scene(layer = i)
+                
+    config.scene = _scene_all_layers
+    
+
+##############################################################################
+## show
+
+## This adds dissolve effect between images when images with the same tag are changed. 
+## This is useful to change expression.
+## show ステートメントを表情変化などに使った時 dissolve で変化するようにします。
+        
+    
+    def _show_dissolve(name, at_list=[], layer='master', what=None, zorder=0, tag=None, behind=None, atl=None):
+        
+        # If an image has tag and it's showing, use dissolve effect.
+        if len(name)>1 and renpy.showing(name[0], layer = layer):
+            renpy.show(name[0], at_list, layer, what, zorder, tag, behind,atl)
+            renpy.with_statement(None)
+            renpy.transition(Dissolve(.3, alpha=True), layer)
+            
+        renpy.show(name, at_list, layer, what, zorder, tag, behind,atl)
+
+    config.show = _show_dissolve
 
