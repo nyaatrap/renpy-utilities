@@ -110,7 +110,7 @@ label crawl:
         if crawler.in_dungeon():
             $ crawler.draw_dungeon()
         else:
-            scene expression crawler.image
+            show expression crawler.image at topleft
         with Dissolve(.25)
 
     jump crawl_loop
@@ -142,9 +142,9 @@ label crawl_loop:
             # show eventmap or dungeon navigator
             $ block()
             if crawler.in_dungeon():
-                call screen dungeon(crawler)
+                call screen dungeon_navigator(crawler)
             else:
-                call screen eventmap(crawler)
+                call screen eventmap_navigator(crawler)
 
             # move by place
             if isinstance(_return, Place):
@@ -192,10 +192,10 @@ label crawl_loop:
 
 
 ##############################################################################
-## Dungeon screen
+## Dungeon navigator screen
 ## screen that shows orientation buttons in dungeon
 
-screen dungeon(crawler):
+screen dungeon_navigator(crawler):
 
     $ coord = Coordinate(*crawler.pos)
 

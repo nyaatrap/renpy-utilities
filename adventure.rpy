@@ -102,7 +102,7 @@ label adventure:
     # Show background
     if player.image:
         scene black with Dissolve(.25)
-        scene expression player.image
+        show expression player.image at topleft
         with Dissolve(.25)
 
     jump adventure_loop
@@ -130,7 +130,7 @@ label adventure_loop:
         $ block()
         
         # show eventmap
-        call screen eventmap(player)
+        call screen eventmap_navigator(player)
 
         # move by place
         if isinstance(_return, Place):
@@ -164,10 +164,10 @@ init python:
 
 
 ##############################################################################
-## Eventmap screen
+## Eventmap navigator screen
 ## screen that shows events and places over the current level
 
-screen eventmap(player):
+screen eventmap_navigator(player):
 
     ## show places
     for i in player.get_places():
