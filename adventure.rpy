@@ -127,8 +127,9 @@ label adventure_loop:
             $ _loop += 1
 
         $ player.after_interact = True
-        # show eventmap
         $ block()
+        
+        # show eventmap
         call screen eventmap(player)
 
         # move by place
