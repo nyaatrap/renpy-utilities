@@ -46,15 +46,34 @@ label enter:
     "enter point"
     return
 
-## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
-define ev.ev2 = Event("field", pos="1")
-label ev2:
-    "1"
-    return
-
 define ev.none = Event("field", priority=-10)
 label none:
     "There is nothing"
+    return
+
+## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
+define ev.passive1 = Event("field", pos="1", priority=-1)
+label passive1:
+    "passive event on tile 1"
+    return True
+        
+
+define place.wood = Place("field", pos=(3,0), image="top/1.png")
+define ev.wood = Event("wood")
+label wood:
+    "icon is clicked"
+    return
+    
+define place.wood2 = Place("field", pos=(0, 5), image="top/2.png")
+define ev.wood2 = Event("wood2")
+label wood2:
+    "icon is clicked"
+    return
+    
+define place.wood3 = Place("field", pos = (3,3), image="top/3.png")
+define ev.wood3 = Event("wood3")
+label wood3:
+    "icon is clicked"
     return
 
 
@@ -141,13 +160,13 @@ label explore_loop:
 screen tilemap_navigator(explorer):       
     
     # show coordinate
-    $ tilemap = explorer.image
+    python:
+        tilemap = explorer.image
+        width = tilemap.tile_width
+        height = tilemap.tile_height
     
     if tilemap.coordinate:
-        python:
-            x, y = tilemap.coordinate
-            width = tilemap.tile_width
-            height = tilemap.tile_height
+        $ x, y = tilemap.coordinate
     
         text "([x], [y])"
     
@@ -162,22 +181,23 @@ screen tilemap_navigator(explorer):
                     xoffset x*width
                     yoffset y*height
                     
-        key "button_select" action Return((x, y))        
+        key "button_select" action Return((x, y))                
 
-    ## show events
-    for i in explorer.get_events(click=True):
+    ## show places and events
+    for i in explorer.get_places() + explorer.get_events(click=True):
         button xysize (width, height):
             action Return(i)
             if  i.image:
                 add i.image
             if tilemap.isometric:
-                xoffset (i.pos[0]-i.pos[1])*width/2
-                yoffset (i.pos[0]+i.pos[1])*height/2
+                xoffset (i.pos[0]-i.pos[1])*width/2 - tilemap.tile_offset[0]
+                yoffset (i.pos[0]+i.pos[1])*height/2 - tilemap.tile_offset[1]
                 xpos (len(tilemap.map) -1)*width/2
             else:
-                xoffset i.pos[0]*width
-                yoffset i.pos[1]*height
+                xoffset i.pos[0]*width - tilemap.tile_offset[0]
+                yoffset i.pos[1]*height- tilemap.tile_offset[1]
 
+            
 
 ##############################################################################
 ## Explore class

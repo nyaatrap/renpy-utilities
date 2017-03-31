@@ -206,8 +206,8 @@ init -3 python:
                 tile_x = (x-self.tile_offset[0])/self.tile_width + (y-self.tile_offset[1])/self.tile_height - len(self.map)/2
                 tile_y = -(x/self.tile_width-self.tile_offset[0]) + (y-self.tile_offset[1])/self.tile_height + len(self.map)/2
             else:
-                tile_x = x/self.tile_width
-                tile_y = y/self.tile_height
+                tile_x = (x-self.tile_offset[0])/self.tile_width
+                tile_y = (y-self.tile_offset[1])/self.tile_height
                 
             # Make coordinate None if it's out of displayable
             if tile_x < 0 or tile_y < 0 or tile_x >= len(self.map[0]) or tile_y >= len(self.map):

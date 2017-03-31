@@ -169,20 +169,13 @@ init python:
 
 screen eventmap_navigator(player):
 
-    ## show places
-    for i in player.get_places():
+    ## show places and events
+    for i in player.get_places() + player.get_events(click=True):
         button pos i.pos:
             action Return(i)
             if i.image:
                 add i.image
-
-    ## show events
-    for i in player.get_events(click=True):
-        button pos i.pos:
-            action Return(i)
-            if  i.image:
-                add i.image
-
+                
 
 ##############################################################################
 ## Level class
