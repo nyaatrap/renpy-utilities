@@ -89,6 +89,8 @@ init python:
     def block():
         # blocks rollback then allows saving data in the current interaction
 
+        config.skipping = None
+        renpy.checkpoint()
         renpy.block_rollback()
         renpy.retain_after_load()
 

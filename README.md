@@ -25,10 +25,6 @@ This file implements integrated gallery that serches images and music automatica
 This file contains additional statements   
 Ren'Py に新しいステートメント（命令文）を追加するファイルです。   
 
-## tilemap.rpy
-This file defines Tilemap class that create single map from small tile images.   
-小さな画像を並べて一枚の画像にする Tilemap クラスを追加するファイルです。   
-
 ## dressup.rpy
 This file adds Doll class and LayeredDisplayable that provides layered sprites.   
 多層レイヤーのスプライトを提供する Doll クラスと LayeredDisplayable を追加するファイルです。   
@@ -44,14 +40,24 @@ This file defines Actor and Arena class to add turn-based combat and competition
 ターン制の戦闘や競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。   
 基本的な枠組みしかありませんので、実用には改変する必要があります。   
 
-## explorer.rpy
-This file provides exploration game framework that uses event maps.   
-２Dマップにイベントを配置する探索型ゲームのフレームワークを追加するファイルです。   
+## tilemap.rpy
+This file defines Tilemap class that create single map from small tile images.   
+小さな画像を並べて一枚の画像にする Tilemap クラスを追加するファイルです。   
+
+## adventure.rpy
+This file provides adventure game framework that uses event maps.   
+イベントを配置した２Dマップを探索するアドベンチャーゲームのフレームワークを追加するファイルです。   
 ラベルをオブジェクトとのペアで管理することで、マップ上にイベントとして配置して呼び出すことができます。   
 RPGからSLGまで様々に使えるように汎用性を高くしてありますが、その分コードは少し複雑になっています。   
 
-## crawler.rpy
-This file add pseudo-3D dungeon crawl function into explorer framework.   
-To player the sample game, download the cave folder then place it in the images directory.   
-explore を拡張して疑似３Dダンジョン探索機能を追加するファイルです。   
+## tilemap_explore.rpy
+This file adds tilemap exploring function into adventure framework.   
+This framework requres tilemap.rpy and adventure.rpy.   
+adventure にタイルマップを探索する機能を追加するファイルです。   
+tilemap.rpy と adventure.rpy が必要になります。
+
+## dungeon_crawl.rpy
+This file adds pseudo-3D dungeon crawling function into adventurer framework.   
+To play the sample game, download the cave folder then place it in the images directory.   
+adventure に疑似３Dダンジョン探索機能を追加するファイルです。   
 サンプルを実行するには images/cave フォルダーの画像をダウンロードする必要があります。   

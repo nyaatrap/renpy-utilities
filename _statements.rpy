@@ -103,7 +103,7 @@ python early:
 ## scene 
 
 ## By default, the scene statement clears only the master layer.
-## This makes the scene statement clears all layers except ovelay.
+## This makes the scene statement clears all layers except overlay.
 ## scene ステートメントが overlay 以外の全ての消去するように拡張します。
 
 

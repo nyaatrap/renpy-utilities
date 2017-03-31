@@ -1,7 +1,7 @@
-## This file provides exploration game framework that uses event maps.
-## ２Dマップにイベントを配置する探索型ゲームのフレームワークを追加するファイルです。
-## ラベルをオブジェクトとのペアで管理することで、マップ上にイベントとして配置して呼び出すことができます。
-## RPGからSLGまで様々に使えるように汎用性を高くしてありますが、その分コードは少し複雑になっています。
+##This file provides adventure game framework that uses event maps.
+##イベントを配置した２Dマップを探索するアドベンチャーゲームのフレームワークを追加するファイルです。
+##ラベルをオブジェクトとのペアで管理することで、マップ上にイベントとして配置して呼び出すことができます。
+##RPGからSLGまで様々に使えるように汎用性を高くしてありますが、その分コードは少し複雑になっています。
 
 ##############################################################################
 ## How to Use
@@ -26,10 +26,10 @@ define place.w_station = Place(level="west", pos=(.4,.4), image=Text("west-stati
 define place.shop = Place(level="west", pos=(.2,.5), image=Text("shop"))
 
 
-## それから現在位置や達成イベントなどを保持する探検者を Explorer(level, pos, image) で default で定義します
+## それから現在位置や達成イベントなどを保持する探検者を Player(level, pos, image) で default で定義します
 ## level のかわりに place を使うこともできます。
 ## 任意のパラメーターを追加すると、各イベントを呼び出す条件に使えます。
-default explorer = Explorer("home", turn=0)
+default player = Player("home", turn=0)
 
 
 ## 各イベントは define と label のペアで定義します。
@@ -63,8 +63,8 @@ label shop:
 ## click を True にすると場所と同じように image を表示して
 ## クリックから即座にリンクしたラベルを呼び出します。
 ## click が False の場合は移動後にイベントをチェックします。
-## explorer.seen(ev) でそのイベントを見たかどうか評価できます。
-define ev.direct = Event("west", pos=(.1,.1), cond="explorer.seen(ev.shop)", click=True, image=Text("click here"))
+## player.seen(ev) でそのイベントを見たかどうか評価できます。
+define ev.direct = Event("west", pos=(.1,.1), cond="player.seen(ev.shop)", click=True, image=Text("click here"))
 label direct:
     "this is a direct click event"
     return ev.direct.pos
@@ -73,11 +73,11 @@ label direct:
 define ev.turn = Event(priority = -100, precede =True, multi=True)
 label turn:
     #"turn+1"
-    $ explorer.turn += 1
+    $ player.turn += 1
     return
 
 
-## start ラベルから explore へジャンプすると探索を開始します。
+## start ラベルから adventure へジャンプすると探索を開始します。
 
 
 ##############################################################################
@@ -88,66 +88,66 @@ label turn:
 ## Main label
 ## Jumping to this label starts exploration
 
-label explore:
+label adventure:
 
     # Update event list in current level
-    $ explorer.update_events()
-    $ explorer.after_interact = False
+    $ player.update_events()
+    $ player.after_interact = False
 
     # Play music
-    if explorer.music:
-        if renpy.music.get_playing() != explorer.music:
-            play music explorer.music fadeout 1.0
+    if player.music:
+        if renpy.music.get_playing() != player.music:
+            play music player.music fadeout 1.0
 
     # Show background
-    if explorer.image:
+    if player.image:
         scene black with Dissolve(.25)
-        scene expression explorer.image
+        scene expression player.image
         with Dissolve(.25)
 
-    jump explore_loop
+    jump adventure_loop
 
 
-label explore_loop:
+label adventure_loop:
     while True:
 
         # check passive events
         $ block()
-        $ _events = explorer.get_events()
+        $ _events = player.get_events()
 
         # sub loop to excecute all passive events
         $ _loop = 0
         while _loop < len(_events):
 
-            $ explorer.event = _events[_loop]
+            $ player.event = _events[_loop]
             $ block()
-            call expression explorer.event.label or explorer.event.name
-            if explorer.move_pos(_return):
-                jump explore
+            call expression player.event.label or player.event.name
+            if player.move_pos(_return):
+                jump adventure
             $ _loop += 1
 
-        $ explorer.after_interact = True
+        $ player.after_interact = True
         # show eventmap
         $ block()
-        call screen eventmap(explorer)
+        call screen eventmap(player)
 
         # move by place
         if isinstance(_return, Place):
-            $ explorer.pos = _return.pos
+            $ player.pos = _return.pos
 
         # excecute click event
         elif isinstance(_return, Event):
-            $ explorer.event = _return
+            $ player.event = _return
             $ block()
-            call expression explorer.event.label or explorer.event.name
-            if explorer.move_pos(_return):
-                jump explore
+            call expression player.event.label or player.event.name
+            if player.move_pos(_return):
+                jump adventure
 
 
 label after_load():
 
     # Update event list in current level
-    $ explorer.update_events()
+    $ player.update_events()
     return
 
 
@@ -156,6 +156,8 @@ init python:
     def block():
         # blocks rollback then allows saving data in the current interaction
 
+        config.skipping = None
+        renpy.checkpoint()
         renpy.block_rollback()
         renpy.retain_after_load()
 
@@ -164,17 +166,17 @@ init python:
 ## Eventmap screen
 ## screen that shows events and places over the current level
 
-screen eventmap(explorer):
+screen eventmap(player):
 
     ## show places
-    for i in explorer.get_places():
+    for i in player.get_places():
         button pos i.pos:
             action Return(i)
             if i.image:
                 add i.image
 
     ## show events
-    for i in explorer.get_events(click=True):
+    for i in player.get_events(click=True):
         button pos i.pos:
             action Return(i)
             if  i.image:
@@ -192,7 +194,7 @@ init -3 python:
         Class that represents level that place events on it. It has following fields:
 
         image - image that is shown behind events
-        music - music that is played while explorer in this level
+        music - music that is played while player in this level
         info - Information text to be shown on event map screen.
         """
 
@@ -247,7 +249,7 @@ init -3 python:
         def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False, 
             precede=False, click=False, image=None, label=None, info=""):
 
-            self.place = level if Explorer.get_place(level) else None
+            self.place = level if Player.get_place(level) else None
             self._level = None if self.place else level
             self._pos = None if self.place else pos
             self.cond = cond
@@ -263,7 +265,7 @@ init -3 python:
             
         @property
         def level(self):
-            return Explorer.get_place(self.place).level if self.place else self._level
+            return Player.get_place(self.place).level if self.place else self._level
             
         @level.setter
         def level(self, value):
@@ -271,7 +273,7 @@ init -3 python:
             
         @property
         def pos(self):
-            return Explorer.get_place(self.place).pos if self.place else self._pos
+            return Player.get_place(self.place).pos if self.place else self._pos
             
         @pos.setter
         def pos(self, value):
@@ -279,9 +281,9 @@ init -3 python:
 
 
 ##############################################################################
-## Explorer class
+## Player class
 
-    class Explorer(object):
+    class Player(object):
 
         """
         Class that stores various methods and data for explroring. It has the following fields:
@@ -289,13 +291,13 @@ init -3 python:
         level - current level.
         pos - current coordinate
         image - image that is shown behind events
-        music - music that is played while explorer in this level
+        music - music that is played while player in this level
         event - current event
         """
 
         def __init__(self, level=None, pos=None, **kwargs):
 
-            place = Explorer.get_place(level)
+            place = Player.get_place(level)
             self.level = place.level if place else level
             self.pos = place.pos if place else pos
 
