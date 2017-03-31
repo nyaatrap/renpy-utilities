@@ -9,16 +9,36 @@
 
 
 ## まずタイルマップを作成します。
-## 次にそれらを使ってレベルを Field(image, music, tilemap) で定義します。
-## image はタイルマップで作成した画像タグです。
-## tilemap は作成したタイルマップです。
 
-define level.field = Field(image="map", tilemap=tilemap)
+init python:
+    
+    tileset2 =[Image("images/1.png"), Image("images/1.png")]
+
+    map2 = [
+        ["1","1","1","1","1","1","1","1"],
+        ["1","0","1","0","0","0","0","1"],
+        ["1","0","1","0","1","1","0","1"],
+        ["1","0","0","0","0","1","0","1"],
+        ["1","0","1","1","0","0","0","1"],
+        ["1","0","0","0","0","1","0","1"],
+        ["1","1","0","1","1","1","0","1"],
+        ["1","1","1","1","1","1","1","1"],
+        ]
+        
+    tile_mapping = {"0":0, "1":1}
+        
+    tilemap2 = Tilemap(map2, tileset2, 128, 64, tile_mapping, isometric=True)        
+        
+## 次にそれらを使ってレベルを Level(image, music) で定義します。
+## image は画像ではなく、タイルマップオブジェクトです。
+## default で定義します。
+
+default level.field = Level(tilemap2)
 
 
 ## 最後に冒険者を Explorer クラスで定義します。
 
-default explorer = Explorer("field", pos=(1,1))
+default explorer = Explorer("field", pos=(1,1), cursor = Image("images/0.png"))
 
 
 ## フィールドのイベントを定義します。
@@ -29,9 +49,9 @@ label enter:
     return
 
 ## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
-define ev.ev2 = Event("field", pos="2")
+define ev.ev2 = Event("field", pos="1")
 label ev2:
-    "2"
+    "1"
     return
 
 define ev.none = Event("field", priority=-10)
@@ -65,7 +85,7 @@ label explore:
     # Show background
     if explorer.image:
         scene black with Dissolve(.25)
-        scene expression explorer.image
+        show expression explorer.image at topleft
         with Dissolve(.25)
 
     jump explore_loop
@@ -93,10 +113,10 @@ label explore_loop:
         $ block()
         
         # show eventmap
-        if explorer.in_field():
-            call screen field(explorer)
+        if explorer.in_tilemap():
+            call screen tilemap_navigator(explorer)
         else:
-            call screen eventmap(explorer)
+            call screen eventmap_navigator(explorer)
 
         # move by place
         if isinstance(_return, Place):
@@ -117,19 +137,33 @@ label explore_loop:
 
             
 ##############################################################################
-## Field screen
-## screen that shows orientation buttons in tilemap field
-## This overwrites default eventmap screen
+## Tilemap navigator screen
+## This overwrites eventmap screen
 
-screen field(explorer):
+screen tilemap_navigator(explorer):       
     
     # show coordinate
-    if explorer.tilemap.coordinate:
-        $ coord = explorer.tilemap.coordinate    
-        text "[coord]"
-        key "button_select" action Return(coord)
-        
+    if explorer.image.coordinate:
+        python:
+            tilemap = explorer.image
+            x, y = tilemap.coordinate
+            width = tilemap.tile_width
+            height = tilemap.tile_height
+    
+        text "([x], [y])"
+    
         ## show cursor
+        if explorer.cursor:
+            add explorer.cursor:
+                if tilemap.isometric:
+                    xoffset (x-y)*width/2
+                    yoffset (x+y)*height/2
+                    xpos (len(tilemap.map) -1)*width/2
+                else:
+                    xoffset coord[0]*width
+                    yoffset coord[1]*height
+                    
+        key "button_select" action Return((x, y))        
         
 
     ## show events
@@ -141,54 +175,29 @@ screen field(explorer):
 
 
 ##############################################################################
-## Field class.
+## Explore class
 
 init -2 python:
-
-    class Field(Level):
-
-        """
-        Expanded Level class to holds tilemap class.
-        """
-
-        def __init__(self, image=None, music=None, tilemap = None, info=""):
-
-            super(Field, self).__init__(image, music, info)
-            self.tilemap = tilemap
-
-
-##############################################################################
-## Explore class
 
     class Explorer(Player):
 
         """
-        Expanded Player Class that stores various methods and data for exploring.
+        Expanded Player Class that stores various methods and data for tilemap exploring.
         """
-            
-        @property
-        def tilemap(self):
-            return self.get_level(self.level).tilemap
 
 
-        def in_field(self):
-            # returns true if explorer is in field
+        def in_tilemap(self):
+            # returns true if explorer is in tilemap
 
-            return isinstance(self.get_level(self.level), Field)
+            return isinstance(self.image, Tilemap)
 
 
         def _check_pos(self, ev, click, pos):
             # It overrides a same method to support coordinate
 
-            if ev.pos == None or ev.pos == pos:
+            if click or ev.pos == None or ev.pos == pos:
                 return True
-            if not self.in_field() and click:
+                
+            elif ev.pos == self.image.map[pos[1]][pos[0]]:
                 return True
-            elif pos:
-                if len(ev.pos) == 2:
-                    if ev.pos[0] == pos[0] and ev.pos[1] == pos[1]:
-                        return True
-                else:
-                    if ev.pos == self.tilemap.map[pos[1]][pos[0]]:
-                        return True
 
