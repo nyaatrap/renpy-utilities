@@ -60,14 +60,13 @@ label shop:
     "this is a shop"
     return
 
-## click を True にすると場所と同じように image を表示して
-## クリックから即座にリンクしたラベルを呼び出します。
-## click が False の場合は移動後にイベントをチェックします。
+## image を与えると、イベントマップ上に表示され place のようにクリックで移動できるようになります。
+## イベントが発生したマーカーとしても利用できます。
 ## player.seen(ev) でそのイベントを見たかどうか評価できます。
-define ev.direct = Event("west", pos=(.1,.1), cond="player.seen(ev.shop)", click=True, image=Text("click here"))
-label direct:
-    "this is a direct click event"
-    return ev.direct.pos
+define ev.shop2 = Event("west", pos=(.1,.1), cond="player.seen(ev.shop)", image=Text("hidden shop"))
+label shop2:
+    "this is a hidden shop."
+    return
 
 ## このラベルは毎ターン最後に呼ばれ、ターンの経過を記録しています。
 define ev.turn = Event(priority = -100, precede =True, multi=True)
@@ -129,20 +128,24 @@ label adventure_loop:
         $ player.after_interact = True
         $ block()
         
-        # show eventmap
+        # show eventmap navigator
         call screen eventmap_navigator(player)
-
-        # move by place
+        
+        #  If return value is a place
         if isinstance(_return, Place):
             $ player.pos = _return.pos
-
-        # excecute click event
+        
+        # If return value is an event
         elif isinstance(_return, Event):
-            $ player.event = _return
-            $ block()
-            call expression player.event.label or player.event.name
-            if player.move_pos(_return):
-                jump adventure
+            $ player.pos = _return.pos
+            
+            # If it's an active event, excecute it.
+            if _return.active:
+                $ player.event = _return
+                $ block()
+                call expression player.event.label or player.event.name
+                if player.move_pos(_return):
+                    jump adventure
 
 
 label after_load():
@@ -169,12 +172,13 @@ init python:
 
 screen eventmap_navigator(player):
 
-    ## show places and events
-    for i in player.get_places() + player.get_events(click=True):
-        button pos i.pos:
+    ## show places and events                                 
+    for i in player.get_places() + player.get_shown_events():
+        button:
             action Return(i)
             if i.image:
                 add i.image
+            pos i.pos
                 
 
 ##############################################################################
@@ -233,15 +237,15 @@ init -3 python:
         once - Set this true prevents calling this event second time.
         multi - Set this true don't prevent other events in the same interaction.
         precede - Set this true searches this event before showing event map screen.
-        click - Set this true makes click events. Like an event place object, that allows clicking this event on map.
-                Otherwise, this is passive event.
-        image - Imagebutton to be shown on eventmap if click is True.
+        active - Set this true makes this event as 'active event'. 
+                An active event is exceuted when you clicked its image on an eventmap.
+        image - Image that is shown on an eventmap.
         label - If it's given this label is called instead of object name.
         info - Information text to be shown on event map screen.
         """
 
-        def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False, 
-            precede=False, click=False, image=None, label=None, info=""):
+        def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False, precede=False, 
+            active=False, image=None, label=None, info=""):
 
             self.place = level if Player.get_place(level) else None
             self._level = None if self.place else level
@@ -251,7 +255,7 @@ init -3 python:
             self.once = once
             self.multi = multi
             self.precede = precede
-            self.click = click
+            self.active = active
             self.image = image
             self.label = label
             self.info = info
@@ -353,33 +357,38 @@ init -3 python:
                     pl = self.get_place(i)
                     if isinstance(pl, Place) and (pl.level == None or pl.level == self.level):
                         self.current_places.append(pl)
+            
 
-
-        def get_events(self, click = False, pos=None):
-            # returns event list that happens in the given pos.
-
-            pos = pos or self.pos
+        def get_shown_events(self):
+            # returns event list that is shown in the navigation screen
 
             events = []
             for i in self.current_events:
-                if i.click == click:
-                    if not i.once or not self.seen(i):
-                        if click or i.precede or self.after_interact:
-                            if self._check_pos(i, click, pos) and eval(i.cond):
+                if not i.once or not self.seen(i):
+                    if isinstance(i.pos, tuple):
+                        if eval(i.cond):
+                            events.append(i)
+
+            return events
+
+
+        def get_events(self):
+            # returns event list that happens in the given pos.
+
+            events = []
+            for i in self.current_events:
+                if not i.once or not self.seen(i):
+                    if i.precede or self.after_interact:
+                        if i.pos == None or i.pos == self.pos:
+                            if not i.active and eval(i.cond):
                                 events.append(i)
 
             return self.cut_events(events)
 
 
-        def _check_pos(self, ev, click, pos):
-            # internal function for get_events.
-
-            if click or ev.pos == None or ev.pos == pos:
-                return True
-
-
         def cut_events(self, events):
-            # if not multi is False, remove second or later
+            # If not multi is False, remove second or later
+            # This is only used in passive events 
 
             found = False
             for i in events[:]:
@@ -390,7 +399,7 @@ init -3 python:
                         found=True
 
             return events
-
+            
 
         def get_places(self):
             # returns place list that shown in current interaction.

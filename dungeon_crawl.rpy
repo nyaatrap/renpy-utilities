@@ -60,7 +60,7 @@ label entrance:
     return
 
 ## dx,dy を与えるとその向きのみイベントが発生します。
-define ev.chest = Event("cave", pos=(6,6,0,1), click=True)
+define ev.chest = Event("cave", pos=(6,6,0,1), active=True)
 label chest:
     "You found a chest"
     return
@@ -77,7 +77,7 @@ label collision:
     with vpunch
     return
 
-define ev.nothing = Event("cave", priority=-10, click=True)
+define ev.nothing = Event("cave", priority=-10, active=True)
 label nothing:
     "There is nothing"
     return
@@ -146,18 +146,23 @@ label crawl_loop:
             else:
                 call screen eventmap_navigator(crawler)
 
-            # move by place
+            #  If return value is a place
             if isinstance(_return, Place):
                 $ crawler.pos = _return.pos
                 jump crawl_loop
 
-            # excecute click event
+            # If return value is an event
             elif isinstance(_return, Event):
-                $ crawler.event = _return
-                $ block()
-                call expression crawler.event.label or crawler.event.name
-                if crawler.move_pos(_return):
-                    jump crawl
+                if not crawler.in_dungeon():
+                    $ crawler.pos = _return.pos                    
+                    
+                # If it's an active event, excecute it.
+                if _return.active:
+                    $ crawler.event = _return
+                    $ block()
+                    call expression crawler.event.label or crawler.event.name
+                    if crawler.move_pos(_return):
+                        jump crawl
                 jump crawl_loop
 
             # collision
@@ -200,7 +205,7 @@ screen dungeon_navigator(crawler):
     $ coord = Coordinate(*crawler.pos)
 
     ## show events
-    for i in crawler.get_events(click=True):
+    for i in crawler.get_events(active=True):
         button xysize (config.screen_width, config.screen_height):
             action Return(i)
         if  i.image:
@@ -364,22 +369,23 @@ init -2 python:
             # returns true if crawler is in dungeon
 
             return isinstance(self.get_level(self.level), Dungeon)
+            
 
+        def get_events(self, active = False, pos=None):
+            # returns event list that happens in the given pos.
+            
+            pos = pos or self.pos
 
-        def _check_pos(self, ev, click, pos):
-            # It overrides a same method to support coordinate
+            events = []
+            for i in self.current_events:
+                if not i.once or not self.seen(i):
+                    if i.precede or self.after_interact:
+                        if i.pos == None or (isinstance(i.pos, basestring) and i.pos == self.map[pos[1]][pos[0]]) or\
+                        i.pos == pos or (len(i.pos)==2 and i.pos[0] == pos[0] and i.pos[1] == pos[1]):
+                            if active == i.active and eval(i.cond):
+                                events.append(i)
 
-            if ev.pos == None or ev.pos == pos:
-                return True
-            if not self.in_dungeon() and click:
-                return True
-            elif pos:
-                if len(ev.pos) == 2:
-                    if ev.pos[0] == pos[0] and ev.pos[1] == pos[1]:
-                        return True
-                else:
-                    if ev.pos == self.map[pos[1]][pos[0]]:
-                        return True
+            return self.cut_events(events)
 
 
         def draw_dungeon(self):
