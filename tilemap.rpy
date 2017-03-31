@@ -98,6 +98,7 @@ init -3 python:
         tile_height - height of each tile.
         tile_mapping - a dictionaly that maps string of map to index of tileset.
            If None, each corrdinate of map should be integer.
+        tile_offset - blank pixel of (left, top) side of each tile
         isometric - if true, isometric tile is used. 
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
         mask - 2-dimentional list of 0 or 1. If it's 0, tile will no be rendered.
@@ -105,8 +106,8 @@ init -3 python:
         coordinate - (x, y) coordinate of a tile  where mouse is hovering.
         """
 
-        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, isometric = False, 
-            area = None, mask = None, interact = True, **properties):
+        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, tile_offset = (0,0),
+            isometric = False, area = None, mask = None, interact = True, **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
@@ -114,6 +115,7 @@ init -3 python:
             self.tile_width = tile_width
             self.tile_height = tile_height or tile_width
             self.tile_mapping = tile_mapping
+            self.tile_offset = tile_offset
             self.isometric = isometric
             self.area = area
             self.mask = mask
@@ -201,8 +203,8 @@ init -3 python:
 
             # Get index of tile where mouse is hovered. 
             if self.isometric:
-                tile_x = x/self.tile_width + y/self.tile_height - len(self.map)/2
-                tile_y = - x/self.tile_width + y/self.tile_height + len(self.map)/2
+                tile_x = (x-self.tile_offset[0])/self.tile_width + (y-self.tile_offset[1])/self.tile_height - len(self.map)/2
+                tile_y = -(x/self.tile_width-self.tile_offset[0]) + (y-self.tile_offset[1])/self.tile_height + len(self.map)/2
             else:
                 tile_x = x/self.tile_width
                 tile_y = y/self.tile_height

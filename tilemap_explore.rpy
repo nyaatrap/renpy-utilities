@@ -12,22 +12,20 @@
 
 init python:
     
-    tileset2 =[Image("images/1.png"), Image("images/1.png")]
+    tileset2 =[Image("ground/1.png"), Image("ground/2.png")]
 
     map2 = [
-        ["1","1","1","1","1","1","1","1"],
-        ["1","0","1","0","0","0","0","1"],
-        ["1","0","1","0","1","1","0","1"],
-        ["1","0","0","0","0","1","0","1"],
-        ["1","0","1","1","0","0","0","1"],
-        ["1","0","0","0","0","1","0","1"],
-        ["1","1","0","1","1","1","0","1"],
-        ["1","1","1","1","1","1","1","1"],
+        ["1","1","1","1","1","1"],
+        ["1","0","1","0","0","0"],
+        ["1","0","1","0","1","1"],
+        ["1","0","0","0","0","1"],
+        ["1","0","1","1","0","0"],
+        ["1","0","0","0","0","1"],
         ]
         
     tile_mapping = {"0":0, "1":1}
         
-    tilemap2 = Tilemap(map2, tileset2, 128, 64, tile_mapping, isometric=True)        
+    tilemap2 = Tilemap(map2, tileset2, 192, 96, tile_mapping, tile_offset = (0, 44), isometric=True)        
         
 ## 次にそれらを使ってレベルを Level(image, music) で定義します。
 ## image は画像ではなく、タイルマップオブジェクトです。
@@ -38,7 +36,7 @@ default level.field = Level(tilemap2)
 
 ## 最後に冒険者を Explorer クラスで定義します。
 
-default explorer = Explorer("field", pos=(1,1), cursor = Image("images/0.png"))
+default explorer = Explorer("field", pos=(1,1), cursor = Image("ground/0.png"))
 
 
 ## フィールドのイベントを定義します。
@@ -143,9 +141,10 @@ label explore_loop:
 screen tilemap_navigator(explorer):       
     
     # show coordinate
-    if explorer.image.coordinate:
+    $ tilemap = explorer.image
+    
+    if tilemap.coordinate:
         python:
-            tilemap = explorer.image
             x, y = tilemap.coordinate
             width = tilemap.tile_width
             height = tilemap.tile_height
@@ -160,18 +159,24 @@ screen tilemap_navigator(explorer):
                     yoffset (x+y)*height/2
                     xpos (len(tilemap.map) -1)*width/2
                 else:
-                    xoffset coord[0]*width
-                    yoffset coord[1]*height
+                    xoffset x*width
+                    yoffset y*height
                     
         key "button_select" action Return((x, y))        
-        
 
     ## show events
     for i in explorer.get_events(click=True):
-        button pos i.pos:
+        button xysize (width, height):
             action Return(i)
             if  i.image:
                 add i.image
+            if tilemap.isometric:
+                xoffset (i.pos[0]-i.pos[1])*width/2
+                yoffset (i.pos[0]+i.pos[1])*height/2
+                xpos (len(tilemap.map) -1)*width/2
+            else:
+                xoffset i.pos[0]*width
+                yoffset i.pos[1]*height
 
 
 ##############################################################################
@@ -184,7 +189,6 @@ init -2 python:
         """
         Expanded Player Class that stores various methods and data for tilemap exploring.
         """
-
 
         def in_tilemap(self):
             # returns true if explorer is in tilemap
@@ -200,4 +204,5 @@ init -2 python:
                 
             elif ev.pos == self.image.map[pos[1]][pos[0]]:
                 return True
+
 
