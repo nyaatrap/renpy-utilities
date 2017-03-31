@@ -1,6 +1,7 @@
 ﻿## This file defines Tilemap class that create single map from small tile images.
 ## 小さな画像を並べて一枚の画像にする Tilemap クラスを追加するファイルです。
 
+
 ##############################################################################
 ## How to Use
 ##############################################################################
@@ -60,7 +61,8 @@ label sample_tilemap:
     $ tilemap.area = None
 
     ## tilemap.coordinate でマウスがホバーしているタイルの座標を取得する事ができます。
-    call screen tilemap_coordinate
+    ## ただしisometric の場合タイルの数が偶数でないと、正しく取得できません
+    call screen tilemap_coordinate(tilemap)
     "[_return]"
 
     return
@@ -69,7 +71,7 @@ label sample_tilemap:
 ##############################################################################
 ## Screen that shows coordinate of tilemap
 
-screen tilemap_coordinate():    
+screen tilemap_coordinate(tilemap):    
 
     text "Cick a tile to return its coodinate" align .5, .9
 
