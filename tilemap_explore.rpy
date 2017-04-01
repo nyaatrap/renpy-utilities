@@ -9,70 +9,54 @@
 
 
 ## まずタイルマップを作成します。
-
-init python:
-    
-    tileset2 =[Image("ground/1.png"), Image("ground/2.png")]
-
-    map2 = [
-        ["0","1","1","1","1","1"],
-        ["0","0","1","1","1","1"],
-        ["0","0","1","1","1","1"],
-        ["0","0","0","0","0","1"],
-        ["0","0","0","0","0","0"],
-        ["0","0","0","0","0","0"],
-        ]
-        
-    tile_mapping = {"0":0, "1":1}
-        
-    tilemap2 = Tilemap(map2, tileset2, 192, 96, tile_mapping, tile_offset = (0, 44), isometric=True)        
+## ここでは tilemap.rpy で定義したものを直接使います。
         
 ## 次にそれらを使ってレベルを Level(image, music) で定義します。
 ## image は画像ではなく、タイルマップオブジェクトです。
 ## default で定義します。
 
-default level.field = Level(tilemap2)
+default level.field = Level(tilemap)
 
 
 ## 最後に冒険者を Explorer クラスで定義します。
+## pos はゲームをスタートするタイルの座標です。
 ## cursor はマウスの乗っているタイルを色変えする画像です。
 
-default explorer = Explorer("field", pos=(1,1), cursor = Transform("ground/0.png", alpha=0.5))
+default explorer = Explorer("field", pos=(1,1), cursor = Transform(Solid("#f66", xysize=(32,32)), alpha=0.5))
 
 
-## フィールドのイベントを定義します。
+## タイルマップ上のイベントを定義します。
 
+## イベントは、プレイヤーがposの位置に移動した時に呼び出されます。
 define ev.enter = Event("field", pos=(1,1), precede=True)
 label enter:
     "enter point"
     return
-
-define ev.none = Event("field", priority=-10)
-label none:
-    "There is nothing"
+    
+## pos を文字列にすると、その文字列のある map の座標でイベントが発生します。
+## タイルマップを文字列で定義したときのみ有効です。
+define ev.ev1 = Event("field", pos="1")
+label ev1:
+    "tile 1"
     return
 
-## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
-define ev.passive1 = Event("field", pos="1", priority=-1)
-label passive1:
-    "passive event on tile 1"
+## pos が与えられていないイベントは、そのレベル内なら毎ターン発生します。
+define ev.ev0 = Event("field", priority=-1)
+label ev0:
+    "tile 0"
     return
+
         
 ## image を与えると tilemap navigator 上に表示されます。
 
-define ev.icon = Event("field", pos=(3,0), image="top/1.png")
-label icon:
-    "icon 1 is clicked"
+define ev.iconA = Event("field", pos=(5,0), image=Text("A"))
+label iconA:
+    "icon A is clicked"
     return
     
-define ev.icon2 = Event("field", pos=(0,5), image="top/2.png")
-label icon2:
-    "icon 2 is clicked"
-    return
-    
-define ev.icon3 = Event("field", pos=(3,3), image="top/3.png")
-label icon3:
-    "icon 3 is clicked"
+define ev.iconB = Event("field", pos=(8,7), image=Text("B"))
+label iconB:
+    "icon B is clicked"
     return
 
 
@@ -141,14 +125,11 @@ label explore_loop:
         # If return value is an event
         elif isinstance(_return, Event):
             $ explorer.pos = _return.pos
-            
-            # If it's an active event, excecute it.
-            if _return.active:
-                $ explorer.event = _return
-                $ block()
-                call expression explorer.event.label or explorer.event.name
-                if explorer.move_pos(_return):
-                    jump adventure
+            $ explorer.event = _return
+            $ block()
+            call expression explorer.event.label or explorer.event.name
+            if explorer.move_pos(_return):
+                jump adventure
             
         # If return value is coordinate
         elif isinstance(_return, tuple):
@@ -182,13 +163,12 @@ screen tilemap_navigator(explorer):
                     xoffset x*width
                     yoffset y*height
                     
-        ## Instead of places, returns coordinate of tiles 
+        ## returns coordinate of tiles 
         key "button_select" action Return((x, y))
 
-    ## show events
-    for i in explorer.get_shown_events():
+    ## show places and events
+    for i in explorer.get_places() + explorer.get_shown_events():
         button xysize (width, height):
-            add i.image
             if tilemap.isometric:
                 xoffset (i.pos[0]-i.pos[1])*width/2 - tilemap.tile_offset[0]
                 yoffset (i.pos[0]+i.pos[1])*height/2 - tilemap.tile_offset[1]
@@ -196,6 +176,10 @@ screen tilemap_navigator(explorer):
             else:
                 xoffset i.pos[0]*width - tilemap.tile_offset[0]
                 yoffset i.pos[1]*height- tilemap.tile_offset[1]
+            if isinstance(i, Place) or i.active:
+                action Return(i)
+            if i.image:
+                add i.image
 
             
 
@@ -218,6 +202,7 @@ init -2 python:
 
         def get_events(self):
             # returns event list that happens in the given pos.
+            # this overwrites the same method in player class.
 
             events = []
             for i in self.current_events:

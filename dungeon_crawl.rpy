@@ -43,7 +43,7 @@ define sample_map =[
 ## image は先に定義したダンジョンの種類です。
 ## map は ２次元配列の map [[]] か、タブ区切りのスプレッドシートファイル名です。
 
-define level.cave = Dungeon(image="cave", map=sample_map)
+default level.cave = Dungeon(image="cave", map=sample_map)
 
 
 ## 最後に冒険者を Crawler クラスで定義します。
@@ -54,6 +54,7 @@ default crawler = Crawler("cave", pos=(1,1,0,1))
 
 ## ダンジョンのイベントを定義します。
 
+## イベントは、プレイヤーがpos の位置に移動した時に呼び出されます。
 define ev.entrance = Event("cave", pos=(1,1), precede=True, once=True)
 label entrance:
     "Here starts crawling"
@@ -71,17 +72,19 @@ label enemy:
     "There is an enemy"
     return
 
-## 衝突の場合は衝突先のイベントが呼ばれます。
-define ev.collision = Event("cave", pos="1")
-label collision:
-    with vpunch
-    return
-
+## pos が与えられていないイベントは、そのレベル内なら毎ターン発生します。
+## active を True にすると、クリックした時のみ呼び出されるアクティブイベントになります。
 define ev.nothing = Event("cave", priority=-10, active=True)
 label nothing:
     "There is nothing"
     return
 
+
+## 衝突の場合は衝突先のイベントがアクティブイベントとして呼ばれます。
+define ev.collision = Event("cave", pos="1", active=True)
+label collision:
+    with vpunch
+    return
 
 ## start ラベルから crawl へジャンプすると探索を開始します。
 
@@ -154,25 +157,22 @@ label crawl_loop:
             # If return value is an event
             elif isinstance(_return, Event):
                 if not crawler.in_dungeon():
-                    $ crawler.pos = _return.pos                    
-                    
-                # If it's an active event, excecute it.
-                if _return.active:
-                    $ crawler.event = _return
-                    $ block()
-                    call expression crawler.event.label or crawler.event.name
-                    if crawler.move_pos(_return):
-                        jump crawl
+                    $ crawler.pos = _return.pos
+                $ crawler.event = _return
+                $ block()
+                call expression crawler.event.label or crawler.event.name
+                if crawler.move_pos(_return):
+                    jump crawl
                 jump crawl_loop
 
             # collision
             elif isinstance(_return, Coordinate) and crawler.map[_return.y][_return.x] in crawler.collision:
 
-                # check passive events
+                # check active events
                 $ block()
-                $ _events = crawler.get_events(pos = _return.unpack())
+                $ _events = crawler.get_events(pos = _return.unpack(), active=True)
 
-                # sub loop to excecute all passive events
+                # sub loop to excecute all active events
                 $ _loop = 0
                 while _loop < len(_events):
 
@@ -207,9 +207,10 @@ screen dungeon_navigator(crawler):
     ## show events
     for i in crawler.get_events(active=True):
         button xysize (config.screen_width, config.screen_height):
-            action Return(i)
-        if  i.image:
-            add i.image
+            if i.active:
+                action Return(i)
+            if  i.image:
+                add i.image
 
 
     #move buttons
@@ -373,6 +374,7 @@ init -2 python:
 
         def get_events(self, active = False, pos=None):
             # returns event list that happens in the given pos.
+            # this overwrites the same method in player class.
             
             pos = pos or self.pos
 

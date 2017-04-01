@@ -33,7 +33,7 @@ default player = Player("home", turn=0)
 
 
 ## 各イベントは define と label のペアで定義します。
-## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede, click, image) で定義します。
+## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede) で定義します。
 ## 探索者が place の場所にいて cond が満たされると、リンクしたラベルが呼ばれます。
 ## priorty は発生の優先度で、一番数字が大きいものが優先して実行されます。
 ## once を True にすると一度しか実行されません。
@@ -60,10 +60,10 @@ label shop:
     "this is a shop"
     return
 
-## image を与えると、イベントマップ上に表示され place のようにクリックで移動できるようになります。
-## イベントが発生したマーカーとしても利用できます。
+## image を与えると、イベントマップ上にその画像が表示されます。
+## さらに active を True にすると place のようにクリックでイベントを呼び出せます。
 ## player.seen(ev) でそのイベントを見たかどうか評価できます。
-define ev.shop2 = Event("west", pos=(.1,.1), cond="player.seen(ev.shop)", image=Text("hidden shop"))
+define ev.shop2 = Event("west", pos=(.1,.1), cond="player.seen(ev.shop)", active = True, image=Text("hidden shop"))
 label shop2:
     "this is a hidden shop."
     return
@@ -138,14 +138,11 @@ label adventure_loop:
         # If return value is an event
         elif isinstance(_return, Event):
             $ player.pos = _return.pos
-            
-            # If it's an active event, excecute it.
-            if _return.active:
-                $ player.event = _return
-                $ block()
-                call expression player.event.label or player.event.name
-                if player.move_pos(_return):
-                    jump adventure
+            $ player.event = _return
+            $ block()
+            call expression player.event.label or player.event.name
+            if player.move_pos(_return):
+                jump adventure
 
 
 label after_load():
@@ -175,10 +172,11 @@ screen eventmap_navigator(player):
     ## show places and events                                 
     for i in player.get_places() + player.get_shown_events():
         button:
-            action Return(i)
+            pos i.pos
+            if isinstance(i, Place) or i.active:
+                action Return(i)
             if i.image:
                 add i.image
-            pos i.pos
                 
 
 ##############################################################################
