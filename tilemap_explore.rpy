@@ -129,7 +129,7 @@ label explore_loop:
             $ block()
             call expression explorer.event.label or explorer.event.name
             if explorer.move_pos(_return):
-                jump adventure
+                jump explore
             
         # If return value is coordinate
         elif isinstance(_return, tuple):
