@@ -61,7 +61,6 @@ label sample_tilemap:
     $ tilemap.area = None
 
     ## tilemap.coordinate でマウスがホバーしているタイルの座標を取得する事ができます。
-    ## ただし isometric の場合タイルの数が偶数でないと、正しく取得できません。
     call screen tilemap_coordinate(tilemap)
     "[_return]"
 
@@ -205,6 +204,9 @@ init -3 python:
             if self.isometric:
                 tile_x = (x-self.tile_offset[0])/self.tile_width + (y-self.tile_offset[1])/self.tile_height - len(self.map)/2
                 tile_y = -(x/self.tile_width-self.tile_offset[0]) + (y-self.tile_offset[1])/self.tile_height + len(self.map)/2
+                if len(self.map) % 2 ==1:
+                    tile_x -= 0.5
+                    tile_y += 0.5
             else:
                 tile_x = (x-self.tile_offset[0])/self.tile_width
                 tile_y = (y-self.tile_offset[1])/self.tile_height
