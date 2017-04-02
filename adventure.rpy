@@ -334,7 +334,7 @@ init -3 python:
             # get current events
             self.current_events = []
             for i in dir(store.event) + dir(store.ev) + dir(store):
-                if not i.startswith("_"):
+                if not i.startswith("_") and i != "i":
                     ev = self.get_event(i)
                     if isinstance(ev, Event) and (ev.level == None or ev.level == self.level):
                         ev.name = i.split(".")[1] if i.count(".") else i
