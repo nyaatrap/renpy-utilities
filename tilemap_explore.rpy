@@ -210,7 +210,7 @@ init -2 python:
 
             events = []
             for i in self.current_events:
-                if not i.once or not self.seen(i):
+                if not i.once or not self.happened(i):
                     if i.precede or self.after_interact:
                         if i.pos == None or i.pos == self.pos or i.pos == self.image.map[self.pos[1]][self.pos[0]]:
                             if not i.active and eval(i.cond):

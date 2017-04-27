@@ -373,7 +373,7 @@ init -3 python:
 
             events = []
             for i in self.current_events:
-                if not i.once or not self.seen(i):
+                if not i.once or not self.happened(i):
                     if isinstance(i.pos, tuple):
                         if eval(i.cond):
                             events.append(i)
@@ -386,7 +386,7 @@ init -3 python:
 
             events = []
             for i in self.current_events:
-                if not i.once or not self.happned(i):
+                if not i.once or not self.happened(i):
                     if i.precede or self.after_interact:
                         if i.pos == None or i.pos == self.pos:
                             if not i.active and eval(i.cond):
