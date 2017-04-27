@@ -331,12 +331,12 @@ init -3 python:
                         
 
         def has_trait(self, name, score=None):
-            # returns True if inventory has this trait whose score is higher than give.
+            # returns True if inventory has this trait whose score is higher than given.
             
             # check valid name or not
             self.get_trait(name)
 
-            return name in [k for k, v in self.traits.items() if score==None or v > score]
+            return name in [k for k, v in self.traits.items() if score==None or v >= score]
 
 
         def count_trait(self, name):

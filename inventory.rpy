@@ -12,11 +12,13 @@
 ## cost が 1（デフォルト）の場合、アイテム使用時に個数が一つ減ります。
 ## info はマウスフォーカスした時に表示される情報です。
 ## item の名前空間を使う事もできます。
+## prereqs はそのアイテムを購入するときに消費するアイテムです。
 
 define item.apple = Item("Apple", type="food", value=10, info="This is an apple")
 define item.orange = Item("Orange", type="food", value=20)
 define item.knife = Item("Knife", type="supply", value=50)
 define item.dress = Item("Dress", type="outfit", value=100)
+define item.juice = Item("Juice", type="food", value=30, prereqs="orange:1, apple:2")
 
 ## それから所持者を Inventory(currency, tradein, infinite, item_types, items) で定義します。
 ## currency は所持金、tradein はその所持者が下取りする時の価格比です。
@@ -238,12 +240,12 @@ init -3 python:
             
 
         def has_item(self, name, score=None):
-            # returns True if inventory has this item whose score is higher than give.
+            # returns True if inventory has this item whose score is higher than given.
             
             # check valid name or not
             self.get_item(name)
 
-            return name in [k for k, v in self.items.items() if score==None or v > score]
+            return name in [k for k, v in self.items.items() if score==None or v >= score]
 
 
         def count_item(self, name):
@@ -297,20 +299,34 @@ init -3 python:
             self.add_item(name, score)
             if remove and self.items[name] <= 0:
                 self.remove_item(name)  
+                    
 
-
-        def buy_item(self, name, score = None):
+        def buy_item(self, name, score = None, prereqs=True):
             # buy an item
+            # if prereqs is True, it requires items listed in prereqs
 
             score = score or self.get_item(name).score
             value = self.get_item(name).value*score
+            prereqs = self.get_item(name).prereqs
             
             if not self.infinite and self.currency >= value:
-                self.add_item(name, score)
-                self.currency -= value
+                
+                if prereqs:
+                    for k,v in prereqs.items():
+                        if not self.has_item(k, score=v*score):
+                            break                            
+                    else:                        
+                        self.add_item(name, score)
+                        for k,v in prereqs.items():
+                            self.score_item(k, score=-v*score)
+                        self.currency -= value
+
+                else:
+                    self.add_item(name, score)
+                    self.currency -= value
 
 
-        def sell_item(self, name, buyer):
+        def sell_item(self, name, buyer, prereqs=True):
             # remove an item then add this item to buyer for money
             
             if self.has_item(name):
@@ -318,7 +334,7 @@ init -3 python:
                 score = self.get_item(name).score if self.infinite else self.items[name]
                 value = self.get_item(name).value*score
                 
-                buyer.buy_item(name, score)
+                buyer.buy_item(name, score, prereqs)
                 
                 if buyer.infinite or buyer.currency >= value:
                     if not self.infinite:
@@ -398,11 +414,12 @@ init -3 python:
         value - price that is used for trading
         score - default amount of item when it's added into inventory
         cost - if not zero, using this item reduces score.
+        prereqs - required items to buy. This should be given in strings like "itemA:1, itemB:2"
         info - description that is shown when an item is focused
         """
 
 
-        def __init__(self, name="", type="", effect="", value=0, score=1, cost=1, info=""):
+        def __init__(self, name="", type="", effect="", value=0, score=1, cost=1, prereqs=None, info=""):
 
             self.name = name
             self.type = type
@@ -410,6 +427,10 @@ init -3 python:
             self.value = int(value)
             self.score = int(score)
             self.cost = int(cost)
+            self.prereqs = {}
+            if prereqs:
+                for i in [x.split(":") for x in prereqs.split(",")]:
+                    self.prereqs.setdefault(i[0].strip(), int(i[1]))            
             self.info = info
 
 
