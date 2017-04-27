@@ -100,7 +100,7 @@ init -3 python:
         tile_offset - blank pixel of (left, top) side of each tile
         isometric - if true, isometric tile is used. 
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
-        mask - 2-dimentional list of 0 or 1. If it's 0, tile will no be rendered.
+        mask - 2-dimentional list of 0 or 1. If it's 0, tile will not be rendered.
         interact - If true, it restarts interaction when mouse position is changed onto another tile.
         coordinate - (x, y) coordinate of a tile  where mouse is hovering.
         """

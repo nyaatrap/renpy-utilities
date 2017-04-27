@@ -104,7 +104,9 @@ label explore_loop:
 
             $ explorer.event = _events[_loop]
             $ block()
+            $ explorer.happened_events.add(explorer.event.name)
             call expression explorer.event.label or explorer.event.name
+            $ explorer.done_events.add(explorer.event.name)
             if explorer.move_pos(_return):
                 jump explore
             $ _loop += 1
@@ -127,7 +129,9 @@ label explore_loop:
             $ explorer.pos = _return.pos
             $ explorer.event = _return
             $ block()
+            $ explorer.happened_events.add(explorer.event.name)
             call expression explorer.event.label or explorer.event.name
+            $ explorer.done_events.add(explorer.event.name)
             if explorer.move_pos(_return):
                 jump explore
             

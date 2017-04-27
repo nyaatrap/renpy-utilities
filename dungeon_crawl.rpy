@@ -132,7 +132,9 @@ label crawl_loop:
 
             $ crawler.event = _events[_loop]
             $ block()
+            $ crawler.happened_events.add(crawler.event.name)
             call expression crawler.event.label or crawler.event.name
+            $ crawler.done_events.add(crawler.event.name)
             if crawler.move_pos(_return):
                 jump crawl
             $ _loop += 1
@@ -160,7 +162,9 @@ label crawl_loop:
                     $ crawler.pos = _return.pos
                 $ crawler.event = _return
                 $ block()
+                $ crawler.happened_events.add(crawler.event.name)
                 call expression crawler.event.label or crawler.event.name
+                $ crawler.done_events.add(crawler.event.name)
                 if crawler.move_pos(_return):
                     jump crawl
                 jump crawl_loop
@@ -178,7 +182,9 @@ label crawl_loop:
 
                     $ crawler.event = _events[_loop]
                     $ block()
+                    $ crawler.happened_events.add(crawler.event.name)
                     call expression crawler.event.label or crawler.event.name
+                    $ crawler.done_events.add(crawler.event.name)
                     if crawler.move_pos(_return):
                         jump crawl
                     $ _loop += 1
@@ -380,7 +386,7 @@ init -2 python:
 
             events = []
             for i in self.current_events:
-                if not i.once or not self.seen(i):
+                if not i.once or not self.happened(i):
                     if i.precede or self.after_interact:
                         if i.pos == None or (isinstance(i.pos, basestring) and i.pos == self.map[pos[1]][pos[0]]) or\
                         i.pos == pos or (len(i.pos)==2 and i.pos[0] == pos[0] and i.pos[1] == pos[1]):

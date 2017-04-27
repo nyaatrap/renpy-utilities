@@ -35,7 +35,7 @@ default player = Player("home", turn=0)
 ## 各イベントは define と label のペアで定義します。
 ## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede) で定義します。
 ## 探索者が place の場所にいて cond が満たされると、リンクしたラベルが呼ばれます。
-## priorty は発生の優先度で、一番数字が大きいものが優先して実行されます。
+## priorty は発生の優先度で、数字が小さい順に実行されます。デフォルトは０です。
 ## once を True にすると一度しか実行されません。
 ## multi を True にすると他のイベントも同時に発生します。
 ## precede を True にするとマップ表示前にイベントを確認します。
@@ -62,8 +62,9 @@ label shop:
 
 ## image を与えると、イベントマップ上にその画像が表示されます。
 ## さらに active を True にすると place のようにクリックでイベントを呼び出せます。
-## player.seen(ev) でそのイベントを見たかどうか評価できます。
-define ev.shop2 = Event("west", pos=(.1,.1), cond="player.seen(ev.shop)", active = True, image=Text("hidden shop"))
+## player.happened(ev) でそのイベントが呼び出されたかどうか評価できます。
+## player.done(ev) でそのイベントが最後まで実行されたかどうか評価できます。
+define ev.shop2 = Event("west", pos=(.1,.1), cond="player.happened(ev.shop)", active = True, image=Text("hidden shop"))
 label shop2:
     "this is a hidden shop."
     return
@@ -120,7 +121,9 @@ label adventure_loop:
 
             $ player.event = _events[_loop]
             $ block()
+            $ player.happened_events.add(player.event.name)
             call expression player.event.label or player.event.name
+            $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
                 jump adventure
             $ _loop += 1
@@ -140,7 +143,9 @@ label adventure_loop:
             $ player.pos = _return.pos
             $ player.event = _return
             $ block()
+            $ player.happened_events.add(player.event.name)
             call expression player.event.label or player.event.name
+            $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
                 jump adventure
 
@@ -301,7 +306,8 @@ init -3 python:
             self.event = None
             self.current_events = []
             self.current_places = []
-            self.seen_events = set()
+            self.done_events = set()
+            self.happened_events = set()
 
             for i in kwargs.keys():
                 setattr(self, i, kwargs[i])
@@ -322,10 +328,15 @@ init -3 python:
             return self.get_level(self.level).info
 
 
-        def seen(self, ev):
-            # returns True if this event is seen.
+        def happened(self, ev):
+            # returns True if this event is happened.
 
-            return ev.name in self.seen_events
+            return ev.name in self.happened_events
+
+        def done(self, ev):
+            # returns True if this event is done.
+
+            return ev.name in self.done_events
 
 
         def update_events(self, check=True):
@@ -375,7 +386,7 @@ init -3 python:
 
             events = []
             for i in self.current_events:
-                if not i.once or not self.seen(i):
+                if not i.once or not self.happned(i):
                     if i.precede or self.after_interact:
                         if i.pos == None or i.pos == self.pos:
                             if not i.active and eval(i.cond):
@@ -413,9 +424,6 @@ init -3 python:
         def move_pos(self, _return):
             # Changes own level and pos
             # if nothing changed, return None
-
-            # before checking jump, add current event into the seen list.
-            self.seen_events.add(self.event.name)
 
             # don't move
             if not _return:
