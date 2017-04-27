@@ -74,7 +74,7 @@ label enemy:
 
 ## pos が与えられていないイベントは、そのレベル内なら毎ターン発生します。
 ## active を True にすると、クリックした時のみ呼び出されるアクティブイベントになります。
-define ev.nothing = Event("cave", priority=-10, active=True)
+define ev.nothing = Event("cave", priority=100, active=True)
 label nothing:
     "There is nothing"
     return

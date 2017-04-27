@@ -41,7 +41,7 @@ label ev1:
     return
 
 ## pos が与えられていないイベントは、そのレベル内なら毎ターン発生します。
-define ev.ev0 = Event("field", priority=-1)
+define ev.ev0 = Event("field", priority=1)
 label ev0:
     "tile 0"
     return

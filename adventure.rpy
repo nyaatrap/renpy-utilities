@@ -70,7 +70,7 @@ label shop2:
     return
 
 ## このラベルは毎ターン最後に呼ばれ、ターンの経過を記録しています。
-define ev.turn = Event(priority = -100, precede =True, multi=True)
+define ev.turn = Event(priority = 100, precede =True, multi=True)
 label turn:
     #"turn+1"
     $ player.turn += 1
@@ -357,7 +357,7 @@ init -3 python:
                             except:
                                 raise Exception("Invalid syntax '{}' in '{}'".format(ev.cond, ev.name))
 
-            self.current_events.sort(key = lambda ev: ev.priority, reverse =True)
+            self.current_events.sort(key = lambda ev: ev.priority)
 
             # get current places
             self.current_places = []
