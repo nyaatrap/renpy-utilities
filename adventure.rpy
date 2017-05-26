@@ -372,7 +372,7 @@ init -3 python:
             # returns event list that is shown in the navigation screen
 
             events = []
-            for i in self.current_events:
+            for i in reversed(self.current_events):
                 if not i.once or not self.happened(i):
                     if isinstance(i.pos, tuple):
                         if eval(i.cond):
