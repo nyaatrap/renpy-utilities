@@ -337,7 +337,23 @@ init -3 python:
             self.get_skill(name)
 
             return name in [k for k, v in self.skills.items() if score==None or v >= score]
+            
 
+        def has_skills(self, name, score=None):
+            # returns True if inventory has these skills whose score is higher than give. 
+            # "a, b, c" means a and b and c, "a | b | c" means a or b or c.
+            
+            separator = "|" if name.count("|") else ","
+            names = name.split(separator)
+            for i in names:
+                i = i.strip()
+                if separator == "|" and self.has_item(i, score):
+                    return True
+                elif separator == "," and not self.has_item(i, score):
+                    return False
+                    
+            return True if separator == ","  else False
+            
 
         def count_skill(self, name):
             # returns score of this skill
