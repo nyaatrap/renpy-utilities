@@ -50,13 +50,13 @@ This file provides adventure game framework that uses event maps.
 ラベルをオブジェクトとのペアで管理することで、マップ上にイベントとして配置して呼び出すことができます。   
 RPGからSLGまで様々に使えるように汎用性を高くしてありますが、その分コードは少し複雑になっています。   
 
-## tilemap_explore.rpy
+## adventure_tilemap.rpy
 This file adds tilemap exploring function into adventure framework.   
 This framework requres tilemap.rpy and adventure.rpy.   
 adventure にタイルマップを探索する機能を追加するファイルです。   
 tilemap.rpy と adventure.rpy が必要になります。
 
-## dungeon_crawl.rpy
+## adventure_dungeon.rpy
 This file adds pseudo-3D dungeon crawling function into adventurer framework.   
 To play the sample game, download the cave folder then place it in the images directory.   
 adventure に疑似３Dダンジョン探索機能を追加するファイルです。   
