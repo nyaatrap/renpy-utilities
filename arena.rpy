@@ -6,16 +6,16 @@
 ## How to Use
 ##############################################################################
 
-## まずアクターが使用する能力を Trait(name, type, effect, target, value, score, cost) で定義します。
+## まずアクターが使用する能力を Skill(name, type, effect, target, value, score, cost) で定義します。
 ## type は表示される能力のカテゴリーです。このデモでは "active" のみ有効です。
-## effect は使用した時の効果です。"attack", "heal" 以外は Trait クラスに書き加えます。
+## effect は使用した時の効果です。"attack", "heal" 以外は Skill クラスに書き加えます。
 ## target は能力を使う相手で "friend" か "foe" があります。
 ## value は効果の能力を使用した時の効果の強さです。
 ## score, cost は使用回数がある能力に使います。デフォルトは1と0です。
 ## skill の名前空間も使えます。
 
-define skill.attack = Trait("Attack", type="active", effect="attack", target="foe", value=5)
-define skill.heal = Trait("Heal", type="active", effect="heal", target="friend", value=10, score=5, cost=1)
+define skill.attack = Skill("Attack", type="active", effect="attack", target="foe", value=5)
+define skill.heal = Skill("Heal", type="active", effect="heal", target="friend", value=10, score=5, cost=1)
 
 ## 次にアクターを Actor(name, skills, hp) で定義します。
 ## skills は能力のリストで、skill. を外した文字列です。
@@ -248,15 +248,15 @@ init -3 python:
 
         name - name of this actor
         skills - dict of {"skillname", score}
-        attribute - there are many values defined by self.attr = value form
-                attribute can be defined the blow
-        default_attrribute - default value of attribute. if it's positive number, attribute's value is limited to this value.
+        attributes - float or int variables that are added into an actor when an object is created.
+        default_attrributes - default values of attributes. if it's positive number, it means maximum point.
         """
 
-        # This will create self.hp and self.default_hp
+        # Default attributes that are added when attributes are not defined.
+        # This will create self.hp and self.default_hp.
         _attributes = ["hp"]
         
-        # Define default skill categories
+        # Default skill categories. It's used when skill_types are not defined.
         _skill_types = ["active"]
 
         def __init__(self, name="", skills=None, skill_types = None, **kwargs):
@@ -319,7 +319,7 @@ init -3 python:
         def get_skill(self, name):
             # returns skill object from name
 
-            if isinstance(name, Trait): 
+            if isinstance(name, Skill): 
                 return name
                 
             elif isinstance(name, basestring):
@@ -327,7 +327,7 @@ init -3 python:
                 if obj: 
                     return obj
                 
-            raise Exception("Trait '{}' is not defined".format(name))
+            raise Exception("Skill '{}' is not defined".format(name))
                         
 
         def has_skill(self, name, score=None):
@@ -426,7 +426,7 @@ init -3 python:
             # get all skill objects defined under namespace
 
             for i in dir(namespace):
-                if isinstance(getattr(namespace, i), Trait):
+                if isinstance(getattr(namespace, i), Skill):
                     self.add_skill(i)
 
 
@@ -456,9 +456,9 @@ init -3 python:
 
 
 ##############################################################################
-## Trait class.
+## Skill class.
 
-    class Trait(object):
+    class Skill(object):
 
         """
         Class that represents skill that is stored by actor object. It has follwing fields:

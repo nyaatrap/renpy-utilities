@@ -237,9 +237,9 @@ init -2 python:
         equips - dictonary of {"type": "name"}        
         """
 
-        # Define default eqippable item types
+        # Default eqippable item types. It's used when item_types are not defined.
         # デフォルトの装備できるアイテムのタイプを定義します。
-        _equip_types = ["feet", "bottom", "top"]
+        _equip_types = []
 
         def __init__(self, folder="", layers = None, equip_types = None, **kwargs):
             

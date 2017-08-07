@@ -52,15 +52,15 @@ transform position(x=.5, y=.5, t=move_time, a=stand_anchor):
 
 # 中央へ表示または移動する。
 transform move_center:
-    position (.5, .5)
+    position (.5)
     
 # 右へ表示または移動する。
 transform move_right:
-    position (.8, .5)
+    position (.8)
     
 # 左へ表示または移動する。
 transform move_left:
-    position (.2, .5)
+    position (.2)
     
 
 ##############################################################################

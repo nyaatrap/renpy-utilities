@@ -207,7 +207,7 @@ init -3 python:
         selected - selected slot in a current screen.
         """
 
-        # Define default item categories
+        # Default item categories. It's used when item_types are not defined.
         _item_types = []
 
         def __init__(self, currency = 0, tradein = 1.0, infinite = False, items=None, item_types=None):
