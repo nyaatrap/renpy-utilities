@@ -1,4 +1,4 @@
-## This file adds pseudo-3D dungeon crawling function into adventure framework.
+## This file adds pseudo-3D dungeon adventure_dungeoning function into adventure framework.
 ## To play the sample game, download the cave folder then place it in the images directory.
 ## adventure に疑似３Dダンジョン探索機能を追加するファイルです。
 ## サンプルを実行するには images/cave フォルダーの画像をダウンロードする必要があります。
@@ -46,10 +46,12 @@ define sample_map =[
 default level.cave = Dungeon(image="cave", map=sample_map)
 
 
-## 最後に冒険者を Crawler クラスで定義します。
+## 最後に冒険者を DungeonPlayer クラスで定義します。
 ## ダンジョンの pos は (x,y,dx,dy) の組で、dx が 1 ならみぎ、-1 ならひだりを向きます。
+## adventure.rpy との定義の重複を避けるため別名にしていますが、
+## ゲームスタート後は player に戻して使います。
 
-default crawler = Crawler("cave", pos=(1,1,0,1))
+default dungeonplayer = DungeonPlayer("cave", pos=(1,1,0,1), turn=0)
 
 
 ## ダンジョンのイベントを定義します。
@@ -57,7 +59,7 @@ default crawler = Crawler("cave", pos=(1,1,0,1))
 ## イベントは、プレイヤーがpos の位置に移動した時に呼び出されます。
 define ev.entrance = Event("cave", pos=(1,1), precede=True, once=True)
 label entrance:
-    "Here starts crawling"
+    "Here starts adventure_dungeoning"
     return
 
 ## dx,dy を与えるとその向きのみイベントが発生します。
@@ -86,7 +88,7 @@ label collision:
     with vpunch
     return
 
-## start ラベルから crawl へジャンプすると探索を開始します。
+## start ラベルから adventure_dungeon へジャンプすると探索を開始します。
 
 
 ##############################################################################
@@ -95,123 +97,127 @@ label collision:
 
 ##############################################################################
 ## Main label
-## Jumping to this label starts dungeon crawling
+## Jumping to this label starts dungeon adventure_dungeoning
 
-label crawl:
+label adventure_dungeon:
+    
+    # rename back
+    $ player = dungeonplayer
+    
     # Update event list in current level
-    $ crawler.update_events()
-    $ crawler.after_interact = False
+    $ player.update_events()
+    $ player.after_interact = False
 
     # Play music
-    if crawler.music:
-        if renpy.music.get_playing() != crawler.music:
-            play music crawler.music fadeout 1.0
+    if player.music:
+        if renpy.music.get_playing() != player.music:
+            play music player.music fadeout 1.0
 
     # Show background
-    if crawler.image:
+    if player.image:
         scene black with Dissolve(.25)
-        if crawler.in_dungeon():
-            $ crawler.draw_dungeon()
+        if player.in_dungeon():
+            $ player.draw_dungeon()
         else:
-            show expression crawler.image at topleft
+            show expression player.image at topleft
         with Dissolve(.25)
 
-    jump crawl_loop
+    jump adventure_dungeon_loop
 
 
-label crawl_loop:
+label adventure_dungeon_loop:
     while True:
 
         # check passive events
         $ block()
-        $ _events = crawler.get_events()
+        $ _events = player.get_events()
 
         # sub loop to excecute all passive events
         $ _loop = 0
         while _loop < len(_events):
 
-            $ crawler.event = _events[_loop]
+            $ player.event = _events[_loop]
             $ block()
-            $ crawler.happened_events.add(crawler.event.name)
-            call expression crawler.event.label or crawler.event.name
-            $ crawler.done_events.add(crawler.event.name)
-            if crawler.move_pos(_return):
-                jump crawl
+            $ player.happened_events.add(player.event.name)
+            call expression player.event.label or player.event.name
+            $ player.done_events.add(player.event.name)
+            if player.move_pos(_return):
+                jump adventure_dungeon
             $ _loop += 1
 
-        $ crawler.after_interact = True
+        $ player.after_interact = True
 
         # sub loop to ignore passive events
         while True:
 
             # show eventmap or dungeon navigator
             $ block()
-            if crawler.in_dungeon():
-                call screen dungeon_navigator(crawler)
+            if player.in_dungeon():
+                call screen dungeon_navigator(player)
             else:
-                call screen eventmap_navigator(crawler)
+                call screen eventmap_navigator(player)
 
             #  If return value is a place
             if isinstance(_return, Place):
-                $ crawler.pos = _return.pos
-                jump crawl_loop
+                $ player.pos = _return.pos
+                jump adventure_dungeon
 
             # If return value is an event
             elif isinstance(_return, Event):
-                if not crawler.in_dungeon():
-                    $ crawler.pos = _return.pos
-                $ crawler.event = _return
+                if not player.in_dungeon():
+                    $ player.pos = _return.pos
+                $ player.event = _return
                 $ block()
-                $ crawler.happened_events.add(crawler.event.name)
-                call expression crawler.event.label or crawler.event.name
-                $ crawler.done_events.add(crawler.event.name)
-                if crawler.move_pos(_return):
-                    jump crawl
-                jump crawl_loop
+                $ player.happened_events.add(player.event.name)
+                call expression player.event.label or player.event.name
+                $ player.done_events.add(player.event.name)
+                if player.move_pos(_return):
+                    jump adventure_dungeon
+                jump adventure_dungeon_loop
 
             # collision
-            elif isinstance(_return, Coordinate) and crawler.map[_return.y][_return.x] in crawler.collision:
+            elif isinstance(_return, Coordinate) and player.map[_return.y][_return.x] in player.collision:
 
                 # check active events
                 $ block()
-                $ _events = crawler.get_events(pos = _return.unpack(), active=True)
+                $ _events = player.get_events(pos = _return.unpack(), active=True)
 
                 # sub loop to excecute all active events
                 $ _loop = 0
                 while _loop < len(_events):
 
-                    $ crawler.event = _events[_loop]
+                    $ player.event = _events[_loop]
                     $ block()
-                    $ crawler.happened_events.add(crawler.event.name)
-                    call expression crawler.event.label or crawler.event.name
-                    $ crawler.done_events.add(crawler.event.name)
-                    if crawler.move_pos(_return):
-                        jump crawl
+                    $ player.happened_events.add(player.event.name)
+                    call expression player.event.label or player.event.name
+                    $ player.done_events.add(player.event.name)
+                    if player.move_pos(_return):
+                        jump adventure_dungeon
                     $ _loop += 1
 
-                jump crawl_loop
+                jump adventure_dungeon_loop
 
             # move
             elif isinstance(_return, Coordinate):
-                if _return.x == crawler.pos[0] and _return.y == crawler.pos[1]:
-                    $ crawler.move_pos(_return.unpack())
-                    $ crawler.draw_dungeon()
+                if _return.x == player.pos[0] and _return.y == player.pos[1]:
+                    $ player.move_pos(_return.unpack())
+                    $ player.draw_dungeon()
                 else:
-                    $ crawler.move_pos(_return.unpack())
-                    $ crawler.draw_dungeon()
-                    jump crawl_loop
+                    $ player.move_pos(_return.unpack())
+                    $ player.draw_dungeon()
+                    jump adventure_dungeon_loop
 
 
 ##############################################################################
 ## Dungeon navigator screen
 ## screen that shows orientation buttons in dungeon
 
-screen dungeon_navigator(crawler):
+screen dungeon_navigator(player):
 
-    $ coord = Coordinate(*crawler.pos)
+    $ coord = Coordinate(*player.pos)
 
     ## show events
-    for i in crawler.get_events(active=True):
+    for i in player.get_events(active=True):
         button xysize (config.screen_width, config.screen_height):
             if i.active:
                 action Return(i)
@@ -219,7 +225,7 @@ screen dungeon_navigator(crawler):
                 add i.image
 
 
-    #move buttons
+    # move buttons
     fixed style_prefix "move":
         textbutton "W" action Return(coord.front())  xcenter .5 ycenter .86
         textbutton "S" action Return(coord.back())  xcenter .5 ycenter .96
@@ -228,7 +234,7 @@ screen dungeon_navigator(crawler):
         textbutton "D" action Return(coord.right()) xcenter .65 ycenter .96
         textbutton "A" action Return(coord.left())  xcenter .35 ycenter .96
 
-    #keys
+    # keys
         for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
             key i action Return(coord.front())
         for i in ["repeat_s", "s","repeat_S","S", "focus_down"]:
@@ -247,7 +253,7 @@ style move_button_text:
 
 
 ##############################################################################
-## Dungeon class.
+## Dungeon  class.
 
 init -2 python:
 
@@ -351,12 +357,12 @@ init -2 python:
 
 
 ##############################################################################
-## Crawler class
+## DungeonPlayer class
 
-    class Crawler(Player):
+    class DungeonPlayer(Player):
 
         """
-        Expanded Player Class that stores various methods and data for crawling.
+        Expanded Player Class that stores various methods and data for dungeon crawling.
         """
             
         @property
@@ -373,7 +379,7 @@ init -2 python:
 
 
         def in_dungeon(self):
-            # returns true if crawler is in dungeon
+            # returns true if player is in dungeon
 
             return isinstance(self.get_level(self.level), Dungeon)
             

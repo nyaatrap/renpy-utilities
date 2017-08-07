@@ -18,11 +18,13 @@
 default level.field = Level(tilemap)
 
 
-## 最後に冒険者を Explorer クラスで定義します。
+## 最後に冒険者を TilemapPlayer クラスで定義します。
 ## pos はゲームをスタートするタイルの座標です。
 ## cursor はマウスの乗っているタイルを色変えする画像です。
+## adventure.rpy との定義の重複を避けるため別名にしていますが、
+## ゲームスタート後は player に戻して使います。
 
-default explorer = Explorer("field", pos=(1,1), cursor = Transform(Solid("#f66", xysize=(32,32)), alpha=0.5))
+default tilemapplayer = TilemapPlayer("field", pos=(1,1), cursor = Transform(Solid("#f66", xysize=(32,32)), alpha=0.5), turn=0)
 
 
 ## タイルマップ上のイベントを定義します。
@@ -60,7 +62,7 @@ label iconB:
     return
 
 
-## start ラベルから explore へジャンプすると探索を開始します。
+## start ラベルから adventure_tilemap へジャンプすると探索を開始します。
 
 
 ##############################################################################
@@ -71,94 +73,98 @@ label iconB:
 ## Main label
 ## Jumping to this label starts exploration
 
-label explore:
+label adventure_tilemap:
 
+    # rename back
+    $ player = tilemapplayer
+    
     # Update event list in current level
-    $ explorer.update_events()
-    $ explorer.after_interact = False
+    $ player.update_events()
+    $ player.after_interact = False
 
     # Play music
-    if explorer.music:
-        if renpy.music.get_playing() != explorer.music:
-            play music explorer.music fadeout 1.0
+    if player.music:
+        if renpy.music.get_playing() != player.music:
+            play music player.music fadeout 1.0
 
     # Show background
-    if explorer.image:
+    if player.image:
         scene black with Dissolve(.25)
-        show expression explorer.image at topleft
+        show expression player.image at topleft
         with Dissolve(.25)
 
-    jump explore_loop
+    jump adventure_tilemap_loop
 
 
-label explore_loop:
+label adventure_tilemap_loop:
     while True:
 
         # check passive events
         $ block()
-        $ _events = explorer.get_events()
+        $ _events = player.get_events()
 
         # sub loop to excecute all passive events
         $ _loop = 0
         while _loop < len(_events):
 
-            $ explorer.event = _events[_loop]
+            $ player.event = _events[_loop]
             $ block()
-            $ explorer.happened_events.add(explorer.event.name)
-            call expression explorer.event.label or explorer.event.name
-            $ explorer.done_events.add(explorer.event.name)
-            if explorer.move_pos(_return):
-                jump explore
+            $ player.happened_events.add(player.event.name)
+            call expression player.event.label or player.event.name
+            $ player.done_events.add(player.event.name)
+            if player.move_pos(_return):
+                jump adventure_tilemap
             $ _loop += 1
 
-        $ explorer.after_interact = True
+        $ player.after_interact = True
         $ block()
         
         # show eventmap or tilemap navigator
-        if explorer.in_tilemap():
-            call screen tilemap_navigator(explorer)
+        if player.in_tilemap():
+            call screen tilemap_navigator(player)
         else:
-            call screen eventmap_navigator(explorer)
+            call screen eventmap_navigator(player)
         
         #  If return value is a place
         if isinstance(_return, Place):
-            $ explorer.pos = _return.pos
+            $ player.pos = _return.pos
         
         # If return value is an event
         elif isinstance(_return, Event):
-            $ explorer.pos = _return.pos
-            $ explorer.event = _return
+            $ player.pos = _return.pos
+            $ player.event = _return
             $ block()
-            $ explorer.happened_events.add(explorer.event.name)
-            call expression explorer.event.label or explorer.event.name
-            $ explorer.done_events.add(explorer.event.name)
-            if explorer.move_pos(_return):
-                jump explore
+            $ player.happened_events.add(player.event.name)
+            call expression player.event.label or player.event.name
+            $ player.done_events.add(player.event.name)
+            if player.move_pos(_return):
+                jump adventure_tilemap
             
         # If return value is coordinate
         elif isinstance(_return, tuple):
-            $ explorer.pos = _return
+            $ player.pos = _return
 
             
 ##############################################################################
 ## Tilemap navigator screen
 
-screen tilemap_navigator(explorer):       
+screen tilemap_navigator(player):       
     
     # show coordinate
     python:
-        tilemap = explorer.image
+        tilemap = player.image
         width = tilemap.tile_width
         height = tilemap.tile_height
     
     if tilemap.coordinate:
-        $ x, y = tilemap.coordinate
-    
+        
+        ## show coodinate
+        $ x, y = tilemap.coordinate    
         text "([x], [y])"
     
         ## show cursor
-        if explorer.cursor:
-            add explorer.cursor:
+        if player.cursor:
+            add player.cursor:
                 if tilemap.isometric:
                     xoffset (x-y)*width/2
                     yoffset (x+y)*height/2
@@ -171,7 +177,7 @@ screen tilemap_navigator(explorer):
         key "button_select" action Return((x, y))
 
     ## show places and events
-    for i in explorer.get_places() + explorer.get_shown_events():
+    for i in player.get_places() + player.get_shown_events():
         button xysize (width, height):
             if tilemap.isometric:
                 xoffset (i.pos[0]-i.pos[1])*width/2 - tilemap.tile_offset[0]
@@ -192,14 +198,14 @@ screen tilemap_navigator(explorer):
 
 init -2 python:
 
-    class Explorer(Player):
+    class TilemapPlayer(Player):
 
         """
         Expanded Player Class that stores various methods and data for tilemap exploring.
         """
 
         def in_tilemap(self):
-            # returns true if explorer is in tilemap
+            # returns true if player is in tilemap
 
             return isinstance(self.image, Tilemap)
             
