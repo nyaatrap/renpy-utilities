@@ -153,7 +153,7 @@ init python:
             return None
 
 ## 実際の振動アニメーション。
-transform shake(t=move_time, d=move_size):
+transform shake(t=move_time, d=move_size, a=stand_anchor):
     anchor a alpha 1.0
     function renpy.curry(_shake_function)(dt=t, dist=d*2)
     xoffset 0 yoffset 0
