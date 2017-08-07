@@ -1,4 +1,4 @@
-## This file adds pseudo-3D dungeon adventure_dungeoning function into adventure framework.
+## This file adds pseudo-3D dungeon crawing function into adventure framework.
 ## To play the sample game, download the cave folder then place it in the images directory.
 ## adventure に疑似３Dダンジョン探索機能を追加するファイルです。
 ## サンプルを実行するには images/cave フォルダーの画像をダウンロードする必要があります。
@@ -59,7 +59,7 @@ default dungeonplayer = DungeonPlayer("cave", pos=(1,1,0,1), turn=0)
 ## イベントは、プレイヤーがpos の位置に移動した時に呼び出されます。
 define ev.entrance = Event("cave", pos=(1,1), precede=True, once=True)
 label entrance:
-    "Here starts adventure_dungeoning"
+    "Here starts crawling"
     return
 
 ## dx,dy を与えるとその向きのみイベントが発生します。
@@ -253,7 +253,7 @@ style move_button_text:
 
 
 ##############################################################################
-## Dungeon  class.
+## Dungeon class.
 
 init -2 python:
 

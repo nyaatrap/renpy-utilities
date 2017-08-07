@@ -124,7 +124,7 @@ screen dressup(im, doll, inv):
             textbutton name action Function(doll.equip_item, i, inv)
 
     vbox yalign 1.0:
-        textbutton "Auton" action Function(doll.equip_all_items, inv)
+        textbutton "Auto" action Function(doll.equip_all_items, inv)
         textbutton "Reset" action Function(doll.unequip_all_items, inv)
         textbutton "Return" action Return()
 
