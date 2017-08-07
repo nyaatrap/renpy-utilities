@@ -34,125 +34,107 @@ init offset = -3
 ## on show は画像を初めて表示する時、on replace は表示してある画像を動かす時に使われます。
 
 ## 立ち絵のアンカーを小数で定義します。
-define stand_anchor = (.5, .4)
+define stand_anchor = (.5, .5)
 
 ## 座標の移動にかかる時間を小数で定義します。
 define move_time = .5
 
-
-## 中央に表示する。
-transform trueCenter(t=move_time):
+## 共通するコードを先に定義しておきます。
+transform position(x=.5, y=.5, t=move_time, a=stand_anchor):
     on show:
-        anchor stand_anchor pos (.5, .5)
+        anchor a pos (x, y)
     on replace:
-        anchor stand_anchor alpha 1.0
-        ease t pos (.5, .5)
+        anchor a alpha 1.0
+        ease t pos (x, y)
 
-## 左寄りに表示する。
-transform nearLeft(t=move_time):
-    on show:
-        anchor stand_anchor pos (.35, .5)
-    on replace:
-        anchor stand_anchor alpha 1.0
-        ease t pos (.35, .5)
+## 実際に使うポジションを定義します。
+## 以下は例です。使いやすい名前に書き換えてください。
 
-## 左端に表示する。
-transform farLeft(t=move_time):
-    on show:
-        anchor stand_anchor pos (.2, .5)
-    on replace:
-        anchor stand_anchor alpha 1.0
-        ease t pos (.2, .5)
-
-## 右寄りに表示する。
-transform nearRight(t=move_time):
-    on show:
-        anchor stand_anchor pos (.65, .5)
-    on replace:
-        anchor stand_anchor alpha 1.0
-        ease t pos (.65, .5)
-
-## 右端に表示する。
-transform farRight(t=move_time):
-    on show:
-        anchor stand_anchor pos (.8, .5)
-    on replace:
-        anchor stand_anchor alpha 1.0
-        ease t pos (.8, .5)
-
+# 中央へ表示または移動する。
+transform move_center:
+    position (.5, .5)
+    
+# 右へ表示または移動する。
+transform move_right:
+    position (.8, .5)
+    
+# 左へ表示または移動する。
+transform move_left:
+    position (.2, .5)
+    
 
 ##############################################################################
 ## Animations
 ## 以下の trasnform は画像にアニメーションを加えます。
 ## アニメーションと同時に位置を指定する場合は show 画像 at animation, position の順で指定します。
-
+## 例：show girl at inR, move_center 
 
 ## アニメーションの動きの大きさを整数で定義します。
 ## 全身の立ち絵のサイズの20分の１くらいが目安です。
 define move_size =32
 
 ##  左から現れるアニメーション。
-transform inL(t=move_time/2, d=move_size):
-    anchor stand_anchor alpha .0 xoffset -d
+transform inL(t=move_time/2, d=move_size, a=stand_anchor):
+    anchor a alpha .0 xoffset -d
     easein t alpha 1.0 xoffset 0
 
 ##  右から現れるアニメーション。
-transform inR(t=move_time/2, d=move_size):
-    anchor stand_anchor alpha .0 xoffset d
+transform inR(t=move_time/2, d=move_size, a=stand_anchor):
+    anchor a alpha .0 xoffset d
     easein t alpha 1.0 xoffset 0
 
 ## 左に消えるアニメーション。
-## hide は at 節を使えないため show 画像 を使います。
-transform outL(t=move_time/2, d=move_size):
+## hide は at 節を使えないため show 画像 at transform を使います。
+transform outL(t=move_time/2, d=move_size, a=stand_anchor):
     on hide:
-        anchor stand_anchor 
+        anchor a 
         easeout t alpha .0 xoffset -d
         xoffset 0
 
 ## 右に消えるアニメーション。
-transform outR(t=move_time/2, d=move_size):
+transform outR(t=move_time/2, d=move_size, a=stand_anchor):
     on hide:
-        anchor stand_anchor 
+        anchor a 
         easeout t alpha .0 xoffset d
         xoffset 0
 
 ## 軽くホップするアニメーション。
-transform hop(t=move_time/2, d=move_size):
-    anchor stand_anchor alpha 1.0
+transform hop(t=move_time/2, d=move_size, a=stand_anchor):
+    anchor a alpha 1.0
     ease t/2 yoffset -d
     ease t/2 yoffset 0
 
 ## 二回連続してホップするアニメーション。
-transform doublehop(t=move_time, d=move_size):
-    anchor stand_anchor alpha 1.0
+transform doublehop(t=move_time, d=move_size, a=stand_anchor):
+    anchor a alpha 1.0
     ease t/4 yoffset -d
     ease t/4 yoffset 0
     ease t/4 yoffset -d
     ease t/4 yoffset 0
 
 ## 軽くかがむアニメーション。
-transform bow(t=move_time, d=move_size):
-    anchor stand_anchor alpha 1.0
+transform bow(t=move_time, d=move_size, a=stand_anchor):
+    anchor a alpha 1.0
     ease t/2 yoffset d
     ease t/2 yoffset 0
 
 ## 左右に二回揺れるアニメーション。
-transform wag(t=move_time, d=move_size):
-    anchor stand_anchor alpha 1.0
+transform wag(t=move_time, d=move_size, a=stand_anchor):
+    anchor a alpha 1.0
     easein t/6 xoffset d/2
     ease t/3 xoffset -d/2
     easein t/3 xoffset d/4
     easein t/6 xoffset 0
 
 ## 素早く左に避けるアニメーション。
-transform swayL(t=move_time/2, d=move_size):
-    anchor stand_anchor alpha 1.0
+transform swayL(t=move_time/2, d=move_size, a=stand_anchor):
+    anchor a alpha 1.0
     ease t/3 xoffset -d*4
     ease t*2/3 xoffset 0
 
 ## 素早く右に避けるアニメーション。
-transform swayR(t=move_time/2, d=move_size):
-    anchor stand_anchor alpha 1.0
+transform swayR(t=move_time/2, d=move_size, a=stand_anchor):
+    anchor a alpha 1.0
     ease t/3 xoffset d*4
     ease t*2/3 xoffset 0
 
@@ -172,7 +154,7 @@ init python:
 
 ## 実際の振動アニメーション。
 transform shake(t=move_time, d=move_size):
-    anchor stand_anchor alpha 1.0
+    anchor a alpha 1.0
     function renpy.curry(_shake_function)(dt=t, dist=d*2)
     xoffset 0 yoffset 0
 
