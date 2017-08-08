@@ -237,7 +237,7 @@ init -2 python:
         equips - dictonary of {"type": "name"}        
         """
 
-        # Default eqippable item types. It's used when item_types are not defined.
+        # Default equipable item types. It's used when item_types are not defined.
         # デフォルトの装備できるアイテムのタイプを定義します。
         _equip_types = []
 
@@ -247,10 +247,35 @@ init -2 python:
             
             self.equip_types = equip_types or self._equip_types
             
-            # dictionary whose keys are item types and values are list [item, score]
+            # dictionary whose keys are item types and values are item names
             self.equips = {}            
             for i in self.equip_types:
                 self.equips.setdefault(i, None)
+                
+                
+        def has_equip(self, name):
+            # returns True if doll equipped this item.
+            
+            # check valid name or not
+            Inventory.get_item(name)
+
+            return name in [v for k, v in self.equips.items()]
+            
+            
+        def has_equips(self, name):
+            # returns True if doll equipped these items. 
+            # "a, b, c" means a and b and c, "a | b | c" means a or b or c.
+            
+            separator = "|" if name.count("|") else ","
+            names = name.split(separator)
+            for i in names:
+                i = i.strip()
+                if separator == "|" and self.has_equip(i):
+                    return True
+                elif separator == "," and not self.has_equip(i):
+                    return False
+                    
+            return True if separator == ","  else False
 
 
         def equip_item(self, name, inv):
