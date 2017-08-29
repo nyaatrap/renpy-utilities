@@ -1,4 +1,4 @@
-## This file defines Actor and Arena class to add turn-based combat and competition.
+## This file defines Actor and Arena class to add turn-based combat.
 ## ターン制の戦闘や競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。
 ## 基本的な枠組みしかありませんので、実用には改変する必要があります。
 
@@ -8,14 +8,14 @@
 
 ## まずアクターが使用する能力を Skill(name, type, effect, target, value, score, cost) で定義します。
 ## type は表示される能力のカテゴリーです。このデモでは "active" のみ有効です。
-## effect は使用した時の効果です。"attack", "heal" 以外は Skill クラスに書き加えます。
+## effect は使用した時の効果です。"attack", "heal" 以外は Arena クラスに書き加えます。
 ## target は能力を使う相手で "friend" か "foe" があります。
 ## value は効果の能力を使用した時の効果の強さです。
 ## score, cost は使用回数がある能力に使います。デフォルトは1と0です。
 ## skill の名前空間も使えます。
 
 define skill.attack = Skill("Attack", type="active", effect="attack", target="foe", value=5)
-define skill.heal = Skill("Heal", type="active", effect="heal", target="friend", value=10, score=5, cost=1)
+define skill.heal = Skill("Heal", type="active", effect="heal", target="friend", value=10, score=2, cost=1)
 
 ## 次にアクターを Actor(name, skills, hp) で定義します。
 ## skills は能力のリストで、skill. を外した文字列です。
@@ -29,7 +29,7 @@ default pawn = Actor("Pawn A", skills=["attack"], hp=10)
 default pawn2 = pawn.copy("Pawn B")
 default pawn3 = pawn.copy("Pawn C")
 
-## 最後に競争に関するデータを保存するアリーナを定義します。
+## 最後に戦闘に関するデータを保存するアリーナを定義します。
 default arena = Arena()
 
 ## 以上で準備完了です。
@@ -39,19 +39,19 @@ default arena = Arena()
 
 label sample_combat:
 
-    ## 競争仲間と競争相手のアクターをリストとしてアリーナに追加します。
+    ## 戦闘仲間と戦闘相手のアクターをリストとしてアリーナに追加します。
 
-    $ arena.friends = [knight, bishop]
-    $ arena.foes = [pawn, pawn2, pawn3]
+    $ arena.player_actors = [knight, bishop]
+    $ arena.enemy_actors = [pawn, pawn2, pawn3]
 
-    ## ここから競争開始。
+    ## ここから戦闘開始。
     call _combat(arena)
 
-    ## 競争が終わると結果を _return で知ることができます。
-    if arena.state == "win":
+    ## 戦闘が終わると結果を _return で知ることができます。
+    if _return == "win":
          "You win"
 
-    elif arena.state == "lose":
+    elif _return == "lose":
         "You lose"
 
     else:
@@ -80,22 +80,24 @@ label _combat(arena):
 
         python:
 
-            # get current actor to perform
-            _actor = arena.get_turn()
+            # set current actor to perform
+            arena.actor = arena.get_turn()
 
-            # set skill and target
-            if _actor in arena.friends:
-                _actor.skill = renpy.call_screen("choose_skill", _actor)
-                _actor.target = renpy.call_screen("choose_target", targets = arena.get_targets(_actor))
+            # player 
+            if arena.actor in arena.player_actors:
+                arena.actor.skill = renpy.call_screen("choose_skill", arena)
+                arena.actor.target = renpy.call_screen("choose_target", arena)
+                
+            # enemy
             else:
-                _actor.skill = _actor.choose_skill()
-                _actor.target = _actor.choose_target(arena.get_targets(_actor))
+                arena.actor.skill = arena.get_skill()
+                arena.actor.target = arena.get_target()
 
             # perform skill
-            _actor.use_skill()
+            arena.perform_skill()
 
             # update arena's state
-            arena.update_state()
+            arena.end_turn()
 
     hide screen combat_ui
     
@@ -115,23 +117,25 @@ screen combat_ui(arena):
 
     zorder -1
 
-    # show friends status
+    # show player status
     vbox:
-        for i in arena.friends:
+        for i in arena.player_actors:
             hbox:
                 text "[i.name]: HP [i.hp]"
 
-    # show foes status
+    # show enemy status
     vbox xalign 1.0:
-        for i in arena.foes:
+        for i in arena.enemy_actors:
             hbox:
                 text "[i.name]: HP [i.hp]"
 
 
-screen choose_skill(actor):
+screen choose_skill(arena):
 
     tag menu
     modal True
+    
+    $ actor = arena.actor
 
     # caption
     label "[actor.name]'s turn" align .5, .2
@@ -140,21 +144,31 @@ screen choose_skill(actor):
     vbox align .5, .5:
         for name, score, obj in actor.get_skills(types=["active"]):
             $ score_text = " ({}/{})".format(score, obj.score) if obj.cost else "" 
-            textbutton "[obj.name][score_text]" action [Return(name) if score else NullAction()]
+            textbutton "[obj.name][score_text]":
+                
+                # sensitive if skill is available
+                if arena.check_skill(actor, name):
+                    action Return(name)
+                    
 
-
-screen choose_target(targets):
+screen choose_target(arena):
 
     tag menu
     modal True
 
+    $ actor = arena.actor
+    
     # caption
     label "Choose target" align .5, .2
 
     # commands
     vbox align .5, .5:
-        for i in targets:
-            textbutton i.name action Return(i)
+        for i in arena.foes(actor) if actor.get_skill(actor.skill).target == "foe" else arena.friends(actor):
+            textbutton i.name:
+                
+                # sensitive if target is available
+                if arena.check_target(actor, i):
+                    action Return(i)
 
 
 ##############################################################################
@@ -167,73 +181,132 @@ init -3 python:
         """
         This class represents acting field for actors. It has the follwing fields:
 
-        friends - list of playable actors
-        foes - list of unplayable actors
+        player_actors - list of playable actors
+        enemy_actors - list of unplayable actors
+        actor - current actor to perform
+        order - performing order of actors 
         state - curernt state of arena. "win", "lose", "draw" ends combat, otherwise keep performing.
         """
 
-        def __init__(self, friends=None, foes=None):
+        def __init__(self, player_actors=None, enemy_actors=None):
 
-            self.friends = friends or []
-            self.foes = foes or []
+            self.player_actors = player_actors or []
+            self.enemy_actors = enemy_actors or []
 
             self.order = []
+            self.actor = None
             self.state = None
+            
+            
+        def friends(self, actor=None):
+            # returns friendly actors
+            
+            actor = actor or self.actor
+            return self.player_actors if actor in self.player_actors else self.enemy_actors
+            
+                
+        def foes(self, actor=None):
+            # returns hostile actors
+            
+            actor = actor or self.actor
+            return self.player_actors if actor in self.enemy_actors else self.enemy_actors
 
 
         def init(self):
             # call this to set order
 
             self.state = None
-            self.order = self.friends+self.foes
+            self.order = self.player_actors + self.enemy_actors
             renpy.random.shuffle(self.order)
 
 
         def reset_state(self):
             # reset actors's states
 
-            for i in self.friends + self.foes:
+            for i in self.player_actors + self.enemy_actors:
                 i.reset_state()
 
 
-        def update_state(self):
-            # call this each turn to update arena's state
-
-            for i in self.friends:
-                if i.hp > 0:
-                    break
-            else:
-                self.state = "lose"
-
-            for i in self.foes:
-                if i.hp > 0:
-                    break
-            else:
-                self.state = "win"
-
-
         def get_turn(self):
-            # returns the next performer
+            # returns a next actor to perform
 
             while True:
                 actor = self.order.pop(0)
                 self.order.append(actor)
                 if actor.hp > 0:
                     return actor
+                    
+                    
+        def check_skill(self, actor=None, name=None):
+            # returns True if skill is available
             
-            
-        def get_targets(self, actor):
-            # returns list of targets.
-            
-            obj = actor.get_skill(actor.skill)
-            
-            if not actor.skill or actor not in self.order:
-                return []
-            if actor in self.friends:
-                return self.foes if obj.target=="foe" else self.friends 
-            if actor in self.foes:
-                return self.friends if obj.target=="foe" else self.foes 
+            actor = actor or self.actor
+            name = name or actor.skill
+            obj = actor.get_skill(name)
+            if obj.cost == 0 or actor.count_skill(name) >= obj.cost:
+                return True
+                
+                
+        def get_skill(self, actor=None):
+            # returns a random skill name
 
+            actor = actor or self.actor
+            names = [x for x in actor.get_skills(score=1, types=["active"], rv="name") if self.check_skill(actor, x)]
+            return  renpy.random.choice(names)
+            
+                
+        def check_target(self, actor=None, target=None):
+            # returns True if target is available
+            
+            actor = actor or self.actor
+            target = target or actor.target
+            if target.hp>0:
+                return True
+                
+                
+        def get_target(self, actor=None):
+            # returns a random target
+
+            actor = actor or self.actor
+            targets = self.foes(actor) if actor.get_skill(actor.skill).target == "foe" else self.friends(actor)
+            targets = [x for x in targets if self.check_target(actor, x)]
+            return renpy.random.choice(targets)
+
+
+        def perform_skill(self, actor=None, target=None, name=None):
+            # perform skill on the target
+            
+            actor = actor or self.actor            
+            target = target or actor.target
+            name = name or actor.skill
+            obj = actor.get_skill(name)
+
+            if obj.effect == "attack":
+                target.change_state(hp = -obj.value)
+                narrator ("{}'s attack. {} loses {} HP".format(actor.name, target.name, obj.value))
+
+            elif obj.effect == "heal":
+                target.change_state(hp = +obj.value)
+                narrator ("{}'s heal. {} gains {} HP".format(actor.name, target.name, obj.value))
+            
+            if obj.cost:
+                actor.score_skill(actor.skill, - obj.cost, remove=False)
+
+
+        def end_turn(self):
+            # call this each turn to update arena's state
+
+            for i in self.player_actors:
+                if i.hp > 0:
+                    break
+            else:
+                self.state = "lose"
+
+            for i in self.enemy_actors:
+                if i.hp > 0:
+                    break
+            else:
+                self.state = "win"
                 
 
 ##############################################################################
@@ -303,16 +376,17 @@ init -3 python:
             self.target = None
 
 
-        def update_state(self):
-            # call this each turn to amend invalid attributes
+        def change_state(self, **kwargs):
+            # Change attribtues. 
+            # instead of changing attributes directly, use this method.
 
-            for i in self._attributes:
-                attr = getattr(self, i)
-                max = getattr(self, "default_"+i)
-                if max > 0 and attr > max:
-                    setattr(self, i, max)
-                if attr < 0:
-                    setattr(self, i, 0)
+            for k, v in kwargs.items():
+                if k in self._attributes:
+                    nv = getattr(self, k) + v
+                    mv = getattr(self, "default_"+k)
+                    setattr(self, k, max(0, min(nv, mv)))
+                else:
+                    raise Exception("{} is not defined attributes".format(k))
             
 
         @classmethod
@@ -331,7 +405,7 @@ init -3 python:
                         
 
         def has_skill(self, name, score=None):
-            # returns True if inventory has this skill whose score is higher than given.
+            # returns True if actor has this skill whose score is higher than given.
             
             # check valid name or not
             self.get_skill(name)
@@ -340,7 +414,7 @@ init -3 python:
             
 
         def has_skills(self, name, score=None):
-            # returns True if inventory has these skills whose score is higher than give. 
+            # returns True if actor has these skills whose score is higher than give. 
             # "a, b, c" means a and b and c, "a | b | c" means a or b or c.
             
             separator = "|" if name.count("|") else ","
@@ -446,30 +520,6 @@ init -3 python:
                     self.add_skill(i)
 
 
-        def use_skill(self):
-            # use skill on target
-            
-            obj = self.get_skill(self.skill)
-            target = self.target
-
-            obj.use(target)
-            
-            if obj.cost:
-                self.score_skill(self.skill, - obj.cost, remove=False)
-
-                
-        def choose_skill(self):
-            # returns skill randomly
-
-            return renpy.random.choice(self.get_skills(score=1, types=["active"], rv="name"))
-
-
-        def choose_target(self, targets):
-            # returns target randomly
-
-            return renpy.random.choice([x for x in targets if x.hp>0])
-
-
 
 ##############################################################################
 ## Skill class.
@@ -500,22 +550,6 @@ init -3 python:
             self.score = int(score)
             self.cost = int(cost)
             self.info = info
-            
-
-        def use(self, target):
-            # use skill on target.
-            
-            if self.effect == "attack":
-                target.hp -= self.value
-                target.update_state()
-                narrator ("{} loses {} HP".format(target.name, self.value))
-
-            elif self.effect == "heal":
-                target.hp += self.value
-                target.update_state()
-                narrator ("{} gains {} HP".format(target.name, self.value))
-
-            return
             
             
 ##############################################################################
