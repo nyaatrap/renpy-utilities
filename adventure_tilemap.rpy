@@ -9,56 +9,63 @@
 
 
 ## まずタイルマップを作成します。
-## ここでは tilemap.rpy で定義したものを直接使います。
-        
-## 次にそれらを使ってレベルを Level(image, music) で定義します。
+# tilemap = Tilemap(map1, tileset, 32, 32)
+
+## 次にそれを使ってレベルを Level(image, music) を dafault で定義します。
 ## image は画像ではなく、タイルマップオブジェクトです。
-## default で定義します。
+## ここでは、tilemap.rpy で定義した tilemap を使います。
 
 default level.field = Level(tilemap)
 
 
-## 最後に冒険者を TilemapPlayer クラスで定義します。
-## pos はゲームをスタートするタイルの座標です。
+## それから冒険者を TilemapPlayer(level, pos, cursor) を使って dafault で定義します。
+## level はゲームをスタートするレベル、pos はそのタイルの座標です。
+## 通常の adventure と異なり整数のペア(x,y)で与えます。
 ## cursor はマウスの乗っているタイルを色変えする画像です。
 ## adventure.rpy との定義の重複を避けるため別名にしていますが、
 ## ゲームスタート後は player に戻して使います。
 
-default tilemapplayer = TilemapPlayer("field", pos=(1,1), cursor = Transform(Solid("#f66", xysize=(32,32)), alpha=0.5), turn=0)
+default tilemapplayer = TilemapPlayer("field", pos=(0,0),
+    cursor = Transform(Solid("#f66", xysize=(32,32)), alpha=0.5), turn=0)
 
 
 ## タイルマップ上のイベントを定義します。
+## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede, label) で定義します。
 
-## イベントは、プレイヤーがposの位置に移動した時に呼び出されます。
-define ev.enter = Event("field", pos=(1,1), precede=True)
-label enter:
-    "enter point"
-    return
-    
-## pos を文字列にすると、その文字列のある map の座標でイベントが発生します。
-## タイルマップを文字列で定義したときのみ有効です。
-define ev.ev1 = Event("field", pos="1")
-label ev1:
-    "tile 1"
-    return
 
-## pos が与えられていないイベントは、そのレベル内なら毎ターン発生します。
-define ev.ev0 = Event("field", priority=1)
-label ev0:
-    "tile 0"
-    return
-
-        
-## image を与えると tilemap navigator 上に表示されます。
+## クリックで発生するイベントです。 image を与えると tilemap の上にその画像が表示されます。
 
 define ev.iconA = Event("field", pos=(5,0), image=Text("A"))
 label iconA:
     "icon A is clicked"
     return
-    
+
+
 define ev.iconB = Event("field", pos=(8,7), image=Text("B"))
 label iconB:
     "icon B is clicked"
+    return
+
+
+## pos が与えられていないイベントは、そのレベル内ならどこでも発生します。
+define ev.ev0 = Event("field", priority=2)
+label ev0:
+    "there is nothing there"
+    return
+
+
+## 次のイベントは、プレイヤーがその座標にいる時に、プレイヤーの操作前に呼び出されるイベントです。
+define ev.enter = Event("field", pos=(0,0), precede=True, priority=999)
+label enter:
+    "enter point"
+    return
+
+
+## pos を整数もしくは文字列にすると、その文字列がマップを定義した二元配列の値と一致する座標の場合に、イベントが発生します。
+## タイルマップの定義に文字列を利用した場合に特に有効です。
+define ev.ev1 = Event("field", pos=2, priority=1)
+label ev1:
+    "mapchip'2' is clicked"
     return
 
 
@@ -77,7 +84,7 @@ label adventure_tilemap:
 
     # rename back
     $ player = tilemapplayer
-    
+
     # Update event list in current level
     $ player.update_events()
     $ player.after_interact = False
@@ -118,17 +125,17 @@ label adventure_tilemap_loop:
 
         $ player.after_interact = True
         $ block()
-        
+
         # show eventmap or tilemap navigator
         if player.in_tilemap():
             call screen tilemap_navigator(player)
         else:
             call screen eventmap_navigator(player)
-        
+
         #  If return value is a place
         if isinstance(_return, Place):
             $ player.pos = _return.pos
-        
+
         # If return value is an event
         elif isinstance(_return, Event):
             $ player.pos = _return.pos
@@ -139,29 +146,29 @@ label adventure_tilemap_loop:
             $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
                 jump adventure_tilemap
-            
+
         # If return value is coordinate
         elif isinstance(_return, tuple):
             $ player.pos = _return
 
-            
+
 ##############################################################################
 ## Tilemap navigator screen
 
-screen tilemap_navigator(player):       
-    
+screen tilemap_navigator(player):
+
     # show coordinate
     python:
         tilemap = player.image
         width = tilemap.tile_width
         height = tilemap.tile_height
-    
+
     if tilemap.coordinate:
-        
+
         ## show coodinate
-        $ x, y = tilemap.coordinate    
+        $ x, y = tilemap.coordinate
         text "([x], [y])"
-    
+
         ## show cursor
         if player.cursor:
             add player.cursor:
@@ -172,8 +179,8 @@ screen tilemap_navigator(player):
                 else:
                     xoffset x*width
                     yoffset y*height
-                    
-        ## returns coordinate of tiles 
+
+        ## returns coordinate of tiles
         key "button_select" action Return((x, y))
 
     ## show places and events
@@ -191,7 +198,7 @@ screen tilemap_navigator(player):
             if i.image:
                 add i.image
 
-            
+
 
 ##############################################################################
 ## Explore class
@@ -208,7 +215,7 @@ init -2 python:
             # returns true if player is in tilemap
 
             return isinstance(self.image, Tilemap)
-            
+
 
         def get_events(self):
             # returns event list that happens in the given pos.
