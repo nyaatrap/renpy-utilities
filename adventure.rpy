@@ -205,14 +205,12 @@ init -3 python:
 
         image - image that is shown behind events.
         music - music that is played while player in this level.
-        info - Information text to be shown on event map screen.
         """
 
-        def __init__(self, image=None, music=None, info=""):
+        def __init__(self, image=None, music=None):
 
             self.image = image
             self.music = music
-            self.info = info
 
 
 ##############################################################################
@@ -225,13 +223,12 @@ init -3 python:
         This class's fileds are same to event class
         """
 
-        def __init__(self, level=None, pos=None, cond="True", image=None, info=""):
+        def __init__(self, level=None, pos=None, cond="True", image=None):
 
             self.level = level
             self.pos = pos
             self.cond = cond
             self.image = image
-            self.info = info
 
 
 ##############################################################################
@@ -253,11 +250,10 @@ init -3 python:
                 An active event is exceuted when you clicked its image on an eventmap.
         image - Image that is shown on an eventmap.
         label - If it's given this label is called instead of object name.
-        info - Information text to be shown on event map screen.
         """
 
         def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False, precede=False,
-            active=False, image=None, label=None, info=""):
+            active=False, image=None, label=None):
 
             self.place = level if Player.get_place(level) else None
             self._level = None if self.place else level
@@ -270,8 +266,6 @@ init -3 python:
             self.active = active
             self.image = image
             self.label = label
-            self.info = info
-            self.name = ""
 
         @property
         def level(self):
@@ -303,7 +297,6 @@ init -3 python:
         event - current event.
         image - shortcut to level.image.
         music - shortcut to level.music.
-        info - shortcut to level.info.
 
         happening(event) - returns True if an event is happened.
         done(event) - returns True if an event is happened and done.
@@ -334,11 +327,6 @@ init -3 python:
         @property
         def image(self):
             return self.get_level(self.level).image
-
-
-        @property
-        def info(self):
-            return self.get_level(self.level).info
 
 
         def happened(self, ev):
