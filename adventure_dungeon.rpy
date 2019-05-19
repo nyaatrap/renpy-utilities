@@ -1,49 +1,75 @@
-## This file adds pseudo-3D dungeon crawing function into adventure framework.
+## This file adds pseudo-3D dungeon crawling function into adventure framework.
 ## To play the sample game, download the cave folder then place it in the images directory.
 ## adventure に疑似３Dダンジョン探索機能を追加するファイルです。
-## サンプルを実行するには images/cave フォルダーの画像をダウンロードする必要があります。
+## サンプルを実行するには dungeon フォルダーの画像をダウンロードする必要があります。
 
 ##############################################################################
 ## How to Use
 ##############################################################################
 
+## まず最初に画像の種類を文字列のリストで定義します。
+## 文字列は表示する画像ファイルの接頭辞になります
+## リストの一番最初はどのレイヤーでも共通で表示する背景画像になります。
 
-## まず背景画像を定義します。
-## ファイル名の最初はダンジョンの種類名、つぎは壁や扉などのタイル名、最後は座標です。
-## 座標は下の図で player を上を向いたプレイヤーの位置とした相対座標です。
+define dungeonset = ["dungeon/base", "dungeon/floor", "dungeon/wall"]
 
-## left2, front2, right2
-## left1, front1, right1
-## left0, player, right0
+## 次にダンジョンに表示する壁などの画像の数や重なりを2次元配列で定義します。
+## この例では、一番遠くに7つ、一番近くに3つの画像を表示できるようにしています。
+## c0をプレイヤーがいる位置と思って、上が画面の奥になるようイメージしてください。
+## 文字列は表示する画像ファイルの接尾辞になります
 
-# image cave floor = "images/cave floor.png"
-# image cave wall left0 = "images/cave wall left0.png"
-# image cave wall front1 ="images/cave wall front1.png"
-# image cave wall left1 = "images/cave wall left1.png"
-# image cave wall front2 = "images/cave wall front2.png"
-# image cave wall left2 = "images/cave wall left2.png"
+define dungeon_layers = [
+    ["lll6", "ll6", "l6", "c6", "r6", "rr6", "rrr6"],
+    ["lll5", "ll5", "l5", "c5", "r5", "rr5", "rrr5"],
+    ["lll4", "ll4", "l4", "c4", "r4", "rr4", "rrr4"],
+            ["ll3", "l3", "c3", "r3", "rr3"],
+            ["ll2", "l2", "c2", "r2", "rr2"],
+                    ["l1","c1","r1"],
+                    ["l0","c0","r0"],
+    ]
+
+## 上で定義した接頭辞と接尾辞の組み合わせで作る画像を用意します。
+## "dungeon/floor_lll6.png" など
+## 背景画像のみ最初で定義したリストの一番目と同じ名前にします。
+## "dungeon/base.png"
 
 
-## 次に２次元配列 [[]] でマップを定義します。
-## "0" または空白は画像なし、"1" は "wall"、"2" は"door" で定義した画像が
-## 割り当てられます。この割り当てや衝突判定は Crawler クラスで変更できます。
+## 描画したいマップを整数の二次元配列で表現します。
+## 配列の値は上で定義したリストのインデックスで
+## dungeonset = ["dungeonbase", "floor", ...] の場合 1 は floor を表します。
+## 0 や空集合の場合は描画しません
 
-define sample_map =[
-["1","1","1","1","1","1","1","1"],
-["1","0","1","0","0","0","0","1"],
-["1","0","1","0","1","1","0","1"],
-["1","0","0","0","0","1","0","1"],
-["1","0","1","1","0","0","0","1"],
-["1","0","0","0","0","1","0","1"],
-["1","e","0","1","1","1","0","1"],
-["1","1","1","1","1","1","1","1"]
+define map2 =[
+[2,2,2,2,2,2,2,2],
+[2,1,2,1,1,1,1,2],
+[2,1,2,1,1,1,1,2],
+[2,1,1,1,1,2,1,2],
+[2,1,0,0,1,1,1,2],
+[2,1,1,1,1,1,1,2],
+[2,0,1,1,1,1,1,2],
+[2,1,1,1,1,1,1,2],
+[2,1,1,1,1,1,1,2],
+[2,1,0,1,1,1,1,2],
+[2,1,0,1,2,2,1,2],
+[2,1,0,1,1,2,1,2],
+[2,1,0,0,1,1,1,2],
+[2,1,1,1,1,2,1,2],
+[2,0,1,2,2,2,1,2],
+[2,2,2,2,2,2,2,2]
 ]
 
-## それらを使ってレベルを Dungeon(image, music, map) で定義します。
-## image は先に定義したダンジョンの種類です。
-## map は ２次元配列の map [[]] か、タブ区切りのスプレッドシートファイル名です。
+## 侵入できないタイルの種類のリストも作成しておきます。
+define collision = (0, 2)
 
-default level.cave = Dungeon(image="cave", map=sample_map)
+## ダンジョンの画像を LayeredMap(map, tileset, tile_mapping, layers, pov) で定義します。
+## map, tileset, layers は上で定義したもので、pov は最後に定義するダンジョンプレイヤークラスを文字列で与えます。
+
+define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer")
+
+
+## それらを使ってレベルを Dungeon(image, music, map, collision) で定義します。
+## ここでもう一度 map を与えているのは衝突判定に利用するためです。
+default level.dungeon = Dungeon(image=map_image, map=map2, collision=collision)
 
 
 ## 最後に冒険者を DungeonPlayer クラスで定義します。
@@ -51,41 +77,38 @@ default level.cave = Dungeon(image="cave", map=sample_map)
 ## adventure.rpy との定義の重複を避けるため別名にしていますが、
 ## ゲームスタート後は player に戻して使います。
 
-default dungeonplayer = DungeonPlayer("cave", pos=(1,1,0,1), turn=0)
+default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0)
 
 
 ## ダンジョンのイベントを定義します。
 
 ## イベントは、プレイヤーがpos の位置に移動した時に呼び出されます。
-define ev.entrance = Event("cave", pos=(1,1), precede=True, once=True)
-label entrance:
-    "Here starts crawling"
-    return
-
 ## dx,dy を与えるとその向きのみイベントが発生します。
-define ev.chest = Event("cave", pos=(6,6,0,1), active=True)
-label chest:
-    "You found a chest"
+define ev.entrance = Event("dungeon", pos=(1,1), precede=True, once=True)
+label entrance:
+    "Enter point"
     return
 
-## pos を文字列にするとその文字列のある map の座標でイベントが発生します。
-define ev.enemy = Event("cave", pos="e", precede=True)
-label enemy:
-    "There is an enemy"
-    return
 
-## pos が与えられていないイベントは、そのレベル内なら毎ターン発生します。
+## pos が与えられていないイベントは、そのレベル内ならどこでも発生します。
 ## active を True にすると、クリックした時のみ呼び出されるアクティブイベントになります。
-define ev.nothing = Event("cave", priority=100, active=True)
+define ev.nothing = Event("dungeon", priority=100, active=True)
 label nothing:
     "There is nothing"
     return
 
 
-## 衝突の場合は衝突先のイベントがアクティブイベントとして呼ばれます。
-define ev.collision = Event("cave", pos="1", active=True)
-label collision:
+## pos を整数もしくは文字列にすると、その文字列がマップを定義した二元配列の値と一致する座標の場合に、イベントが発生します。
+## 移動しようとした場所が衝突する座標の場合、active=True にするとその座標のイベントが呼ばれます。
+
+define ev.collision_wall = Event("dungeon", pos=2, active=True)
+label collision_wall:
     with vpunch
+    return
+
+define ev.collision_pit = Event("dungeon", pos=0, active=True)
+label collision_pit:
+    "There is a pit"
     return
 
 ## start ラベルから adventure_dungeon へジャンプすると探索を開始します。
@@ -97,14 +120,14 @@ label collision:
 
 ##############################################################################
 ## Main label
-## Jumping to this label starts dungeon adventure_dungeoning
+## Jumping to this label starts dungeon adventure
 
 label adventure_dungeon:
-    
+
     # rename back
     $ player = dungeonplayer
-    
-    # Update event list in current level
+
+    # Update event list in the current level
     $ player.update_events()
     $ player.after_interact = False
 
@@ -116,10 +139,7 @@ label adventure_dungeon:
     # Show background
     if player.image:
         scene black with Dissolve(.25)
-        if player.in_dungeon():
-            $ player.draw_dungeon()
-        else:
-            show expression player.image at topleft
+        show expression player.image at topleft
         with Dissolve(.25)
 
     jump adventure_dungeon_loop
@@ -132,7 +152,7 @@ label adventure_dungeon_loop:
         $ block()
         $ _events = player.get_events()
 
-        # sub loop to excecute all passive events
+        # sub loop to execute all passive events
         $ _loop = 0
         while _loop < len(_events):
 
@@ -175,14 +195,14 @@ label adventure_dungeon_loop:
                     jump adventure_dungeon
                 jump adventure_dungeon_loop
 
-            # collision
+            # move - collision
             elif isinstance(_return, Coordinate) and player.map[_return.y][_return.x] in player.collision:
 
                 # check active events
                 $ block()
                 $ _events = player.get_events(pos = _return.unpack(), active=True)
 
-                # sub loop to excecute all active events
+                # sub loop to execute all active events
                 $ _loop = 0
                 while _loop < len(_events):
 
@@ -201,10 +221,10 @@ label adventure_dungeon_loop:
             elif isinstance(_return, Coordinate):
                 if _return.x == player.pos[0] and _return.y == player.pos[1]:
                     $ player.move_pos(_return.unpack())
-                    $ player.draw_dungeon()
+                    show expression player.image at topleft
                 else:
                     $ player.move_pos(_return.unpack())
-                    $ player.draw_dungeon()
+                    show expression player.image at topleft
                     jump adventure_dungeon_loop
 
 
@@ -234,6 +254,7 @@ screen dungeon_navigator(player):
         textbutton "D" action Return(coord.right()) xcenter .65 ycenter .96
         textbutton "A" action Return(coord.left())  xcenter .35 ycenter .96
 
+
     # keys
         for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
             key i action Return(coord.front())
@@ -260,42 +281,63 @@ init -2 python:
     class Dungeon(Level):
 
         """
-        Expanded Level class to hold 2-dimentional map.
-        map should be list or filename of spreadsheet.
+        Expanded Level class that holds collision data.
         """
 
-        # Make a dict that maps characters in dungeon map to image names
-        _mapping = {"1":"wall", "2":"door", "3":"up", "4":"down"}
+        def __init__(self, image=None, music=None, map = None, collision=None):
 
-        # tuple of collision on dungeon map.
-        _collision = ("1", "2", "3", "4")
-
-        def __init__(self, image=None, music=None, map = None, mapping=None, collision=None, info=""):
-
-            super(Dungeon, self).__init__(image, music, info)
-            self.map = self.read_map(map) if map and isinstance(map, basestring) else map
-            self.mapping = mapping or self._mapping
-            self.collision = collision or self._collision
+            super(Dungeon, self).__init__(image, music)
+            self.map = map
+            self.collision = collision
 
 
-        def read_map(self, file, separator="\t"):
-            # read tsv file to make them into 2-dimentional map
+##############################################################################
+## DungeonPlayer class
 
-            map=[]
-            f = renpy.file(file)
-            for l in f:
-                l = l.decode("utf-8")
-                a = l.rstrip().split(separator)
-                map.append([x for x in a])
-            f.close()
+    class DungeonPlayer(Player):
 
-            return map
+        """
+        Expanded Player Class that stores various methods and data for dungeon crawling.
+        """
+
+        @property
+        def map(self):
+            return self.get_level(self.level).map
+
+
+        @property
+        def collision(self):
+            return self.get_level(self.level).collision
+
+
+        def in_dungeon(self):
+            # returns true if player is in dungeon
+
+            return isinstance(self.get_level(self.level), Dungeon)
+
+
+        def get_events(self, active = False, pos=None):
+            # returns event list that happens in the given pos.
+            # this overwrites the same method in player class.
+
+            pos = pos or self.pos
+
+            events = []
+            for i in self.current_events:
+                if not i.once or not self.happened(i):
+                    if i.precede or self.after_interact:
+                        if i.pos == None or i.pos == pos or i.pos == self.image.map[pos[1]][pos[0]] or\
+                        (isinstance(i.pos, tuple) and len(i.pos)==2 and i.pos[0] == pos[0] and i.pos[1] == pos[1]):
+                            if active == i.active and eval(i.cond):
+                                events.append(i)
+
+            return self.cut_events(events)
 
 
 ##############################################################################
 ## Coordinate class
 
-init -2 python:
+init -3 python:
 
     class Coordinate(object):
 
@@ -357,107 +399,100 @@ init -2 python:
 
 
 ##############################################################################
-## DungeonPlayer class
+## LayeredMap class
 
-    class DungeonPlayer(Player):
+    class LayeredMap(renpy.Displayable):
 
         """
-        Expanded Player Class that stores various methods and data for dungeon crawling.
+        This creates a displayable by layering other displayables. It has the following field values.
+
+        map -  A 2-dimensional list of strings that represent index of a tileset.
+        tileset -  A list of displayables that is used as a tile of tilemap.
+        tile_mapping - a dictionary that maps string of map to index of tileset.
+           If None, each coordinate of map should be integer.
+        pov - string that represents dungeonplayer class. it determines point of view
+        layers - 2-dimensional list of strings to be shown in the perspective view.
+            the first list is farthest layers, from left to right. the last list is the nearest layers. this string is used as suffix of displayable.
         """
-            
-        @property
-        def map(self):
-            return self.get_level(self.level).map
-            
-        @property
-        def mapping(self):
-            return self.get_level(self.level).mapping
-            
-        @property
-        def collision(self):
-            return self.get_level(self.level).collision
 
 
-        def in_dungeon(self):
-            # returns true if player is in dungeon
+        def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, **properties):
 
-            return isinstance(self.get_level(self.level), Dungeon)
-            
-
-        def get_events(self, active = False, pos=None):
-            # returns event list that happens in the given pos.
-            # this overwrites the same method in player class.
-            
-            pos = pos or self.pos
-
-            events = []
-            for i in self.current_events:
-                if not i.once or not self.happened(i):
-                    if i.precede or self.after_interact:
-                        if i.pos == None or (isinstance(i.pos, basestring) and i.pos == self.map[pos[1]][pos[0]]) or\
-                        i.pos == pos or (len(i.pos)==2 and i.pos[0] == pos[0] and i.pos[1] == pos[1]):
-                            if active == i.active and eval(i.cond):
-                                events.append(i)
-
-            return self.cut_events(events)
+            super(LayeredMap, self).__init__(**properties)
+            self.map = map
+            self.tileset = tileset
+            self.tile_mapping = tile_mapping
+            self.pov = pov
+            self.layers = layers
 
 
-        def draw_dungeon(self):
-            # Draw front view image on the coord on the master layer.
+        def render(self, width, height, st, at):
 
-            coord = Coordinate(*self.pos)
-            tag = self.image
-            map = self.map
-            mapping = self.mapping
+            render = renpy.Render(width, height)
 
-            # Calculate relative coordinates
-            floor = coord
-            turnleft = coord.turnleft()
-            turnright = coord.turnright()
-            turnback = coord.turnback()
-            stepback = coord.back()
-            left0 = coord.left()
-            right0 = coord.right()
-            front1 =  coord.front()
-            left1 = front1.left()
-            right1 = front1.right()
-            front2 =  front1.front()
-            left2 = front2.left()
-            right2 = front2.right()
+            # render background
+            render.blit(renpy.render(Image(self.tileset[0]+".png"), width, height, st, at), (0,0))
 
-            # Composite background images.
-            renpy.scene()
+            # get coordinate
+            pov = getattr(store, self.pov)
 
-            # floor base
-            renpy.show("{} floor".format(tag))
+            # depth loop
+            depth = len(self.layers)
 
-            for n, i in enumerate(["left2", "right2", "front2", "left1", "right1", "front1", "left0", "right0", "floor"]):
+            for d in range(depth):
+                coord = Coordinate(*pov.pos)
+                for i in xrange(depth-1-d):
+                    coord = coord.front()
 
-                # Try-except clauses are used to prevent IndexError
-                try:
-                    # get coordinate object defined above
-                    tile=locals()[i]
+                # breadth loop
+                breadth = len(self.layers[d])
+                center = breadth//2
+                wrange = range(breadth-center)
+                for k in xrange(center):
+                    wrange.insert(0, k+center+1)
 
-                    if map[tile.y][tile.x] in mapping.keys():
+                for b in wrange:
+                    coord2 = coord
+                    if b > center:
+                        for j in xrange(b-center):
+                            coord2 = coord2.right()
+                    else:
+                        for j in xrange(center-b):
+                            coord2 = coord2.left()
 
-                        # left side
-                        if i in ["left2", "left1", "left0"]:
-                            image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i)
-                            if renpy.has_image(image):
-                                renpy.show(i, what = Transform(image, yalign=.5))
+                    # Get index of tileset
+                    x,y = coord2.x, coord2.y
+                    try:
+                        if self.tile_mapping:
+                            if self.map[y][x] in self.tile_mapping.keys():
+                                tile = self.tile_mapping[self.map[y][x]]
+                            else:
+                                tile = 0
+                        else:
+                            tile = self.map[y][x]
 
-                        # righit side use mirror image of left side
-                        elif i in ["right2", "right1", "right0"]:
-                            image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i.replace("right", "left"))
-                            if renpy.has_image(image):
-                                renpy.show(i, what = Transform(image, xzoom = -1, xalign = 1.0, yalign=.5))
+                    except IndexError:
+                        tile = 0
 
-                        # front
-                        elif i in ["front2", "front1"]:
-                            image = "{} {} {}".format(tag, mapping[map[tile.y][tile.x]], i)
-                            if renpy.has_image(image):
-                                renpy.show(i, what = Transform(image, align=(.5,.5)))
+                    # blit image if tile is not None
+                    if tile:
+                        image = Image(self.tileset[tile]+"_"+self.layers[d][b]+".png")
+                        render.blit(renpy.render(image, width, height, st, at), (0,0))
 
-                except IndexError:
-                    pass
+            # Redraw regularly
+            # renpy.redraw(self, 1.0/30)\
+
+            return render
+
+
+        def per_interact(self):
+
+            # Redraw per interact.
+            renpy.redraw(self, 0)
+
+        ## TODO
+        #def visit(self):
+
+           # If the displayable has child displayables, this method should be overridden to return a list of those displayables.
+           #return
 

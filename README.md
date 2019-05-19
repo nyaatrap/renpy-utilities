@@ -56,7 +56,7 @@ This framework requires tilemap.rpy and adventure.rpy.
 adventure にタイルマップを探索する機能を追加するファイルです。
 tilemap.rpy と adventure.rpy が必要になります。
 
-## adventure_dungeon.rpy
+## adventure_dungeon.rpy (wip)
 This file adds pseudo-3D dungeon crawling function into adventurer framework.
 To play the sample game, download the cave folder then place it in the images directory.
 adventure に疑似３Dダンジョン探索機能を追加するファイルです。
