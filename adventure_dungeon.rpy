@@ -82,7 +82,12 @@ default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0)
 
 ## ダンジョンのイベントを定義します。
 
-## イベントは、プレイヤーがpos の位置に移動した時に呼び出されます。
+## イベントにはパッシブ、アクティブ、コリジョンの三種類があります。
+## デフォルトはパッシブで、その座標に移動した時に呼ばれます。
+## アクティブはその座標にいる上で、さらにクリックすると呼ばれます。
+## コリジョンは侵入不可能の座標に移動しようとした時に、その移動前に呼ばれます。
+
+## 通所のパッシブイベントは、プレイヤーが pos の位置に移動した時に呼び出されます。
 ## dx,dy を与えるとその向きのみイベントが発生します。
 define ev.entrance = Event("dungeon", pos=(1,1), precede=True, once=True)
 label entrance:
@@ -91,7 +96,7 @@ label entrance:
 
 
 ## pos が与えられていないイベントは、そのレベル内ならどこでも発生します。
-## active を True にすると、クリックした時のみ呼び出されるアクティブイベントになります。
+## active を True にすると、その座標でクリックした時のみ呼び出されるアクティブイベントになります。
 define ev.nothing = Event("dungeon", priority=100, active=True)
 label nothing:
     "There is nothing"
@@ -99,14 +104,14 @@ label nothing:
 
 
 ## pos を整数もしくは文字列にすると、その文字列がマップを定義した二元配列の値と一致する座標の場合に、イベントが発生します。
-## 移動しようとした場所が衝突する座標の場合、active=True にするとその座標のイベントが呼ばれます。
+## 移動しようとした場所が衝突する座標の場合、その座標のコリジョンイベントが呼ばれます。
 
-define ev.collision_wall = Event("dungeon", pos=2, active=True)
+define ev.collision_wall = Event("dungeon", pos=2)
 label collision_wall:
     with vpunch
     return
 
-define ev.collision_pit = Event("dungeon", pos=0, active=True)
+define ev.collision_pit = Event("dungeon", pos=0)
 label collision_pit:
     "There is a pit"
     return
@@ -150,7 +155,7 @@ label adventure_dungeon_loop:
 
         # check passive events
         $ block()
-        $ _events = player.get_events()
+        $ _events = player.get_passive_events()
 
         # sub loop to execute all passive events
         $ _loop = 0
@@ -167,7 +172,7 @@ label adventure_dungeon_loop:
 
         $ player.after_interact = True
 
-        # sub loop to ignore passive events
+        # sub loop to execute active/collision events without moving.
         while True:
 
             # show eventmap or dungeon navigator
@@ -177,12 +182,12 @@ label adventure_dungeon_loop:
             else:
                 call screen eventmap_navigator(player)
 
-            #  If return value is a place
+            #  If return value is a place, move to there
             if isinstance(_return, Place):
                 $ player.pos = _return.pos
                 jump adventure_dungeon
 
-            # If return value is an event
+            # If return value is an active event, execute it.
             elif isinstance(_return, Event):
                 if not player.in_dungeon():
                     $ player.pos = _return.pos
@@ -195,14 +200,15 @@ label adventure_dungeon_loop:
                     jump adventure_dungeon
                 jump adventure_dungeon_loop
 
-            # move - collision
+            # if return value is coordinate and it's coordinate is in collision,
+            # then execute collision events.
             elif isinstance(_return, Coordinate) and player.map[_return.y][_return.x] in player.collision:
 
-                # check active events
+                # check collision events
                 $ block()
-                $ _events = player.get_events(pos = _return.unpack(), active=True)
+                $ _events = player.get_passive_events(pos = _return.unpack())
 
-                # sub loop to execute all active events
+                # sub loop to execute all collision events
                 $ _loop = 0
                 while _loop < len(_events):
 
@@ -217,7 +223,7 @@ label adventure_dungeon_loop:
 
                 jump adventure_dungeon_loop
 
-            # move
+            # else if return value is coordinate, move to the new coordinate
             elif isinstance(_return, Coordinate):
                 if _return.x == player.pos[0] and _return.y == player.pos[1]:
                     $ player.move_pos(_return.unpack())
@@ -236,11 +242,16 @@ screen dungeon_navigator(player):
 
     $ coord = Coordinate(*player.pos)
 
-    ## show events
-    for i in player.get_events(active=True):
-        button xysize (config.screen_width, config.screen_height):
+    ## show active events
+    for i in player.get_active_events():
+        button:
+            xysize (config.screen_width, config.screen_height)
+
             if i.active:
                 action Return(i)
+
+            # show image on the screen. you can also show them on the background.
+            # TODO move images to layered map
             if  i.image:
                 add i.image
 
@@ -255,7 +266,7 @@ screen dungeon_navigator(player):
         textbutton "A" action Return(coord.left())  xcenter .35 ycenter .96
 
 
-    # keys
+    # move keys
         for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
             key i action Return(coord.front())
         for i in ["repeat_s", "s","repeat_S","S", "focus_down"]:
@@ -316,9 +327,10 @@ init -2 python:
             return isinstance(self.get_level(self.level), Dungeon)
 
 
-        def get_events(self, active = False, pos=None):
+        def get_passive_events(self, pos=None):
             # returns event list that happens in the given pos.
             # this overwrites the same method in player class.
+            # if pos is give, it gets events on the given pos
 
             pos = pos or self.pos
 
@@ -328,7 +340,7 @@ init -2 python:
                     if i.precede or self.after_interact:
                         if i.pos == None or i.pos == pos or i.pos == self.image.map[pos[1]][pos[0]] or\
                         (isinstance(i.pos, tuple) and len(i.pos)==2 and i.pos[0] == pos[0] and i.pos[1] == pos[1]):
-                            if active == i.active and eval(i.cond):
+                            if not i.active and eval(i.cond):
                                 events.append(i)
 
             return self.cut_events(events)
@@ -410,9 +422,9 @@ init -3 python:
         tileset -  A list of displayables that is used as a tile of tilemap.
         tile_mapping - a dictionary that maps string of map to index of tileset.
            If None, each coordinate of map should be integer.
-        pov - string that represents dungeonplayer class. it determines point of view
         layers - 2-dimensional list of strings to be shown in the perspective view.
             the first list is farthest layers, from left to right. the last list is the nearest layers. this string is used as suffix of displayable.
+        pov - string that represents dungeonplayer class. it determines point of view
         """
 
 
