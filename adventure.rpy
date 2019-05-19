@@ -18,7 +18,7 @@ define level.west = Level(image=Solid("#339"))
 
 ## 次にイベントが発生する場所を place(level, pos, cond, image) で定義します。
 ## level はその場所が置かれるレベルで、上で定義した level を文字列で与えます。
-## pos はその場所のモニターに対する相対座標になります。 (0.5, 0.5)　が画面中央です。
+## pos はその場所のモニターに対する相対座標になります。 (0.5, 0.5) が画面中央です。
 ## cond が満たされると image がレベルの背景上に表示され、クリックするとその場所に移動します。
 ## place の名前空間でも定義できます。
 
@@ -42,35 +42,39 @@ default player = Player("home", turn=0)
 ## cond が与えられると、その条件式を満たした場合にのみイベントを実行します。
 ## priorty は発生の優先度で、数字が小さい順に実行されます。デフォルトは０です。
 ## once を True にすると一度しか実行されません。デフォルトでは何度も実行されます。
-## multi を True にすると他のイベントも同時に発生します。デフォルトでは優先度の低いイベントを無視します。
-## precede を True にすると、プレイヤーがその場所に居て移動する前にイベントを確認します（パッシブイベント）。
-## デフォルトでは、プレイヤーがそのイベントに移動してきた後に確認します（アクティブイベント）。
+## multi を True にすると他のイベントも同時に発生します。ただし active＝True のイベントは発生しません。
+## precede を True にすると、プレイヤーが操作する前にイベントを確認します。
+## デフォルトでは、プレイヤーが１度操作した後からイベントを確認します。
 ## label を定義すると、イベント名の代わりに、そのラベル名を呼び出します。
 ## event、ev の名前空間でも定義できます。
 
 define ev.myhome = Event("home")
 label myhome:
     "this is my home"
-    ## return でレベルに戻ります。
+    ## return で探索画面に戻ります
     return
+
 
 define ev.e_station = Event("e_station")
 label e_station:
     ## return のあとに次に移動するレベルや場所を文字列で指定できます。
     return "w_station"
 
+
 define ev.w_station = Event("w_station")
 label w_station:
     return "e_station"
+
 
 define ev.shop = Event("shop")
 label shop:
     "this is a shop"
     return
 
+
 ## イベントに image を与えると、イベントマップ上にその画像が表示されます。
-## さらに active を True にすると place と同じく画像を直接クリックしてイベントを呼び出せるようになります。
-## これを使うと場所を定義する手間を省く事ができます。
+## さらに active を True にすると place と同じように
+## 画像を直接クリックしてイベントを呼び出せるようになります。
 ## player.happened(ev) でそのイベントが呼び出されたかどうか評価できます。
 ## player.done(ev) でそのイベントが最後まで実行されたかどうか評価できます。
 define ev.shop2 = Event("west", pos=(.1,.1), cond="player.happened(ev.shop)", active = True, image=Text("hidden shop"))
@@ -78,10 +82,17 @@ label shop2:
     "this is a hidden shop."
     return
 
+
+## image を与えない場合、画面のどこをクリックしてもイベントが発生します。
+define ev.no_there = Event(active=True, priority=99)
+label no_there:
+    "There is nothing there"
+    return
+
+
 ## このラベルは毎ターン操作の直前に呼ばれ、ターンの経過を記録しています。
 define ev.turn = Event(priority = 999, precede =True, multi=True)
 label turn:
-    #"turn+1"
     $ player.turn += 1
     return
 
@@ -122,7 +133,7 @@ label adventure_loop:
 
         # check passive events
         $ block()
-        $ _events = player.get_events()
+        $ _events = player.get_passive_events()
 
         # sub loop to excecute all passive events
         $ _loop = 0
@@ -143,11 +154,11 @@ label adventure_loop:
         # show eventmap navigator
         call screen eventmap_navigator(player)
 
-        # If return value is a place
+        # If return value is a place, move to there
         if isinstance(_return, Place):
             $ player.pos = _return.pos
 
-        # If return value is an event
+        # If return value is an active event, excute it.
         elif isinstance(_return, Event):
             $ player.pos = _return.pos
             $ player.event = _return
@@ -183,12 +194,17 @@ init python:
 
 screen eventmap_navigator(player):
 
-    ## show places and events
-    for i in player.get_places() + player.get_shown_events():
+    ## show places and active events
+    for i in player.get_active_events():
         button:
-            pos i.pos
-            if isinstance(i, Place) or i.active:
+            if i.pos:
+                pos i.pos
+            else:
+                xysize (config.screen_width, config.screen_height)
+            if i.active:
                 action Return(i)
+
+            # show image on screen. you can also show them on the background.
             if i.image:
                 add i.image
 
@@ -223,12 +239,17 @@ init -3 python:
         This class's fileds are same to event class
         """
 
-        def __init__(self, level=None, pos=None, cond="True", image=None):
+        def __init__(self, level=None, pos=None, cond="True", priority=0, image=None):
 
             self.level = level
             self.pos = pos
             self.cond = cond
+            self.priority = int(priority)
             self.image = image
+            self.once = False
+            self.multi = False
+            self.precede = False
+            self.active = True
 
 
 ##############################################################################
@@ -334,6 +355,7 @@ init -3 python:
 
             return ev.name in self.happened_events
 
+
         def done(self, ev):
             # returns True if this event is done.
 
@@ -368,21 +390,24 @@ init -3 python:
                     if isinstance(pl, Place) and (pl.level == None or pl.level == self.level):
                         self.current_places.append(pl)
 
+            self.current_places.sort(key = lambda pl: pl.priority)
 
-        def get_shown_events(self):
-            # returns event list that is shown in the navigation screen
+
+        def get_active_events(self):
+            # returns event and place list that is shown in the navigation screen.
 
             events = []
-            for i in reversed(self.current_events):
+            for i in self.current_events+self.current_places:
                 if not i.once or not self.happened(i):
-                    if isinstance(i.pos, tuple):
                         if eval(i.cond):
                             events.append(i)
+
+            events.sort(key = lambda ev: -ev.priority)
 
             return events
 
 
-        def get_events(self):
+        def get_passive_events(self):
             # returns event list that happens in the given pos.
 
             events = []
@@ -397,7 +422,7 @@ init -3 python:
 
 
         def cut_events(self, events):
-            # If not multi is False, remove second or later
+            # If multi is True, remove second or later
             # This is only used in passive events
 
             found = False
@@ -409,17 +434,6 @@ init -3 python:
                         found=True
 
             return events
-
-
-        def get_places(self):
-            # returns place list that shown in the current interaction.
-
-            places = []
-            for i in self.current_places:
-                if eval(i.cond):
-                    places.append(i)
-
-            return places
 
 
         def move_pos(self, _return):
