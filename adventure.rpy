@@ -36,8 +36,8 @@ default player = Player("home", turn=0)
 
 
 ## 各イベントは define と label のペアで定義します。
-## defne ラベル名 = Event(place, cond, priority, once, multi, precede, label) または、
-## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede, label) で定義します。
+## defne ラベル名 = Event(place, cond, priority, once, multi, precede) または、
+## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede) で定義します。
 ## 探索者が place の場所に移動すると、そのイベントと同じ名前のラベルを呼び出します。
 ## cond が与えられると、その条件式を満たした場合にのみイベントを実行します。
 ## priorty は発生の優先度で、数字が小さい順に実行されます。デフォルトは０です。
@@ -45,7 +45,6 @@ default player = Player("home", turn=0)
 ## multi を True にすると他のイベントも同時に発生します。ただし active＝True のイベントは発生しません。
 ## precede を True にすると、プレイヤーが操作する前にイベントを確認します。
 ## デフォルトでは、プレイヤーが１度操作した後からイベントを確認します。
-## label を定義すると、イベント名の代わりに、そのラベル名を呼び出します。
 ## event、ev の名前空間でも定義できます。
 
 define ev.myhome = Event("home")
@@ -84,11 +83,12 @@ label shop2:
 
 
 ## image を与えない場合、画面のどこをクリックしてもイベントが発生します。
-define ev.no_there = Event(active=True, priority=99)
-label no_there:
+## label を定義すると、イベント名の代わりに、そのラベル名を呼び出します。
+define ev.west_nothing = Event("west", active=True, priority=99)
+define ev.east_nothing = Event("east", active=True, priority=99, label="west_nothing")
+label west_nothing:
     "There is nothing there"
     return
-
 
 ## このラベルは毎ターン操作の直前に呼ばれ、ターンの経過を記録しています。
 define ev.turn = Event(priority = 999, precede =True, multi=True)
@@ -199,14 +199,15 @@ screen eventmap_navigator(player):
         button:
             if i.pos:
                 pos i.pos
-            else:
-                xysize (config.screen_width, config.screen_height)
+
             if i.active:
                 action Return(i)
 
             # show image on screen. you can also show them on the background.
             if i.image:
                 add i.image
+            else:
+                xysize (config.screen_width, config.screen_height)
 
 
 ##############################################################################
