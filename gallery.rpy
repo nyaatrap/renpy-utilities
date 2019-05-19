@@ -1,4 +1,4 @@
-﻿## This file implements integrated gallery that serches images and music automatically.
+﻿## This file implements integrated gallery that searches images and music automatically.
 ## 視聴済みの画像や音楽を自動的に検索・追加する、統合型のギャラリーを追加するファイルです。
 
 ## screens.rpy の navigation に以下の文を追加すると、ギャラリーがゲームメニューに追加されます。

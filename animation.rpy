@@ -53,21 +53,21 @@ transform position(x=.5, y=.5, t=move_time, a=stand_anchor):
 # 中央へ表示または移動する。
 transform move_center:
     position (.5)
-    
+
 # 右へ表示または移動する。
 transform move_right:
     position (.8)
-    
+
 # 左へ表示または移動する。
 transform move_left:
     position (.2)
-    
+
 
 ##############################################################################
 ## Animations
-## 以下の trasnform は画像にアニメーションを加えます。
+## 以下の transform は画像にアニメーションを加えます。
 ## アニメーションと同時に位置を指定する場合は show 画像 at animation, position の順で指定します。
-## 例：show girl at inR, move_center 
+## 例：show girl at inR, move_center
 
 ## アニメーションの動きの大きさを整数で定義します。
 ## 全身の立ち絵のサイズの20分の１くらいが目安です。
@@ -87,14 +87,14 @@ transform inR(t=move_time/2, d=move_size, a=stand_anchor):
 ## hide は at 節を使えないため show 画像 at transform を使います。
 transform outL(t=move_time/2, d=move_size, a=stand_anchor):
     on hide:
-        anchor a 
+        anchor a
         easeout t alpha .0 xoffset -d
         xoffset 0
 
 ## 右に消えるアニメーション。
 transform outR(t=move_time/2, d=move_size, a=stand_anchor):
     on hide:
-        anchor a 
+        anchor a
         easeout t alpha .0 xoffset d
         xoffset 0
 

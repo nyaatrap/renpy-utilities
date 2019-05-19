@@ -81,7 +81,7 @@ label sample_tilemap:
 
 screen track_coordinate(tilemap):
 
-    text "Cick a tile to return its coodinate" align .5, .9
+    text "Click a tile to return its coodinate" align .5, .9
 
     # show coordinate
     if tilemap.coordinate:
@@ -104,12 +104,12 @@ init -3 python:
         tileset -  A list of displayables that is used as a tile of tilemap.
         tile_width - width of each tile.
         tile_height - height of each tile.
-        tile_mapping - a dictionaly that maps string of map to index of tileset.
-           If None, each corrdinate of map should be integer.
+        tile_mapping - a dictionary that maps string of map to index of tileset.
+           If None, each coordinate of map should be integer.
         tile_offset - blank pixel of (left, top) side of each tile
         isometric - if true, isometric tile is used.
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
-        mask - 2-dimentional list of 0 or 1. If it's 0, tile will not be rendered.
+        mask - 2- dimensional list of 0 or 1. If it's 0, tile will not be rendered.
         interact - If True, it restarts interaction when mouse position is changed onto another tile. default is True.
         coordinate - (x, y) coordinate of a tile where mouse is hovering.
         """

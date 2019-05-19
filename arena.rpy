@@ -73,7 +73,7 @@ label _combat(arena):
     python:
         arena.init()
         _rollback = False
-                
+
     show screen combat_ui(arena)
 
     while arena.state not in ["win", "lose", "draw"]:
@@ -83,11 +83,11 @@ label _combat(arena):
             # set current actor to perform
             arena.actor = arena.get_turn()
 
-            # player 
+            # player
             if arena.actor in arena.player_actors:
                 arena.actor.skill = renpy.call_screen("choose_skill", arena)
                 arena.actor.target = renpy.call_screen("choose_target", arena)
-                
+
             # enemy
             else:
                 arena.actor.skill = arena.get_skill()
@@ -100,13 +100,13 @@ label _combat(arena):
             arena.end_turn()
 
     hide screen combat_ui
-    
+
     python:
         _return = arena.state
         arena.reset_state()
         _rollback = True
         renpy.block_rollback()
-        
+
     return _return
 
 
@@ -134,7 +134,7 @@ screen choose_skill(arena):
 
     tag menu
     modal True
-    
+
     $ actor = arena.actor
 
     # caption
@@ -143,13 +143,13 @@ screen choose_skill(arena):
     # commands
     vbox align .5, .5:
         for name, score, obj in actor.get_skills(types=["active"]):
-            $ score_text = " ({}/{})".format(score, obj.score) if obj.cost else "" 
+            $ score_text = " ({}/{})".format(score, obj.score) if obj.cost else ""
             textbutton "[obj.name][score_text]":
-                
+
                 # sensitive if skill is available
                 if arena.check_skill(actor, name):
                     action Return(name)
-                    
+
 
 screen choose_target(arena):
 
@@ -157,7 +157,7 @@ screen choose_target(arena):
     modal True
 
     $ actor = arena.actor
-    
+
     # caption
     label "Choose target" align .5, .2
 
@@ -165,27 +165,27 @@ screen choose_target(arena):
     vbox align .5, .5:
         for i in arena.foes(actor) if actor.get_skill(actor.skill).target == "foe" else arena.friends(actor):
             textbutton i.name:
-                
+
                 # sensitive if target is available
                 if arena.check_target(actor, i):
                     action Return(i)
 
 
 ##############################################################################
-## Arena class.
+## Arena class
 
 init -3 python:
 
     class Arena(object):
 
         """
-        This class represents acting field for actors. It has the follwing fields:
+        This class represents acting field for actors. It has the following fields:
 
         player_actors - list of playable actors
         enemy_actors - list of unplayable actors
         actor - current actor to perform
-        order - performing order of actors 
-        state - curernt state of arena. "win", "lose", "draw" ends combat, otherwise keep performing.
+        order - performing order of actors
+        state - current state of arena. "win", "lose", "draw" ends combat, otherwise keep performing.
         """
 
         def __init__(self, player_actors=None, enemy_actors=None):
@@ -196,18 +196,18 @@ init -3 python:
             self.order = []
             self.actor = None
             self.state = None
-            
-            
+
+
         def friends(self, actor=None):
             # returns friendly actors
-            
+
             actor = actor or self.actor
             return self.player_actors if actor in self.player_actors else self.enemy_actors
-            
-                
+
+
         def foes(self, actor=None):
             # returns hostile actors
-            
+
             actor = actor or self.actor
             return self.player_actors if actor in self.enemy_actors else self.enemy_actors
 
@@ -221,7 +221,7 @@ init -3 python:
 
 
         def reset_state(self):
-            # reset actors's states
+            # reset actor's states
 
             for i in self.player_actors + self.enemy_actors:
                 i.reset_state()
@@ -235,35 +235,35 @@ init -3 python:
                 self.order.append(actor)
                 if actor.hp > 0:
                     return actor
-                    
-                    
+
+
         def check_skill(self, actor=None, name=None):
             # returns True if skill is available
-            
+
             actor = actor or self.actor
             name = name or actor.skill
             obj = actor.get_skill(name)
             if obj.cost == 0 or actor.count_skill(name) >= obj.cost:
                 return True
-                
-                
+
+
         def get_skill(self, actor=None):
             # returns a random skill name
 
             actor = actor or self.actor
             names = [x for x in actor.get_skills(score=1, types=["active"], rv="name") if self.check_skill(actor, x)]
             return  renpy.random.choice(names)
-            
-                
+
+
         def check_target(self, actor=None, target=None):
             # returns True if target is available
-            
+
             actor = actor or self.actor
             target = target or actor.target
             if target.hp>0:
                 return True
-                
-                
+
+
         def get_target(self, actor=None):
             # returns a random target
 
@@ -275,8 +275,8 @@ init -3 python:
 
         def perform_skill(self, actor=None, target=None, name=None):
             # perform skill on the target
-            
-            actor = actor or self.actor            
+
+            actor = actor or self.actor
             target = target or actor.target
             name = name or actor.skill
             obj = actor.get_skill(name)
@@ -288,7 +288,7 @@ init -3 python:
             elif obj.effect == "heal":
                 target.change_state(hp = +obj.value)
                 narrator ("{}'s heal. {} gains {} HP".format(actor.name, target.name, obj.value))
-            
+
             if obj.cost:
                 actor.score_skill(actor.skill, - obj.cost, remove=False)
 
@@ -307,7 +307,7 @@ init -3 python:
                     break
             else:
                 self.state = "win"
-                
+
 
 ##############################################################################
 ## Actor class.
@@ -317,18 +317,18 @@ init -3 python:
     class Actor(object):
 
         """
-        Class that performs skills. It has follwing fields:
+        Class that performs skills. It has following fields:
 
         name - name of this actor
         skills - dict of {"skillname", score}
         attributes - float or int variables that are added into an actor when an object is created.
-        default_attrributes - default values of attributes. if it's positive number, it means maximum point.
+        default_attributes - default values of attributes. if it's positive number, it means maximum point.
         """
 
         # Default attributes that are added when attributes are not defined.
         # This will create self.hp and self.default_hp.
         _attributes = ["hp"]
-        
+
         # Default skill categories. It's used when skill_types are not defined.
         _skill_types = ["active"]
 
@@ -338,9 +338,9 @@ init -3 python:
             self.skills = OrderedDict()
             if skills:
                 for i in skills:
-                    self.add_skill(i)            
+                    self.add_skill(i)
             self.skill_types = skill_types or self._skill_types
-            
+
             self.skill = None
             self.target = None
 
@@ -377,7 +377,7 @@ init -3 python:
 
 
         def change_state(self, **kwargs):
-            # Change attribtues. 
+            # Change attributes.
             # instead of changing attributes directly, use this method.
 
             for k, v in kwargs.items():
@@ -387,36 +387,36 @@ init -3 python:
                     setattr(self, k, max(0, min(nv, mv)))
                 else:
                     raise Exception("{} is not defined attributes".format(k))
-            
+
 
         @classmethod
         def get_skill(self, name):
             # returns skill object from name
 
-            if isinstance(name, Skill): 
+            if isinstance(name, Skill):
                 return name
-                
+
             elif isinstance(name, basestring):
                 obj = getattr(store.skill, name, None) or getattr(store, name, None)
-                if obj: 
+                if obj:
                     return obj
-                
+
             raise Exception("Skill '{}' is not defined".format(name))
-                        
+
 
         def has_skill(self, name, score=None):
             # returns True if actor has this skill whose score is higher than given.
-            
+
             # check valid name or not
             self.get_skill(name)
 
             return name in [k for k, v in self.skills.items() if score==None or v >= score]
-            
+
 
         def has_skills(self, name, score=None):
-            # returns True if actor has these skills whose score is higher than give. 
+            # returns True if actor has these skills whose score is higher than give.
             # "a, b, c" means a and b and c, "a | b | c" means a or b or c.
-            
+
             separator = "|" if name.count("|") else ","
             names = name.split(separator)
             for i in names:
@@ -425,39 +425,39 @@ init -3 python:
                     return True
                 elif separator == "," and not self.has_item(i, score):
                     return False
-                    
+
             return True if separator == ","  else False
-            
+
 
         def count_skill(self, name):
             # returns score of this skill
-            
+
             if self.has_skill(name):
                 return self.skills[name]
-                
-            
+
+
         def get_skills(self, score=None, types = None, rv=None):
             # returns list of (name, score, object) tuple in conditions
             # if rv is "name" or "obj", it returns them.
-            
+
             skills = [k for k, v in self.skills.items() if score==None or v >= score]
-            
+
             if types:
                 skills = [i for i in skills if self.get_skill(i).type in types]
-                
+
             if rv == "name":
                 return skills
-                
+
             elif rv == "obj":
                 return [self.get_skill(i) for i in skills]
-                
+
             return  [(i, self.skills[i], self.get_skill(i)) for i in skills]
 
 
         def add_skill(self, name, score = None):
             # add an skill
             # if score is given, this score is used instead of skill's default value.
-            
+
             score = score or self.get_skill(name).score
 
             if self.has_skill(name):
@@ -479,7 +479,7 @@ init -3 python:
 
             self.add_skill(name, score)
             if remove and self.skills[name] <= 0:
-                self.remove_skill(name)  
+                self.remove_skill(name)
 
 
         def replace_skills(self, first, second):
@@ -491,13 +491,13 @@ init -3 python:
             i2 = keys.index(second)
             keys[i1], keys[i2] = keys[i2], keys[i1]
             values[i1], values[i2] = values[i2], values[i1]
-            
+
             self.skills = OrderedDict(zip(keys, values))
 
 
         def sort_skills(self, order="name"):
             # sort slots
-            
+
             skills = self.skills.items()
 
             if order == "name":
@@ -508,7 +508,7 @@ init -3 python:
                 skills.sort(key = lambda i: self.get_skill(i[0]).value, reverse=True)
             elif order == "amount":
                 skills.sort(key = lambda i: i[1], reverse=True)
-                
+
             self.skills = OrderedDict(skills)
 
 
@@ -527,7 +527,7 @@ init -3 python:
     class Skill(object):
 
         """
-        Class that represents skill that is stored by actor object. It has follwing fields:
+        Class that represents skill that is stored by actor object. It has following fields:
 
         name - skill name that is shown on the screen
         type - skill category
@@ -550,8 +550,8 @@ init -3 python:
             self.score = int(score)
             self.cost = int(cost)
             self.info = info
-            
-            
+
+
 ##############################################################################
 ## Create namespace
 

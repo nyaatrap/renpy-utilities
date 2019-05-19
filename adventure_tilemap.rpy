@@ -1,5 +1,5 @@
 ## This file adds tilemap exploring function into adventure framework.
-## This framework requres tilemap.rpy and adventure.rpy.
+## This framework requires tilemap.rpy and adventure.rpy.
 ## adventure にタイルマップを探索する機能を追加するファイルです。
 ## tilemap.rpy と adventure.rpy が必要になります。
 
@@ -11,14 +11,14 @@
 ## まずタイルマップを作成します。
 # tilemap = Tilemap(map1, tileset, 32, 32)
 
-## 次にそれを使ってレベルを Level(image, music) を dafault で定義します。
+## 次にそれを使ってレベルを Level(image, music) を default で定義します。
 ## image は画像ではなく、タイルマップオブジェクトです。
 ## ここでは、tilemap.rpy で定義した tilemap を使います。
 
 default level.field = Level(tilemap)
 
 
-## それから冒険者を TilemapPlayer(level, pos, cursor) を使って dafault で定義します。
+## それから冒険者を TilemapPlayer(level, pos, cursor) を使って default で定義します。
 ## level はゲームをスタートするレベル、pos はそのタイルの座標です。
 ## 通常の adventure と異なり整数のペア(x,y)で与えます。
 ## cursor はマウスの乗っているタイルを色変えする画像です。
@@ -30,10 +30,10 @@ default tilemapplayer = TilemapPlayer("field", pos=(0,0),
 
 
 ## タイルマップ上のイベントを定義します。
-## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede, label) で定義します。
+## define ラベル名 = Event(level, pos, cond, priority, once, multi, precede, label) で定義します。
 
 ## クリックで発生するイベントです。 image を与えると tilemap の上にその画像が表示されます。
-## タイルマップはすべての座標がクリック可能となるので active を設定する必要はありません。
+## タイルマップはすべての座標がクリック可能となるので place や active を設定する必要はありません。
 
 define ev.iconA = Event("field", pos=(5,0), image=Text("A"))
 label iconA:
@@ -63,8 +63,13 @@ label enter:
 
 ## pos を整数もしくは文字列にすると、その文字列がマップを定義した二元配列の値と一致する座標の場合に、イベントが発生します。
 ## タイルマップの定義に文字列を利用した場合に特に有効です。
-define ev.ev1 = Event("field", pos=2, priority=1)
+define ev.ev1 = Event("field", pos=1, priority=1)
 label ev1:
+    "mapchip'1' is clicked"
+    return
+
+define ev.ev2 = Event("field", pos=2, priority=1)
+label ev2:
     "mapchip'2' is clicked"
     return
 
@@ -85,7 +90,7 @@ label adventure_tilemap:
     # rename back
     $ player = tilemapplayer
 
-    # Update event list in current level
+    # Update event list in the current level
     $ player.update_events()
     $ player.after_interact = False
 
@@ -110,7 +115,7 @@ label adventure_tilemap_loop:
         $ block()
         $ _events = player.get_passive_events()
 
-        # sub loop to excecute all passive events
+        # sub loop to execute all passive events
         $ _loop = 0
         while _loop < len(_events):
 
@@ -136,7 +141,7 @@ label adventure_tilemap_loop:
         if isinstance(_return, Place):
             $ player.pos = _return.pos
 
-        # If return value is an active event, excute it.
+        # If return value is an active event, execute it.
         elif isinstance(_return, Event):
             $ player.pos = _return.pos
             $ player.event = _return
@@ -165,7 +170,7 @@ screen tilemap_navigator(player):
 
     if tilemap.coordinate:
 
-        ## show coodinate
+        ## show coordinate
         $ x, y = tilemap.coordinate
         text "([x], [y])"
 
@@ -187,6 +192,7 @@ screen tilemap_navigator(player):
     for i in player.get_active_events():
         button:
             if isinstance(i.pos, tuple):
+                xysize (width, height)
                 if tilemap.isometric:
                     xoffset (i.pos[0]-i.pos[1])*width/2 - tilemap.tile_offset[0]
                     yoffset (i.pos[0]+i.pos[1])*height/2 - tilemap.tile_offset[1]
@@ -194,6 +200,8 @@ screen tilemap_navigator(player):
                 else:
                     xoffset i.pos[0]*width - tilemap.tile_offset[0]
                     yoffset i.pos[1]*height- tilemap.tile_offset[1]
+            else:
+                xysize (config.screen_width, config.screen_height)
 
             if i.active:
                 action Return(i)
@@ -201,15 +209,11 @@ screen tilemap_navigator(player):
             # show image on screen. you can also show them on the background.
             if i.image:
                 add i.image
-            elif i.pos:
-               xysize (width, height)
-            else:
-                xysize (config.screen_width, config.screen_height)
 
 
 
 ##############################################################################
-## Explore class
+## TilemapPlayer class
 
 init -2 python:
 

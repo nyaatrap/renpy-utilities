@@ -42,7 +42,7 @@ label sample_doll:
     ## 下の例では face レイヤーの画像を "angry.png" に変更します。
     $ erin.face = "angry"
     pause
-    
+
     ## reset_layers() でデフォルトの状態に戻します。
     $ erin.reset_layers()
     pause
@@ -87,7 +87,7 @@ label sample_dressup:
     ## 次の命令はロールバックをブロックして、ゲームの全ての変化をセーブできるようにします。
     ## （デフォルトでは現在の入力待ちの開始時点のみをセーブするので必要になります。）
     $ block()
-    
+
     ## dressup スクリーンを（"画像"、ドール、保管者）で呼び出します。
     call screen dressup("erin2", erin2, closet)
 
@@ -141,7 +141,7 @@ init -3 python:
     class Doll(object):
 
         """
-        class that stores equips and layer infomation. It has the following fields:
+        class that stores equips and layer information. It has the following fields:
 
         folder - folder name that this doll's images are stored.
         layers - folder names that this doll's each layer images are stored.
@@ -170,18 +170,18 @@ init -3 python:
                     setattr(self, i, None)
 
             # dictionary whose keys are layer names and values are lists of images
-            self.images = {}            
+            self.images = {}
             for i in self.layers:
-                self.images.setdefault(i, [])                
+                self.images.setdefault(i, [])
             for i in renpy.list_files():
                 for j in self.layers:
                     if self.folder and i.startswith(self.folder+"/"+j):
                         self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace(".png", ""))
-                        
-                        
+
+
         def reset_layers(self):
             # reset layers to the default
-            
+
             for i in self.layers:
                 setattr(self, i, getattr(self, "_"+i))
 
@@ -191,7 +191,7 @@ init -3 python:
             # Function that is used for dynamic displayable.
 
             doll = getattr(store, doll, None)
-            
+
             if not doll:
                 return Null(), None
 
@@ -226,15 +226,15 @@ init -3 python:
 
 ##############################################################################
 ## Doll2 class
-        
+
 init -2 python:
-    
+
     class Doll2(Doll):
-        
+
         """
-        Class that adds equipments on doll calss. It adds following fields:
+        Class that adds equipments on doll class. It adds following fields:
         equip_types - layer and type names that can be equipped when inventory system is using.
-        equips - dictonary of {"type": "name"}        
+        equips - dictionary of {"type": "name"}
         """
 
         # Default equipable item types. It's used when item_types are not defined.
@@ -242,30 +242,30 @@ init -2 python:
         _equip_types = []
 
         def __init__(self, folder="", layers = None, equip_types = None, **kwargs):
-            
+
             super(Doll2, self).__init__(folder, layers, **kwargs)
-            
+
             self.equip_types = equip_types or self._equip_types
-            
+
             # dictionary whose keys are item types and values are item names
-            self.equips = {}            
+            self.equips = {}
             for i in self.equip_types:
                 self.equips.setdefault(i, None)
-                
-                
+
+
         def has_equip(self, name):
             # returns True if doll equipped this item.
-            
+
             # check valid name or not
             Inventory.get_item(name)
 
             return name in [v for k, v in self.equips.items()]
-            
-            
+
+
         def has_equips(self, name):
-            # returns True if doll equipped these items. 
+            # returns True if doll equipped these items.
             # "a, b, c" means a and b and c, "a | b | c" means a or b or c.
-            
+
             separator = "|" if name.count("|") else ","
             names = name.split(separator)
             for i in names:
@@ -274,7 +274,7 @@ init -2 python:
                     return True
                 elif separator == "," and not self.has_equip(i):
                     return False
-                    
+
             return True if separator == ","  else False
 
 
@@ -282,15 +282,15 @@ init -2 python:
             # equip an item from inv
 
             type = inv.get_item(name).type
-            
+
             if type in self.equip_types:
-                
+
                 if self.equips.get(type):
                     self.unequip_item(type, inv)
-                    
+
                 self.equips[type] = name
                 inv.score_item(name, -1)
-                
+
                 self.update_layers(inv)
 
 
@@ -298,16 +298,16 @@ init -2 python:
             # remove item in this equip type then add this to inv
 
             if self.equips.get(type):
-                
+
                 inv.score_item(self.equips[type], 1)
                 self.equips[type] = None
-                
+
                 self.update_layers(inv)
 
 
         def equip_all_items(self, inv):
             # equip all slot randomly
-            
+
             items = list(inv.items.keys())
             renpy.random.shuffle(items)
 
@@ -337,6 +337,6 @@ init -2 python:
                             setattr(self, i, getattr(self, "_"+i))
                     else:
                         setattr(self, i, getattr(self, "_"+i))
-                
-                        
-                        
+
+
+

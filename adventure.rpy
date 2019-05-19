@@ -1,7 +1,6 @@
 ## This file provides adventure game framework that uses event maps.
 ## イベントを配置した２Dマップを探索するアドベンチャーゲームのフレームワークを追加するファイルです。
 ## ラベルをオブジェクトとのペアで管理することで、マップ上にイベントとして配置して呼び出すことができます。
-## RPGからSLGまで様々に使えるように汎用性を高くしてありますが、その分コードは少し複雑になっています。
 
 ##############################################################################
 ## How to Use
@@ -36,11 +35,11 @@ default player = Player("home", turn=0)
 
 
 ## 各イベントは define と label のペアで定義します。
-## defne ラベル名 = Event(place, cond, priority, once, multi, precede) または、
-## defne ラベル名 = Event(level, pos, cond, priority, once, multi, precede) で定義します。
+## define ラベル名 = Event(place, cond, priority, once, multi, precede) または、
+## define ラベル名 = Event(level, pos, cond, priority, once, multi, precede) で定義します。
 ## 探索者が place の場所に移動すると、そのイベントと同じ名前のラベルを呼び出します。
 ## cond が与えられると、その条件式を満たした場合にのみイベントを実行します。
-## priorty は発生の優先度で、数字が小さい順に実行されます。デフォルトは０です。
+## priority は発生の優先度で、数字が小さい順に実行されます。デフォルトは０です。
 ## once を True にすると一度しか実行されません。デフォルトでは何度も実行されます。
 ## multi を True にすると他のイベントも同時に発生します。ただし active＝True のイベントは発生しません。
 ## precede を True にすると、プレイヤーが操作する前にイベントを確認します。
@@ -72,18 +71,17 @@ label shop:
 
 
 ## イベントに image を与えると、イベントマップ上にその画像が表示されます。
-## さらに active を True にすると place と同じように
-## 画像を直接クリックしてイベントを呼び出せるようになります。
-## player.happened(ev) でそのイベントが呼び出されたかどうか評価できます。
-## player.done(ev) でそのイベントが最後まで実行されたかどうか評価できます。
+## さらに active を True にすると place を使わずに画像を直接クリックしてイベントを呼び出せるようになります。
+## player.happened(ev) でそのイベントが過去に呼び出されたかどうか評価できます。
+## player.done(ev) でそのイベントが過去に最後まで実行されたかどうか評価できます。
 define ev.shop2 = Event("west", pos=(.1,.1), cond="player.happened(ev.shop)", active = True, image=Text("hidden shop"))
 label shop2:
     "this is a hidden shop."
     return
 
 
-## image を与えない場合、画面のどこをクリックしてもイベントが発生します。
-## label を定義すると、イベント名の代わりに、そのラベル名を呼び出します。
+## active = True にして image を与えない場合、画面のどこをクリックしてもイベントが発生します。
+## また label を定義すると、イベント名の代わりにそのラベル名を呼び出します。
 define ev.west_nothing = Event("west", active=True, priority=99)
 define ev.east_nothing = Event("east", active=True, priority=99, label="west_nothing")
 label west_nothing:
@@ -135,7 +133,7 @@ label adventure_loop:
         $ block()
         $ _events = player.get_passive_events()
 
-        # sub loop to excecute all passive events
+        # sub loop to execute all passive events
         $ _loop = 0
         while _loop < len(_events):
 
@@ -158,7 +156,7 @@ label adventure_loop:
         if isinstance(_return, Place):
             $ player.pos = _return.pos
 
-        # If return value is an active event, excute it.
+        # If return value is an active event, execute it.
         elif isinstance(_return, Event):
             $ player.pos = _return.pos
             $ player.event = _return
@@ -172,7 +170,7 @@ label adventure_loop:
 
 label after_load():
 
-    # Update event list in current level
+    # Update event list in the current level
     $ player.update_events()
     return
 
@@ -199,6 +197,8 @@ screen eventmap_navigator(player):
         button:
             if i.pos:
                 pos i.pos
+            else:
+                xysize (config.screen_width, config.screen_height)
 
             if i.active:
                 action Return(i)
@@ -206,8 +206,6 @@ screen eventmap_navigator(player):
             # show image on screen. you can also show them on the background.
             if i.image:
                 add i.image
-            else:
-                xysize (config.screen_width, config.screen_height)
 
 
 ##############################################################################
@@ -218,10 +216,10 @@ init -3 python:
     class Level(object):
 
         """
-        Class that represents level that place events on it. It has following fields:
+        Class that represents level that places events on it. It has following fields:
 
         image - image that is shown behind events.
-        music - music that is played while player in this level.
+        music - music that is played while player is in this level.
         """
 
         def __init__(self, image=None, music=None):
@@ -236,8 +234,8 @@ init -3 python:
     class Place(object):
 
         """
-        Class that places events on level.
-        This class's fileds are same to event class
+        Class that places events on a level.
+        This class's fields are same to event class
         """
 
         def __init__(self, level=None, pos=None, cond="True", priority=0, image=None):
@@ -263,13 +261,13 @@ init -3 python:
 
         level - String of level where this events placed onto.
         pos - (x, y) coordinate on the screen.
-        cond - Conditions to evaluate this event happnes or not. This should be quotated.
-        priority - An event with higher value happens firster. default is 0.
+        cond - Condition that evaluates this event happen or not. This should be quoted expression.
+        priority - An event with higher value happens earlier. default is 0.
         once - Set this true prevents calling this event second time.
         multi - Set this true don't prevent other events in the same interaction.
         precede - Set this true searches this event before showing event map screen.
         active - Set this true makes this event as 'active event'.
-                An active event is exceuted when you clicked its image on an eventmap.
+                An active event is executed when you clicked its image on an eventmap.
         image - Image that is shown on an eventmap.
         label - If it's given this label is called instead of object name.
         """
@@ -486,7 +484,7 @@ init -3 python:
 
         @classmethod
         def get_place(self, name):
-            # make place object from name
+            # returns place object from name
 
             if isinstance(name, Place):
                 return name
@@ -499,7 +497,7 @@ init -3 python:
 
         @classmethod
         def get_event(self, name):
-            # make event object from name
+            # returns event object from name
 
             if isinstance(name, Event):
                 return name
