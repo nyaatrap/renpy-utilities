@@ -11,7 +11,7 @@
 ## 文字列は表示する画像ファイルの接頭辞になります
 ## リストの一番最初はどのレイヤーでも共通で表示する背景画像になります。
 
-define dungeonset = ["dungeon/base", "dungeon/floor", "dungeon/wall"]
+define dungeonset = ["dungeon/base", "dungeon/floor", "dungeon/wall", "dungeon/door"]
 
 ## 次にダンジョンに表示する壁などの画像の数や重なりを2次元配列で定義します。
 ## この例では、一番遠くに7つ、一番近くに3つの画像を表示できるようにしています。
@@ -19,13 +19,13 @@ define dungeonset = ["dungeon/base", "dungeon/floor", "dungeon/wall"]
 ## 文字列は表示する画像ファイルの接尾辞になります
 
 define dungeon_layers = [
-    ["lll6", "ll6", "l6", "c6", "r6", "rr6", "rrr6"],
-    ["lll5", "ll5", "l5", "c5", "r5", "rr5", "rrr5"],
-    ["lll4", "ll4", "l4", "c4", "r4", "rr4", "rrr4"],
-            ["ll3", "l3", "c3", "r3", "rr3"],
-            ["ll2", "l2", "c2", "r2", "rr2"],
-                    ["l1","c1","r1"],
-                    ["l0","c0","r0"],
+   ["llll7", "lll6", "ll6", "l6", "c6", "r6", "rr6", "rrr6", "rrrr6"],
+            ["lll5", "ll5", "l5", "c5", "r5", "rr5", "rrr5"],
+            ["lll4", "ll4", "l4", "c4", "r4", "rr4", "rrr4"],
+                    ["ll3", "l3", "c3", "r3", "rr3"],
+                    ["ll2", "l2", "c2", "r2", "rr2"],
+                            ["l1","c1","r1"],
+                            ["l0","c0","r0"],
     ]
 
 ## 上で定義した接頭辞と接尾辞の組み合わせで作る画像を用意します。
@@ -42,16 +42,16 @@ define dungeon_layers = [
 define map2 =[
 [2,2,2,2,2,2,2,2],
 [2,1,2,1,1,1,1,2],
-[2,1,2,1,1,1,1,2],
-[2,1,1,1,1,2,1,2],
+[2,1,3,1,1,1,1,2],
+[2,1,2,1,1,2,1,2],
 [2,1,0,0,1,1,1,2],
 [2,1,1,1,1,1,1,2],
 [2,0,1,1,1,1,1,2],
 [2,1,1,1,1,1,1,2],
 [2,1,1,1,1,1,1,2],
 [2,1,0,1,1,1,1,2],
-[2,1,0,1,2,2,1,2],
-[2,1,0,1,1,2,1,2],
+[2,1,0,1,2,2,3,2],
+[2,1,0,1,1,1,1,2],
 [2,1,0,0,1,1,1,2],
 [2,1,1,1,1,2,1,2],
 [2,0,1,2,2,2,1,2],
@@ -59,12 +59,13 @@ define map2 =[
 ]
 
 ## 侵入できないタイルの種類のリストも作成しておきます。
-define collision = (0, 2)
+define collision = (0, 2, 3)
 
 ## ダンジョンの画像を LayeredMap(map, tileset, tile_mapping, layers, pov) で定義します。
 ## map, tileset, layers は上で定義したもので、pov は最後に定義するダンジョンプレイヤークラスを文字列で与えます。
+## mirror を"left" か "right" にすると、指定した側の画像を反対側の画像を反転して表示します。
 
-define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer")
+define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left")
 
 
 ## それらを使ってレベルを Dungeon(image, music, map, collision) で定義します。
@@ -85,7 +86,7 @@ default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0)
 ## イベントにはパッシブ、アクティブ、コリジョンの三種類があります。
 ## デフォルトはパッシブで、その座標に移動した時に呼ばれます。
 ## アクティブはその座標にいる上で、さらにクリックすると呼ばれます。
-## コリジョンは侵入不可能の座標に移動しようとした時に、その移動前に呼ばれます。
+## コリジョンは侵入不可能の座標に移動しようとした時に呼ばれます。
 
 ## 通所のパッシブイベントは、プレイヤーが pos の位置に移動した時に呼び出されます。
 ## dx,dy を与えるとその向きのみイベントが発生します。
@@ -111,10 +112,25 @@ label collision_wall:
     with vpunch
     return
 
+
 define ev.collision_pit = Event("dungeon", pos=0)
 label collision_pit:
     "There is a pit"
     return
+
+
+## player.next_pos には次に移動しようとする座標が格納されています。
+## player.front_pos, back_pos, left_pos, right_pos で対応する座標を得られます。
+## player.front2_pos, back2_pos は２歩前、２歩後ろの座標です。
+
+define ev.collision_door = Event("dungeon", pos=3)
+label collision_door:
+    if player.front_pos == player.next_pos:
+        return player.front2_pos
+    else:
+        with vpunch
+        return
+
 
 ## start ラベルから adventure_dungeon へジャンプすると探索を開始します。
 
@@ -206,7 +222,8 @@ label adventure_dungeon_loop:
 
                 # check collision events
                 $ block()
-                $ _events = player.get_passive_events(pos = _return.unpack())
+                $ player.next_pos = _return.unpack()
+                $ _events = player.get_passive_events(pos = player.next_pos)
 
                 # sub loop to execute all collision events
                 $ _loop = 0
@@ -225,11 +242,17 @@ label adventure_dungeon_loop:
 
             # else if return value is coordinate, move to the new coordinate
             elif isinstance(_return, Coordinate):
-                if _return.x == player.pos[0] and _return.y == player.pos[1]:
-                    $ player.move_pos(_return.unpack())
+
+                $ player.next_pos = _return.unpack()
+
+                # if movement is only rotation, don't trigger passive events
+                if player.next_pos[0] == player.pos[0] and player.next_pos[1] == player.pos[1]:
+                    $ player.move_pos(player.next_pos)
                     show expression player.image at topleft
+
+                # otherwise, loop up to check passive events
                 else:
-                    $ player.move_pos(_return.unpack())
+                    $ player.move_pos(player.next_pos)
                     show expression player.image at topleft
                     jump adventure_dungeon_loop
 
@@ -311,6 +334,14 @@ init -2 python:
         Expanded Player Class that stores various methods and data for dungeon crawling.
         """
 
+
+        def __init__(self, level=None, pos=None, **kwargs):
+
+            super(DungeonPlayer, self).__init__(level, pos, **kwargs)
+
+            self.next_pos = None
+
+
         @property
         def map(self):
             return self.get_level(self.level).map
@@ -319,6 +350,36 @@ init -2 python:
         @property
         def collision(self):
             return self.get_level(self.level).collision
+
+
+        @property
+        def front_pos(self):
+            return Coordinate(*self.pos).front().unpack()
+
+
+        @property
+        def front2_pos(self):
+            return Coordinate(*self.pos).front2().unpack()
+
+
+        @property
+        def back_pos(self):
+            return Coordinate(*self.pos).back().unpack()
+
+
+        @property
+        def back2_pos(self):
+            return Coordinate(*self.pos).back2().unpack()
+
+
+        @property
+        def left_pos(self):
+            return Coordinate(*self.pos).left().unpack()
+
+
+        @property
+        def right_pos(self):
+            return Coordinate(*self.pos).right().unpack()
 
 
         def in_dungeon(self):
@@ -428,7 +489,7 @@ init -3 python:
         """
 
 
-        def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, **properties):
+        def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, mirror=None, **properties):
 
             super(LayeredMap, self).__init__(**properties)
             self.map = map
@@ -436,6 +497,7 @@ init -3 python:
             self.tile_mapping = tile_mapping
             self.pov = pov
             self.layers = layers
+            self.mirror = mirror
 
 
         def render(self, width, height, st, at):
@@ -488,7 +550,18 @@ init -3 python:
 
                     # blit image if tile is not None
                     if tile:
-                        image = Image(self.tileset[tile]+"_"+self.layers[d][b]+".png")
+                        if self.mirror == "left" and b<center:
+                            surfix = self.layers[d][breadth-b-1]
+                            flip=True
+                        elif self.mirror == "right" and b>center:
+                            surfix = self.layers[d][breadth-b-1]
+                            flip=True
+                        else:
+                            surfix=self.layers[d][b]
+                            flip=False
+                        image = Image(self.tileset[tile]+"_"+surfix+".png")
+                        if flip:
+                            image = Transform(image, xzoom=-1)
                         render.blit(renpy.render(image, width, height, st, at), (0,0))
 
             # Redraw regularly
