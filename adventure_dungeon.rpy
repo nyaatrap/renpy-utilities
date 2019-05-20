@@ -131,6 +131,13 @@ label collision_door:
         with vpunch
         return
 
+## image event
+
+define ev.sprite = Event("dungeon", pos=(2,6), active=True, image = Image("dungeon/sprite.png"))
+label sprite:
+    "Hello"
+    return
+
 
 ## start ラベルから adventure_dungeon へジャンプすると探索を開始します。
 
@@ -273,11 +280,6 @@ screen dungeon_navigator(player):
             if i.active:
                 action Return(i)
 
-            # show image on the screen. you can also show them on the background.
-            # TODO move images to layered map
-            if  i.image:
-                add i.image
-
 
     # move buttons
     fixed style_prefix "move":
@@ -381,11 +383,35 @@ init -2 python:
         def right_pos(self):
             return Coordinate(*self.pos).right().unpack()
 
+        def compare(self, target):
+            # compares self coordinate to target.
+
+            if isinstance(self.pos, tuple):
+                return Coordinate(*self.pos).compare(target)
+            return False
+
 
         def in_dungeon(self):
             # returns true if player is in dungeon
 
             return isinstance(self.get_level(self.level), Dungeon)
+
+
+        def get_active_events(self, pos=None):
+            # returns event and place list that is shown in the navigation screen.
+
+            pos = pos or self.pos
+
+            events = []
+            for i in self.current_events+self.current_places:
+                if not i.once or not self.happened(i):
+                    if i.pos == None or i.pos == pos or i.pos == self.image.map[pos[1]][pos[0]] or self.compare(i.pos):
+                        if eval(i.cond):
+                            events.append(i)
+
+            events.sort(key = lambda ev: -ev.priority)
+
+            return events
 
 
         def get_passive_events(self, pos=None):
@@ -399,8 +425,7 @@ init -2 python:
             for i in self.current_events:
                 if not i.once or not self.happened(i):
                     if i.precede or self.after_interact:
-                        if i.pos == None or i.pos == pos or i.pos == self.image.map[pos[1]][pos[0]] or\
-                        (isinstance(i.pos, tuple) and len(i.pos)==2 and i.pos[0] == pos[0] and i.pos[1] == pos[1]):
+                        if i.pos == None or i.pos == pos or i.pos == self.image.map[pos[1]][pos[0]] or self.compare(i.pos):
                             if not i.active and eval(i.cond):
                                 events.append(i)
 
@@ -470,6 +495,21 @@ init -3 python:
         def unpack(self):
             return (self.x, self.y, self.dx, self.dy)
 
+        def unpack(self):
+            return (self.x, self.y, self.dx, self.dy)
+
+        def compare(self, target):
+            # Returns True if current coord and target coord shares x and y.
+
+            if isinstance(target, tuple):
+                if self.x==target[0] and self.y==target[1]:
+                    return True
+
+            if isinstance(target, Coordinate):
+                if self.x==target.x and self.y==target.y:
+                    return True
+
+            return False
 
 ##############################################################################
 ## LayeredMap class
@@ -498,6 +538,8 @@ init -3 python:
             self.pov = pov
             self.layers = layers
             self.mirror = mirror
+            self.tile_width = 0.9
+            self.horizontal_line = 0.35
 
 
         def render(self, width, height, st, at):
@@ -564,8 +606,21 @@ init -3 python:
                             image = Transform(image, xzoom=-1)
                         render.blit(renpy.render(image, width, height, st, at), (0,0))
 
+                    # blit image over tile
+                    for sprite in pov.current_events:
+                        if sprite.image and sprite.pos and sprite.pos[0] == x and sprite.pos[1] == y:
+                            zoom = 1.0/(depth-d)
+                            if b<center:
+                                xpos = 0.5 - self.tile_width*zoom*(center-b)
+                            else:
+                                xpos = 0.5 + self.tile_width*zoom*(b-center)
+                            image = Fixed(
+                                Transform(sprite.image, zoom=zoom, xanchor=0.5, xpos=xpos, yalign=self.horizontal_line),
+                                )
+                            render.blit(renpy.render(image, width, height, st, at), (0, 0))
+
             # Redraw regularly
-            # renpy.redraw(self, 1.0/30)\
+            # renpy.redraw(self, 1.0/30)
 
             return render
 
