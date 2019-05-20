@@ -66,7 +66,7 @@ define collision = (0, 2, 3)
 ## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して表示します。
 ## horizon_height, tile_length, first_distance はイベント画像の表示位置の計算につかう属性で、後に解説します。
 define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left",
-    horizon_height = 0.28, tile_length = 0.825, first_distance=0.25)
+    horizon_height = 0.31, tile_length = 0.9, first_distance = 1.0)
 
 
 ## それらを使ってレベルを Dungeon(image, music, map, collision) で定義します。
@@ -135,7 +135,8 @@ label collision_door:
 ## イベントに image = displayable を与えると、ダンジョンのタイル上に表示できます。
 ## そのためには、LayeredMap にアイレベルの高さとプレイヤーが立ってる地点のタイルの横幅を
 ## horizon_height と tile_length に、画面のサイズに対する比率で与えておきます。
-## first_distance は視点と同じタイルにいるオブジェクトとの距離で、0.5 なら半タイル分になります。
+## first_distance は視点と同じタイルにいるオブジェクトとの距離で
+## 値が大きいほど次以降のオブジェクトのサイズが縮小しにくくなります。
 
 ## 表示する画像は、その画像のアイレベルの高さが上で指定した比率になるように、
 ## 上下に適切な空白を取る必要があります。
@@ -536,11 +537,12 @@ init -3 python:
         pov - string that represents dungeonplayer class. it determines point of view
         horizon_height - height of horizon relative to screen.
         tile_length - length of the nearest tile relative to screen.
+        first_distance - distance to the first object. this determines focal length
         """
 
 
         def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, mirror=None,
-            horizon_height = 0.5, tile_length = 1.0, first_distance = 0.5, **properties):
+            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, **properties):
 
             super(LayeredMap, self).__init__(**properties)
             self.map = map
@@ -621,7 +623,7 @@ init -3 python:
                     # blit image over tile
                     for sprite in pov.current_events:
                         if sprite.image and sprite.pos and sprite.pos[0] == x and sprite.pos[1] == y:
-                            zoom = (1.0+self.first_distance)/(depth-d+self.first_distance)
+                            zoom = (self.first_distance)/(depth-d+self.first_distance - 1.0)
                             if b<center:
                                 xpos = 0.5 - self.tile_length*zoom*(center-b)
                             else:
