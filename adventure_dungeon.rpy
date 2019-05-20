@@ -63,9 +63,10 @@ define collision = (0, 2, 3)
 
 ## ダンジョンの画像を LayeredMap(map, tileset, tile_mapping, layers, pov) で定義します。
 ## map, tileset, layers は上で定義したもので、pov は最後に定義するダンジョンプレイヤークラスを文字列で与えます。
-## mirror を"left" か "right" にすると、指定した側の画像を反対側の画像を反転して表示します。
-
-define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left")
+## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して表示します。
+## horizon_height と tile_length はイベント画像の表示位置の計算につかう属性で、後に解説します。
+define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left",
+    horizon_height = 0.32, tile_length = 0.9)
 
 
 ## それらを使ってレベルを Dungeon(image, music, map, collision) で定義します。
@@ -131,8 +132,12 @@ label collision_door:
         with vpunch
         return
 
-## image event
+## イベントに image = displayable を与えると、ダンジョンのタイル上に表示できます。
+## そのためには、LayeredMap にアイレベルの高さとプレイヤーが立ってる地点のタイルの横幅を
+## horizon_height と tile_length に、画面のサイズに対する比率で与えておきます。
 
+## 表示する画像は、その画像のアイレベルの高さが上で指定した比率になるように、
+## 上下に適切な空白を取る必要があります。
 define ev.sprite = Event("dungeon", pos=(2,6), active=True, image = Image("dungeon/sprite.png"))
 label sprite:
     "Hello"
@@ -522,14 +527,17 @@ init -3 python:
         map -  A 2-dimensional list of strings that represent index of a tileset.
         tileset -  A list of displayables that is used as a tile of tilemap.
         tile_mapping - a dictionary that maps string of map to index of tileset.
-           If None, each coordinate of map should be integer.
-        layers - 2-dimensional list of strings to be shown in the perspective view.
-            the first list is farthest layers, from left to right. the last list is the nearest layers. this string is used as suffix of displayable.
+            If None, each coordinate of map should be integer.
+        layers - 2-dimensional list of strings to be shown in the perspective view. The first list is farthest layers,
+            from left to right. the last list is the nearest layers. this string is used as suffix of displayable.
         pov - string that represents dungeonplayer class. it determines point of view
+        horizon_height - height of horizon relative to screen.
+        tile_length - length of the nearest tile relative to screen.
         """
 
 
-        def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, mirror=None, **properties):
+        def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, mirror=None,
+            horizon_height = 0.5, tile_length = 1.0, **properties):
 
             super(LayeredMap, self).__init__(**properties)
             self.map = map
@@ -538,8 +546,8 @@ init -3 python:
             self.pov = pov
             self.layers = layers
             self.mirror = mirror
-            self.tile_width = 0.9
-            self.horizontal_line = 0.35
+            self.horizon_height = horizon_height
+            self.tile_length = tile_length
 
 
         def render(self, width, height, st, at):
@@ -611,11 +619,11 @@ init -3 python:
                         if sprite.image and sprite.pos and sprite.pos[0] == x and sprite.pos[1] == y:
                             zoom = 1.0/(depth-d)
                             if b<center:
-                                xpos = 0.5 - self.tile_width*zoom*(center-b)
+                                xpos = 0.5 - self.tile_length*zoom*(center-b)
                             else:
-                                xpos = 0.5 + self.tile_width*zoom*(b-center)
+                                xpos = 0.5 + self.tile_length*zoom*(b-center)
                             image = Fixed(
-                                Transform(sprite.image, zoom=zoom, xanchor=0.5, xpos=xpos, yalign=self.horizontal_line),
+                                Transform(sprite.image, zoom=zoom, xanchor=0.5, xpos=xpos, yalign=self.horizon_height),
                                 )
                             render.blit(renpy.render(image, width, height, st, at), (0, 0))
 
