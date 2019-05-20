@@ -1,5 +1,5 @@
 ## This file adds pseudo-3D dungeon crawling function into adventure framework.
-## To play the sample game, download the cave folder then place it in the images directory.
+## To play the sample game, download the dungeon folder then place it in the game directory.
 ## adventure に疑似３Dダンジョン探索機能を追加するファイルです。
 ## サンプルを実行するには dungeon フォルダーの画像をダウンロードする必要があります。
 
