@@ -237,9 +237,13 @@ init -2 python:
             for i in self.current_events:
                 if not i.once or not self.happened(i):
                     if i.precede or self.after_interact:
-                        if i.pos == None or i.pos == self.pos or i.pos == self.image.map[self.pos[1]][self.pos[0]]:
+                        if i.pos == None or i.pos == self.pos:
                             if not i.active and eval(i.cond):
                                 events.append(i)
+                        elif self.in_tilemap() and i.pos == self.image.map[self.pos[1][self.pos[0]]:
+                            if not i.active and eval(i.cond):
+                                events.append(i)
+
 
             return self.cut_events(events)
 

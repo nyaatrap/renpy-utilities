@@ -2,6 +2,7 @@
 ## To play the sample game, download the dungeon folder then place it in the game directory.
 ## adventure に疑似３Dダンジョン探索機能を追加するファイルです。
 ## サンプルを実行するには dungeon フォルダーの画像をダウンロードする必要があります。
+## サンプルを正しく表示するには、スクリーンサイズを 1080x720 に設定する必要があります。
 
 ##############################################################################
 ## How to Use
@@ -37,10 +38,10 @@ define dungeon_layers = [
 ## 描画したいマップを整数の二次元配列で表現します。
 ## 配列の値は上で定義したリストのインデックスで
 ## dungeonset = ["dungeonbase", "floor", ...] の場合 1 は floor を表します。
-## 0 や空集合の場合は描画しません
+## 0 や空集合の場合は描画せず、後ろの背景画像が見えるようになります。
 
 define map2 =[
-[2,2,2,2,2,2,2,2],
+[2,3,2,2,2,2,2,2],
 [2,1,2,1,1,1,1,2],
 [2,1,3,1,1,1,1,2],
 [2,1,2,1,1,2,1,2],
@@ -63,15 +64,14 @@ define collision = (0, 2, 3)
 
 ## ダンジョンの画像を LayeredMap(map, tileset, tile_mapping, layers, pov) で定義します。
 ## map, tileset, layers は上で定義したもので、pov は最後に定義するダンジョンプレイヤークラスを文字列で与えます。
-## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して表示します。
+## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して描画します。
 ## horizon_height, tile_length, first_distance はイベント画像の表示位置の計算につかう属性で、後に解説します。
 define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left",
     horizon_height = 0.31, tile_length = 0.9, first_distance = 1.0)
 
 
-## それらを使ってレベルを Dungeon(image, music, map, collision) で定義します。
-## ここでもう一度 map を与えているのは衝突判定に利用するためです。
-default level.dungeon = Dungeon(image=map_image, map=map2, collision=collision)
+## それらを使ってレベルを Dungeon(image, music, collision) で定義します。
+default level.dungeon = Dungeon(image=map_image, collision=collision)
 
 
 ## 最後に冒険者を DungeonPlayer クラスで定義します。
@@ -123,6 +123,7 @@ label collision_pit:
 ## player.next_pos には次に移動しようとする座標が格納されています。
 ## player.front_pos, back_pos, left_pos, right_pos で対応する座標を得られます。
 ## player.front2_pos, back2_pos は２歩前、２歩後ろの座標です。
+## 返り値に (x,y) 座標を与えるとその場所に移動します。
 
 define ev.collision_door = Event("dungeon", pos=3)
 label collision_door:
@@ -131,6 +132,21 @@ label collision_door:
     else:
         with vpunch
         return
+
+
+## 返り値に文字列と移動先の座標を与えるとそのレベルの場所に移動します。
+define ev.exit = Event("dungeon", pos=(1,0), priority = -1)
+label exit:
+    menu:
+        "Do you exit?"
+        "yes":
+            scene black with dissolve
+            "You exited"
+            return "dungeon", (1, 1, 0, 1)
+        "no":
+            pass
+    return
+
 
 ## イベントに image = displayable を与えると、ダンジョンのタイル上に表示できます。
 ## そのためには、LayeredMap にアイレベルの高さとプレイヤーが立ってる地点のタイルの横幅を
@@ -232,7 +248,7 @@ label adventure_dungeon_loop:
 
             # if return value is coordinate and it's coordinate is in collision,
             # then execute collision events.
-            elif isinstance(_return, tuple) and player.map[_return[1]][_return[0]] in player.collision:
+            elif isinstance(_return, tuple) and player.image.map[_return[1]][_return[0]] in player.collision:
 
                 # check collision events
                 $ block()
@@ -407,24 +423,22 @@ init -2 python:
             return isinstance(self.get_level(self.level), Dungeon)
 
 
-        def get_active_events(self, pos=None):
+        def get_active_events(self):
             # returns event and place list that is shown in the navigation screen.
-            # this overwrites the same method in player class.
-            # if pos is give, it gets events on the given pos
-
-            pos = pos or self.pos
 
             events = []
             for i in self.current_events+self.current_places:
                 if not i.once or not self.happened(i):
-                    if i.pos == None or i.pos == pos or i.pos == self.image.map[pos[1]][pos[0]] or self.compare(i.pos):
+                    if not self.in_dungeon():
+                        if eval(i.cond):
+                            events.append(i)
+                    elif i.pos == None or i.pos == self.image.map[self.pos[1]][self.pos[0]] or Coordinate(*self.pos).compare(i.pos):
                         if eval(i.cond):
                             events.append(i)
 
             events.sort(key = lambda ev: -ev.priority)
 
             return events
-
 
         def get_passive_events(self, pos=None):
             # returns event list that happens in the given pos.
@@ -437,7 +451,10 @@ init -2 python:
             for i in self.current_events:
                 if not i.once or not self.happened(i):
                     if i.precede or self.after_interact:
-                        if i.pos == None or i.pos == pos or i.pos == self.image.map[pos[1]][pos[0]] or self.compare(i.pos):
+                        if i.pos == None or i.pos == pos:
+                            if not i.active and eval(i.cond):
+                                events.append(i)
+                        elif self.in_dungeon() and (i.pos == self.image.map[pos[1]][pos[0]] or Coordinate(*pos).compare(i.pos)):
                             if not i.active and eval(i.cond):
                                 events.append(i)
 

@@ -398,8 +398,8 @@ init -3 python:
             events = []
             for i in self.current_events+self.current_places:
                 if not i.once or not self.happened(i):
-                        if eval(i.cond):
-                            events.append(i)
+                    if eval(i.cond):
+                        events.append(i)
 
             events.sort(key = lambda ev: -ev.priority)
 
