@@ -232,11 +232,11 @@ label adventure_dungeon_loop:
 
             # if return value is coordinate and it's coordinate is in collision,
             # then execute collision events.
-            elif isinstance(_return, Coordinate) and player.map[_return.y][_return.x] in player.collision:
+            elif isinstance(_return, tuple) and player.map[_return[1]][_return[0]] in player.collision:
 
                 # check collision events
                 $ block()
-                $ player.next_pos = _return.unpack()
+                $ player.next_pos = _return
                 $ _events = player.get_passive_events(pos = player.next_pos)
 
                 # sub loop to execute all collision events
@@ -255,12 +255,12 @@ label adventure_dungeon_loop:
                 jump adventure_dungeon_loop
 
             # else if return value is coordinate, move to the new coordinate
-            elif isinstance(_return, Coordinate):
+            elif isinstance(_return, tuple):
 
-                $ player.next_pos = _return.unpack()
+                $ player.next_pos = _return
 
                 # if movement is only rotation, don't trigger passive events
-                if player.next_pos[0] == player.pos[0] and player.next_pos[1] == player.pos[1]:
+                if player.compare(player.next_pos):
                     $ player.move_pos(player.next_pos)
                     show expression player.image at topleft
 
@@ -277,8 +277,6 @@ label adventure_dungeon_loop:
 
 screen dungeon_navigator(player):
 
-    $ coord = Coordinate(*player.pos)
-
     ## show active events
     for i in player.get_active_events():
         button:
@@ -290,27 +288,27 @@ screen dungeon_navigator(player):
 
     # move buttons
     fixed style_prefix "move":
-        textbutton "W" action Return(coord.front())  xcenter .5 ycenter .86
-        textbutton "S" action Return(coord.back())  xcenter .5 ycenter .96
-        textbutton "E" action Return(coord.turnright())  xcenter .58 ycenter .91
-        textbutton "Q" action Return(coord.turnleft())   xcenter .42 ycenter .91
-        textbutton "D" action Return(coord.right()) xcenter .65 ycenter .96
-        textbutton "A" action Return(coord.left())  xcenter .35 ycenter .96
+        textbutton "W" action Return(player.front_pos)  xcenter .5 ycenter .86
+        textbutton "S" action Return(player.back_pos)  xcenter .5 ycenter .96
+        textbutton "E" action Return(player.turnright_pos)  xcenter .58 ycenter .91
+        textbutton "Q" action Return(player.turnleft_pos)   xcenter .42 ycenter .91
+        textbutton "D" action Return(player.right_pos) xcenter .65 ycenter .96
+        textbutton "A" action Return(player.left_pos)  xcenter .35 ycenter .96
 
 
     # move keys
         for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
-            key i action Return(coord.front())
+            key i action Return(player.front_pos)
         for i in ["repeat_s", "s","repeat_S","S", "focus_down"]:
-            key i action Return(coord.back())
+            key i action Return(player.back_pos)
         for i in ["repeat_d","d", "repeat_D","D", "rollforward"]:
-            key i action Return(coord.right())
+            key i action Return(player.right_pos)
         for i in ["repeat_a","a", "repeat_A","A", "rollback"]:
-            key i action Return(coord.left())
+            key i action Return(player.left_pos)
         for i in ["repeat_q", "q","repeat_Q","Q", "focus_left"]:
-            key i action Return(coord.turnleft())
+            key i action Return(player.turnleft_pos)
         for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
-            key i action Return(coord.turnright())
+            key i action Return(player.turnright_pos)
 
 style move_button_text:
     size 50
@@ -355,36 +353,41 @@ init -2 python:
         def map(self):
             return self.get_level(self.level).map
 
-
         @property
         def collision(self):
             return self.get_level(self.level).collision
 
+        @property
+        def turnback_pos(self):
+            return Coordinate(*self.pos).turnback().unpack()
+
+        @property
+        def turnleft_pos(self):
+            return Coordinate(*self.pos).turnleft().unpack()
+
+        @property
+        def turnright_pos(self):
+            return Coordinate(*self.pos).turnright().unpack()
 
         @property
         def front_pos(self):
             return Coordinate(*self.pos).front().unpack()
 
-
         @property
         def front2_pos(self):
             return Coordinate(*self.pos).front2().unpack()
-
 
         @property
         def back_pos(self):
             return Coordinate(*self.pos).back().unpack()
 
-
         @property
         def back2_pos(self):
             return Coordinate(*self.pos).back2().unpack()
 
-
         @property
         def left_pos(self):
             return Coordinate(*self.pos).left().unpack()
-
 
         @property
         def right_pos(self):
@@ -504,9 +507,6 @@ init -3 python:
         def unpack(self):
             return (self.x, self.y, self.dx, self.dy)
 
-        def unpack(self):
-            return (self.x, self.y, self.dx, self.dy)
-
         def compare(self, target):
             # Returns True if current coord and target coord shares x and y.
 
@@ -519,6 +519,7 @@ init -3 python:
                     return True
 
             return False
+
 
 ##############################################################################
 ## LayeredMap class
