@@ -250,7 +250,7 @@ label adventure_dungeon_loop:
 
             # if return value is coordinate and it's coordinate is in collision,
             # then execute collision events.
-            elif isinstance(_return, tuple) and player.image.map[_return[1]][_return[0]] in player.collision:
+            elif isinstance(_return, tuple) and player.get_tile(pos = _return) in player.collision:
 
                 # check collision events
                 $ block()
@@ -374,6 +374,7 @@ init -2 python:
             super(DungeonPlayer, self).__init__(level, pos, **kwargs)
 
             self.next_pos = None
+            self.changed_tiles ={}
 
 
         @property
@@ -434,8 +435,32 @@ init -2 python:
             return isinstance(self.get_level(self.level), Dungeon)
 
 
-        def get_active_events(self):
+        def get_tile(self, level=None, pos=None):
+            # returns tile from current or given pos
+
+            if player.in_dungeon():
+                level = level or self.level
+                pos = pos or self.pos
+
+                if (level, pos[0], pos[1]) in self.changed_tiles.keys():
+                    return self.changed_tiles[(level, pos[0], pos[1])]
+                else:
+                    return self.image.map[pos[1]][pos[0]]
+
+
+        def set_tile(self, tile, level=None, pos=None):
+
+            if player.in_dungeon():
+                level = level or self.level
+                pos = pos or self.pos
+
+            self.changed_tiles[(level, pos[0], pos[1])] = tile
+
+
+        def get_active_events(self, pos=None):
             # returns event and place list that is shown in the navigation screen.
+
+            pos = pos or self.pos
 
             events = []
             for i in self.current_events+self.current_places:
@@ -443,13 +468,14 @@ init -2 python:
                     if not self.in_dungeon():
                         if eval(i.cond):
                             events.append(i)
-                    elif i.pos == None or i.pos == self.image.map[self.pos[1]][self.pos[0]] or Coordinate(*self.pos).compare(i.pos):
+                    elif i.pos == None or i.pos == self.get_tile(pos=pos) or Coordinate(*pos).compare(i.pos):
                         if eval(i.cond):
                             events.append(i)
 
             events.sort(key = lambda ev: -ev.priority)
 
             return events
+
 
         def get_passive_events(self, pos=None):
             # returns event list that happens in the given pos.
@@ -465,13 +491,13 @@ init -2 python:
                         if i.pos == None or i.pos == pos:
                             if not i.active and eval(i.cond):
                                 events.append(i)
-                        elif self.in_dungeon() and (i.pos == self.image.map[pos[1]][pos[0]] or Coordinate(*pos).compare(i.pos)):
+                        elif self.in_dungeon() and (i.pos == self.get_tile(pos=pos) or Coordinate(*pos).compare(i.pos)):
                             if not i.active and eval(i.cond):
                                 events.append(i)
 
             return self.cut_events(events)
 
-## TDO addd get_tile and set_tile, find_tile.
+
 
 ##############################################################################
 ## Coordinate class
