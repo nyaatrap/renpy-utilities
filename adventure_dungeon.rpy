@@ -65,9 +65,9 @@ define collision = (0, 2, 3)
 ## ダンジョンの画像を LayeredMap(map, tileset, tile_mapping, layers, pov) で定義します。
 ## map, tileset, layers は上で定義したもので、pov は最後に定義するダンジョンプレイヤークラスを文字列で与えます。
 ## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して描画します。
-## horizon_height, tile_length, first_distance はイベント画像の表示位置の計算につかう属性で、後に解説します。
+## horizon_height, tile_length, first_distance, shading はイベント画像の表示位置の計算につかう属性で、後に解説します。
 define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left",
-    horizon_height = 0.31, tile_length = 0.9, first_distance = 1.0)
+    horizon_height = 0.31, tile_length = 0.9, first_distance = 1.0, shading="#000")
 
 
 ## それらを使ってレベルを Dungeon(image, music, collision) で定義します。
@@ -128,6 +128,7 @@ label collision_pit:
 define ev.collision_door = Event("dungeon", pos=3)
 label collision_door:
     if player.front_pos == player.next_pos:
+        scene black with dissolve
         return player.front2_pos
     else:
         with vpunch
@@ -153,10 +154,11 @@ label exit:
 ## horizon_height と tile_length に、画面のサイズに対する比率で与えておきます。
 ## first_distance は視点と同じタイルにいるオブジェクトとの距離で
 ## 値が大きいほど次以降のオブジェクトのサイズが縮小しにくくなります。
+## Shading は遠くにある画像にかぶせる色で、通常黒を与えます。
 
 ## 表示する画像は、その画像のアイレベルの高さが上で指定した比率になるように、
 ## 上下に適切な空白を取る必要があります。
-define ev.sprite = Event("dungeon", pos=(2,6), active=True, image = Image("dungeon/sprite.png"))
+define ev.sprite = Event("dungeon", pos=(1, 8), active=True, image = Image("dungeon/sprite.png"))
 label sprite:
     "Hello"
     return
@@ -301,6 +303,9 @@ screen dungeon_navigator(player):
             if i.active:
                 action Return(i)
 
+                #TODO show image insteads of map image
+                #TODO support the front tile events
+
 
     # move buttons
     fixed style_prefix "move":
@@ -326,8 +331,14 @@ screen dungeon_navigator(player):
         for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
             key i action Return(player.turnright_pos)
 
+
 style move_button_text:
     size 50
+
+init python:
+    config.keymap['self_voicing'].remove('v')
+    config.keymap['accessibility'].remove('K_a')
+    config.keymap['screenshot'].remove('s')
 
 
 ##############################################################################
@@ -460,6 +471,7 @@ init -2 python:
 
             return self.cut_events(events)
 
+## TDO addd get_tile and set_tile, find_tile.
 
 ##############################################################################
 ## Coordinate class
@@ -537,6 +549,9 @@ init -3 python:
 
             return False
 
+# transform that shades displayable
+    def shade_image(d, alpha = 0.5, color="#000"):
+        return AlphaBlend(Transform(d, alpha = alpha), d, Solid(color, xysize=(config.screen_width, config.screen_height)), True)
 
 ##############################################################################
 ## LayeredMap class
@@ -555,12 +570,13 @@ init -3 python:
         pov - string that represents dungeonplayer class. it determines point of view
         horizon_height - height of horizon relative to screen.
         tile_length - length of the nearest tile relative to screen.
-        first_distance - distance to the first object. this determines focal length
+        first_distance - distance to the first object. this determines focal length.
+        shading - if color is given, it will blend the color over sprites.
         """
 
 
         def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, mirror=None,
-            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, **properties):
+            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, **properties):
 
             super(LayeredMap, self).__init__(**properties)
             self.map = map
@@ -572,6 +588,7 @@ init -3 python:
             self.horizon_height = horizon_height
             self.tile_length = tile_length
             self.first_distance = first_distance
+            self.shading = shading
 
 
         def render(self, width, height, st, at):
@@ -649,6 +666,8 @@ init -3 python:
                             image = Fixed(
                                 Transform(sprite.image, zoom=zoom, xanchor=0.5, xpos=xpos, yalign=self.horizon_height),
                                 )
+                            if self.shading:
+                                image = shade_image(image, alpha=float(depth-1-d)/float(depth-1), color=self.shading)
                             render.blit(renpy.render(image, width, height, st, at), (0, 0))
 
             # Redraw regularly

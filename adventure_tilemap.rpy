@@ -240,7 +240,7 @@ init -2 python:
                         if i.pos == None or i.pos == self.pos:
                             if not i.active and eval(i.cond):
                                 events.append(i)
-                        elif self.in_tilemap() and i.pos == self.image.map[self.pos[1][self.pos[0]]:
+                        elif self.in_tilemap() and i.pos == self.image.map[self.pos[1]][self.pos[0]]:
                             if not i.active and eval(i.cond):
                                 events.append(i)
 

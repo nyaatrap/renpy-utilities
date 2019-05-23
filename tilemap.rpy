@@ -249,7 +249,7 @@ init -3 python:
            return self.tileset
 
 
-    def read_spritesheet(file, sprite_width, sprite_height=None, columns=1, rows=1, spacing=0, margin=0, livecrop=False):
+    def read_spritesheet(file, sprite_width, sprite_height=None, columns=1, rows=1, spacing=0, margin=0):
 
         """ Function that returns a list of displayables from a spritesheet. """
 
@@ -258,10 +258,7 @@ init -3 python:
         for r in xrange(rows):
             for c in xrange(columns):
                 rect = ((sprite_width+spacing)*c+margin, (sprite_height+spacing)*r+margin, sprite_width, sprite_height)
-                if livecrop:
-                    sprites.append(LiveCrop(rect, file))
-                else:
-                    sprites.append(im.Crop(file, rect))
+                sprites.append(im.Crop(file, rect))
 
         return sprites
 
