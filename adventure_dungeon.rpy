@@ -15,7 +15,7 @@
 define dungeonset = ["dungeon/base", "dungeon/floor", "dungeon/wall", "dungeon/door"]
 
 ## 次にダンジョンに表示する壁などの画像の数や重なりを2次元配列で定義します。
-## この例では、一番遠くに7つ、一番近くに3つの画像を表示できるようにしています。
+## この例では、一番遠くに９つ、一番近くに３つの画像を表示できるようにしています。
 ## c0をプレイヤーがいる位置と思って、上が画面の奥になるようイメージしてください。
 ## 文字列は表示する画像ファイルの接尾辞になります
 
@@ -65,9 +65,7 @@ define collision = (0, 2, 3)
 ## ダンジョンの画像を LayeredMap(map, tileset, tile_mapping, layers, pov) で定義します。
 ## map, tileset, layers は上で定義したもので、pov は最後に定義するダンジョンプレイヤークラスを文字列で与えます。
 ## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して描画します。
-## horizon_height, tile_length, first_distance, shading はイベント画像の表示位置の計算につかう属性で、後に解説します。
-define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left",
-    horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading="#000")
+define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left")
 
 
 ## それらを使ってレベルを Dungeon(image, music, collision) で定義します。
@@ -150,18 +148,17 @@ label exit:
 
 
 ## イベントに image = displayable を与えると、ダンジョンのタイル上に表示できます。
-## そのためには、LayeredMap にアイレベルの高さとプレイヤーが立ってる地点のタイルの横幅を
-## horizon_height と tile_length に、画面のサイズに対する比率で与えておきます。
-## first_distance は視点と同じタイルにいるオブジェクトとの距離で
-## 値が大きいほど次以降のオブジェクトのサイズが縮小しにくくなります。
-## Shading は遠くにある画像にかぶせる色で、通常黒を与えます。
-
-## 表示する画像は、その画像のアイレベルの高さが上で指定した比率になるように、
-## 上下に適切な空白を取る必要があります。
 define ev.sprite = Event("dungeon", pos=(1, 8), active=True, image = Image("dungeon/sprite.png"))
 label sprite:
     "Hello"
     return
+
+## 画像の表示位置は LayeredMap に以下のプロパティーを与えることで調整します、
+## horizon_height はアイレベルの高さで、1.0 は画面の下端になります。
+## tile_length はプレイヤーが立ってる地点のタイルの横幅で、1.0 は画面の右端になります。
+## first_distance は視点と同じタイルにいるオブジェクトとの距離で
+## 値が大きいほど次以降のオブジェクトのサイズが縮小しにくくなります。
+## Shading は遠くにある画像にかぶせる色で、通常黒 ("#000") を与えます。
 
 
 ## start ラベルから adventure_dungeon へジャンプすると探索を開始します。
@@ -590,6 +587,7 @@ init -3 python:
         layers - 2-dimensional list of strings to be shown in the perspective view. The first list is farthest layers,
             from left to right. the last list is the nearest layers. this string is used as suffix of displayable.
         pov - string that represents dungeonplayer class. it determines point of view
+        mirror - if "left" or "right", it uses flipped images from the other side.
         horizon_height - height of horizon relative to screen.
         tile_length - length of the nearest tile relative to screen.
         first_distance - distance to the first object. this determines focal length.
