@@ -2,7 +2,7 @@
 ## To play the sample game, download the dungeon folder then place it in the game directory.
 ## adventure に疑似３Dダンジョン探索機能を追加するファイルです。
 ## サンプルを実行するには dungeon フォルダーの画像をダウンロードする必要があります。
-## サンプルを正しく表示するには、スクリーンサイズを 1080x720 に設定する必要があります。
+## サンプルを正しく表示するには、スクリーンサイズを 800x600 に設定する必要があります。
 
 ##############################################################################
 ## How to Use
@@ -67,7 +67,7 @@ define collision = (0, 2, 3)
 ## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して描画します。
 ## horizon_height, tile_length, first_distance, shading はイベント画像の表示位置の計算につかう属性で、後に解説します。
 define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left",
-    horizon_height = 0.31, tile_length = 0.9, first_distance = 1.0, shading="#000")
+    horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading="#000")
 
 
 ## それらを使ってレベルを Dungeon(image, music, collision) で定義します。
@@ -303,9 +303,6 @@ screen dungeon_navigator(player):
             if i.active:
                 action Return(i)
 
-                #TODO show image insteads of map image
-                #TODO support the front tile events
-
 
     # move buttons
     fixed style_prefix "move":
@@ -454,11 +451,13 @@ init -2 python:
                 level = level or self.level
                 pos = pos or self.pos
 
-            self.changed_tiles[(level, pos[0], pos[1])] = tile
+                self.changed_tiles[(level, pos[0], pos[1])] = tile
 
 
         def get_active_events(self, pos=None):
             # returns event and place list that is shown in the navigation screen.
+            # this overwrites the same method in player class.
+            # if pos is give, it gets events on the given pos
 
             pos = pos or self.pos
 
@@ -575,9 +574,6 @@ init -3 python:
 
             return False
 
-# transform that shades displayable
-    def shade_image(d, alpha = 0.5, color="#000"):
-        return AlphaBlend(Transform(d, alpha = alpha), d, Solid(color, xysize=(config.screen_width, config.screen_height)), True)
 
 ##############################################################################
 ## LayeredMap class
@@ -713,3 +709,7 @@ init -3 python:
            # If the displayable has child displayables, this method should be overridden to return a list of those displayables.
            #return
 
+
+# transform that shades displayable
+    def shade_image(d, alpha = 0.5, color="#000"):
+        return AlphaBlend(Transform(d, alpha = alpha), d, Solid(color, xysize=(config.screen_width, config.screen_height)), True)
