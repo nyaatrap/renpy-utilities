@@ -39,6 +39,10 @@ init python:
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
         ]
 
+    ## テキストファイルで定義したマップを次の関数で読み込むことも出来ます。
+    ## numeral を True にすると、文字列を整数に変換して読み込みます。
+    # map1 = read_spreadsheet(file, separator="\t", numeral=False):
+
     ## 最後にタイルマップを Tilemap(map, tileset, tile_width, tile_height, tile_mapping) の形で定義します。
     ## map, tileset は上で定義したもので、tile_width, tile_height は各タイルのサイズです。
 
@@ -251,7 +255,7 @@ init -3 python:
 
     def read_spritesheet(file, sprite_width, sprite_height=None, columns=1, rows=1, spacing=0, margin=0):
 
-        """ Function that returns a list of displayables from a spritesheet. """
+        # Function that returns a list of displayables from a spritesheet.
 
         sprite_height = sprite_height or sprite_width
         sprites=[]
@@ -262,4 +266,26 @@ init -3 python:
 
         return sprites
 
+
+    def read_spreadsheet(file, separator="\t", numeral=False):
+
+        # Function that returns a 2-dimensional list from a text file.
+        # If numeral is True, string will convert to integer.
+
+        rv = []
+        f = renpy.file(file)
+        for l in f:
+            l = l.decode("utf-8")
+            a = l.rstrip().split(separator)
+            rv2 = []
+            for n, x in enumerate(a):
+                if x.isdecimal() and numeral:
+                    x = int(x)
+                elif numeral:
+                    x = 0
+                rv2.append(x)
+            rv.append(rv2)
+        f.close()
+
+        return rv
 
