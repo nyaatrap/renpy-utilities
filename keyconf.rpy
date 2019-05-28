@@ -14,14 +14,9 @@ init 1 python:
     # マウスホイール下回転で読み進められるようにします。
     config.keymap['dismiss'].append('mousedown_5')
 
-    # Allow viewport scrolling by pageup/pagedown
-    # viewport を pageup や pagedown でスクロールできるようにします。
-    config.keymap['viewport_up'].extend(['K_PAGEUP', 'repeat_K_PAGEUP'])
-    config.keymap['viewport_down'].extend(['K_PAGEDOWN', 'repeat_K_PAGEDOWN'])
-
     # Bind 'a' to toggle_afm
     # オート機能を a に割り当てます。
-    config.keymap["toggle_afm"] = ['a']
+    # config.keymap["toggle_afm"] = ['a']
 
     # Bind 's' to toggle_skip
     # スキップ機能を s に追加します。
@@ -49,6 +44,7 @@ init 1 python:
     # config.keymap['toggle_fullscreen'].remove('f')
     # config.keymap['screenshot'].remove('s')
     # config.keymap['hide_windows'].remove('h')
+    # config.keymap['accessibility'].remove('K_a')
 
     # Make button action immediately when pressed.
     # 以下は、マウスボタンが離したときではなく、押した時に即反応するようにします。
@@ -85,7 +81,7 @@ init 1 python:
     def _show_history():
         if not renpy.context()._menu:
             renpy.call_in_new_context("_game_menu", _game_menu_screen="history")
-                
+
     config.underlay.append(renpy.Keymap(history = _show_history))
     config.keymap["history"] = []
 

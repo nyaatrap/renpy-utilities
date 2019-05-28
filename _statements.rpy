@@ -26,7 +26,7 @@ python early:
 ## trans
 
 ## The new trans statement causes transition at the next interaction.
-## it's followed by transtion, and optinally takes onlayer argument.
+## it's followed by transtion, and optionally takes onlayer argument.
 ## by default, 'trans Dissolve(.25) onlayer master' is used without arguments.
 ## renpy.transition のショートカットです。with と似ていますが表示する画像の直前で使います。
 
@@ -97,10 +97,10 @@ python early:
             renpy.error("Image %s is not defined" % image_name)
 
     renpy.register_statement("hide", parse=parse_hide, lint=lint_hide, execute=execute_hide)
-    
+
 
 ##############################################################################
-## scene 
+## scene
 
 ## By default, the scene statement clears only the master layer.
 ## This makes the scene statement clears all layers except overlay.
@@ -108,34 +108,34 @@ python early:
 
 
 init -999 python:
-    
+
     def _scene_all_layers(layer = None):
-        
+
         if layer:
             renpy.scene(layer)
         else:
             for i in config.layers[:-1]:
                 renpy.scene(layer = i)
-                
+
     config.scene = _scene_all_layers
-    
+
 
 ##############################################################################
 ## show
 
-## This adds dissolve effect between images when images with the same tag are changed. 
+## This adds dissolve effect between images when images with the same tag are changed.
 ## This is useful to change expression.
 ## show ステートメントを表情変化などに使った時 dissolve で変化するようにします。
-        
-    
+
+
     def _show_dissolve(name, at_list=[], layer='master', what=None, zorder=0, tag=None, behind=None, atl=None):
-        
+
         # If an image has tag and it's showing, use dissolve effect.
         if len(name)>1 and renpy.showing(name[0], layer = layer):
             renpy.show(name[0], at_list, layer, what, zorder, tag, behind,atl)
             renpy.with_statement(None)
             renpy.transition(Dissolve(.3, alpha=True), layer)
-            
+
         renpy.show(name, at_list, layer, what, zorder, tag, behind,atl)
 
     config.show = _show_dissolve

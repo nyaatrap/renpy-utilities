@@ -43,6 +43,7 @@ init python:
     ## numeral を True にすると、文字列を整数に変換して読み込みます。
     # map1 = read_spreadsheet(file, separator="\t", numeral=False):
 
+
     ## 最後にタイルマップを Tilemap(map, tileset, tile_width, tile_height, tile_mapping) の形で定義します。
     ## map, tileset は上で定義したもので、tile_width, tile_height は各タイルのサイズです。
 
