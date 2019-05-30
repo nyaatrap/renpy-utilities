@@ -592,11 +592,13 @@ init -3 python:
         tile_length - length of the nearest tile relative to screen.
         first_distance - distance to the first object. this determines focal length.
         shading - if color is given, it will blend the color over sprites.
+        substitution - displayable that is used when proper image is not found.
         """
 
 
         def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, mirror=None,
-            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, **properties):
+            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, substitution = Null(),
+            **properties):
 
             super(LayeredMap, self).__init__(**properties)
             self.map = map
@@ -609,6 +611,7 @@ init -3 python:
             self.tile_length = tile_length
             self.first_distance = first_distance
             self.shading = shading
+            self.substitution = substitution
 
 
         def render(self, width, height, st, at):
@@ -670,7 +673,8 @@ init -3 python:
                         else:
                             surfix=self.layers[d][b]
                             flip=False
-                        image = Image(self.tileset[tile]+"_"+surfix+".png")
+                        im_name = self.tileset[tile]+"_"+surfix+".png"
+                        image = Image(im_name) if renpy.loadable(im_name) else self.substitution
                         if flip:
                             image = Transform(image, xzoom=-1)
                         render.blit(renpy.render(image, width, height, st, at), (0,0))
