@@ -20,7 +20,7 @@ define dungeonset = ["dungeon/base", "dungeon/floor", "dungeon/wall", "dungeon/d
 ## 文字列は表示する画像ファイルの接尾辞になります
 
 define dungeon_layers = [
-   ["llll7", "lll6", "ll6", "l6", "c6", "r6", "rr6", "rrr6", "rrrr6"],
+   ["llll6", "lll6", "ll6", "l6", "c6", "r6", "rr6", "rrr6", "rrrr6"],
             ["lll5", "ll5", "l5", "c5", "r5", "rr5", "rrr5"],
             ["lll4", "ll4", "l4", "c4", "r4", "rr4", "rrr4"],
                     ["ll3", "l3", "c3", "r3", "rr3"],
@@ -147,8 +147,9 @@ label exit:
     return
 
 
-## イベントに image = displayable を与えると、ダンジョンのタイル上に表示できます。
-define ev.sprite = Event("dungeon", pos=(1, 8), active=True, image = Image("dungeon/sprite.png"))
+## イベントに image を与えると、ダンジョンのタイル上に表示できます。
+image sp = "dungeon/sprite.png"
+define ev.sprite = Event("dungeon", pos=(1, 8), active=True, image = "sp")
 label sprite:
     "Hello"
     return
@@ -189,7 +190,7 @@ label adventure_dungeon:
     # Show background
     if player.image:
         scene black with Dissolve(.25)
-        show expression player.image at topleft
+        scene expression player.image at topleft
         with Dissolve(.25)
 
     jump adventure_dungeon_loop
@@ -269,20 +270,18 @@ label adventure_dungeon_loop:
 
                 jump adventure_dungeon_loop
 
-            # else if return value is coordinate, move to the new coordinate
+            # if return value is coordinate, move to the new coordinate
             elif isinstance(_return, tuple):
 
                 $ player.next_pos = _return
+                $ player.move_pos(player.next_pos)
 
-                # if movement is only rotation, don't trigger passive events
-                if player.compare(player.next_pos):
-                    $ player.move_pos(player.next_pos)
-                    show expression player.image at topleft
+                # Show background
+                if player.image:
+                    scene expression player.image at topleft
 
-                # otherwise, loop up to check passive events
-                else:
-                    $ player.move_pos(player.next_pos)
-                    show expression player.image at topleft
+                # if movement is not rotation, jump up to the outer loop
+                if not player.compare(player.previous_pos):
                     jump adventure_dungeon_loop
 
 

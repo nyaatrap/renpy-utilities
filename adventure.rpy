@@ -327,6 +327,7 @@ init -3 python:
             place = Player.get_place(level)
             self.level = place.level if place else level
             self.pos = place.pos if place else pos
+            self.previous_pos = self.pos
 
             self.after_interact = False
             self.event = None
@@ -442,6 +443,8 @@ init -3 python:
             # don't move
             if not _return:
                 return None
+
+            self.previous_pos = self.pos
 
             # try place
             rv = self.get_place(_return)
