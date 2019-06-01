@@ -6,7 +6,19 @@
 ## How to Use
 ##############################################################################
 
-## まずアイテムオブジェクトを Item(name, type, value, score, cost, order, prereqs, info) で定義します。
+## まず最初に、管理するアイテムのタイプのリストを作成します。
+define item_types = ["supply", "food", "outfit"]
+
+## それからアイテムの管理者を Inventory(currency, tradein, infinite, item_types) で定義します。
+## currency は所持金、tradein はその所持者が下取りする時の価格比です。
+## infinite を True にすると所持金と在庫が無限になります。
+## item_types は上で定義したアイテムタイプのリストで、アイテム画面でのカテゴリー分けに使用します。
+
+default housewife = Inventory(currency=1000, item_types = item_types)
+default merchant = Inventory(tradein=.25, infinite=True, item_types = item_types)
+
+
+## 各アイテムを Item(name, type, value, score, cost, order, prereqs, info) で定義します。
 ## name は表示される名前、type はカテゴリー、value は価格です。
 ## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
 ## cost が 1（デフォルト）の場合、アイテム使用時に個数が一つ減ります。
@@ -21,15 +33,6 @@ define item.knife = Item("Knife", type="supply", value=50, info="knife")
 define item.dress = Item("Dress", type="outfit", value=100, info="dress")
 define item.juice = Item("Juice", type="food", value=30, prereqs="orange:1, apple:2", info="It requires two oranges and one apple")
 
-## それから所持者を Inventory(currency, tradein, infinite, item_types, items) で定義します。
-## currency は所持金、tradein はその所持者が下取りする時の価格比です。
-## infinite を True にすると所持金と在庫が無限になります。
-## item_types はアイテム画面でカテゴリー分けされるアイテムタイプのリストです。
-## items は所持アイテムの配列で [[アイテム, 個数], [アイテム, 個数],,,] の形になります。
-
-define item_types = ["supply", "food", "outfit"]
-default housewife = Inventory(currency=1000, item_types = item_types)
-default merchant = Inventory(tradein=.25, infinite=True, item_types = item_types)
 
 
 ## ゲームがスタートしたら jump sample_inventory でここに飛んでください。
@@ -40,11 +43,11 @@ label sample_inventory:
     ## item は item. を外した文字列です。
     $ housewife.add_item("apple", score=2)
 
-    ## get_all_items(namespace) で名前空間で定義したすべてのアイテムを自動的に追加します。
-    ## types を与えると、そのリストに含まれるタイプのみを取得します
-    $ merchant.get_all_items(store.item, types=["supply", "food", "outfit"])
+    ## get_all_items(namespace) で名前空間で定義したすべてのアイテムのうち、タイプが合致するものを自動的に追加します。
+    $ merchant.get_all_items(store.item)
 
     ## 他に以下のメソッドがあります。
+    ## add_items(items) - "a,b,c" のように複数のアイテム名与えると、その全てのアイテムを追加できます。
     ## has_item(item) - 所持していれば True を返します。
     ## count_item(item) - 所持している合計の個数を返します。
     ## remove_item(item) - 所持していれば、そのアイテムを奪います。
@@ -53,8 +56,9 @@ label sample_inventory:
     ## can_buy_item(item, score) - アイテムが購入可能かどうか調べます。
     ## sell_item(item, buyer) - アイテムを buyer に売却し、所持金を受け取ります。
     ## give_item(item, getter) - アイテムを getter に渡します。
-    ## use_item(item, target) - アイテムを target に使用します。効果は各アイテムごと定義してください。
-    ## get_items(item, score, types) -  score 以上で types に含まれるアイテムのリストを (name, score, obj) のタプルで返します。
+    ## use_item(item, target, cost="cost") - アイテムを target に使用します。効果は各アイテムごと定義してください。
+    ## can_use_item(item, target, cost="cost") - アイテムが使用可能かどうか調べます。アイテムごとに定義してください。
+    ## get_items(score, types) - score 以上で types に含まれるアイテムのリストを (name, score, obj) のタプルで返します。
 
 
     while True:
@@ -225,20 +229,14 @@ init -3 python:
         selected - selected slot in a current screen.
         """
 
-        # Default item categories. It's used when item_types are not defined.
-        _item_types = []
 
-        def __init__(self, currency = 0, tradein = 1.0, infinite = False, items=None, item_types=None):
+        def __init__(self, currency = 0, tradein = 1.0, infinite = False, item_types=None):
 
             self.currency = int(currency)
             self.tradein = float(tradein)
             self.infinite = infinite
+            self.item_types = item_types
             self.items = OrderedDict()
-            if items:
-                for i in items:
-                    self.add_item(i)
-            self.item_types = item_types or self._item_types
-
             self.selected = None
 
 
@@ -317,6 +315,14 @@ init -3 python:
                 self.items[name] += score
             else:
                 self.items[name] = score
+
+
+        def add_items(self, items):
+            # add items
+
+            for i in items.split(","):
+                i = i.strip()
+                self.add_item(i)
 
 
         def remove_item(self, name):
@@ -441,6 +447,8 @@ init -3 python:
         def get_all_items(self, namespace=store, types=None, sort="order"):
             # get all Item objects defined under namespace
 
+            types = types or self.item_types
+
             for i in dir(namespace):
                 if isinstance(getattr(namespace, i), Item):
                     if self.get_item(i).type in types:
@@ -449,15 +457,31 @@ init -3 python:
             self.sort_items(order=sort)
 
 
-        def use_item(self, name, target):
+        def use_item(self, name, target, cost="cost"):
             # uses item on target
 
             obj = self.get_item(name)
 
             obj.use(target)
 
-            if obj.cost:
+            if cost=="cost" and obj.cost:
                 self.score_item(name, -obj.cost)
+
+            elif cost=="value" and obj.value:
+                self.currency -= value
+
+
+        def can_use_item(self, name, target, cost="cost"):
+            # returns True if inv can use this item
+
+            obj = self.get_item(name)
+
+            if cost=="cost" and self.count_item(name) > obj.score:
+                return False
+            elif cost=="value" and self.currency > obj.value:
+                return False
+
+            return True
 
 
 ##############################################################################
@@ -470,35 +494,37 @@ init -3 python:
 
         name - item name that is shown on the screen
         type - item category
-        effect - effect on use.
         value - price that is used for trading
         score - default amount of item when it's added into inventory
         cost - if not zero, using this item reduces score.
+        order - if integer is given, item can be sorted by this number.
         prereqs - required items to buy. This should be given in strings like "itemA:1, itemB:2"
-        order - if interger is given, item can be sorted by this number.
         info - description that is shown when an item is focused
         """
 
 
-        def __init__(self, name="", type="", effect="", value=0, score=1, cost=1, prereqs=None, order=0, info=""):
+        def __init__(self, name="", type="", value=0, score=1, cost=1, order=0, prereqs=None, info="", **kwargs):
 
             self.name = name
             self.type = type
-            self.effect = effect
             self.value = int(value)
             self.score = int(score)
             self.cost = int(cost)
             self.order = int(order)
+
             self.prereqs = {}
             if prereqs:
                 for i in [x.split(":") for x in prereqs.split(",")]:
                     self.prereqs.setdefault(i[0].strip(), int(i[1]))
             self.info = info
 
+            for i in kwargs.keys():
+                setattr(self, i, kwargs[i])
+
 
         def use(self, target):
 
-            # if self.effect == xxx:
+            # if self.keyword == xxx:
             #   do something
 
             return
