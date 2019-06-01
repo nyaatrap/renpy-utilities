@@ -15,11 +15,11 @@
 ## info はマウスフォーカスした時に表示される情報です。
 ## item の名前空間を使う事もできます。
 
-define item.apple = Item("Apple", type="food", value=10, info="This is an apple")
-define item.orange = Item("Orange", type="food", value=20)
-define item.knife = Item("Knife", type="supply", value=50)
-define item.dress = Item("Dress", type="outfit", value=100)
-define item.juice = Item("Juice", type="food", value=30, prereqs="orange:1, apple:2")
+define item.apple = Item("Apple", type="food", value=10, info="apple")
+define item.orange = Item("Orange", type="food", value=20, info="orange")
+define item.knife = Item("Knife", type="supply", value=50, info="knife")
+define item.dress = Item("Dress", type="outfit", value=100, info="dress")
+define item.juice = Item("Juice", type="food", value=30, prereqs="orange:1, apple:2", info="It requires two oranges and one apple")
 
 ## それから所持者を Inventory(currency, tradein, infinite, item_types, items) で定義します。
 ## currency は所持金、tradein はその所持者が下取りする時の価格比です。
@@ -112,6 +112,12 @@ screen inventory(inv, buyer=None, title="Inventory"):
     # screen variables
     default tab = "all"
 
+    # confirm message
+    if title=="Buy":
+        default confirm_message = "Are you sure to buy it?"
+    else:
+        default confirm_message = "Are you sure to sell it?"
+
     # frame size
     python:
         width = config.screen_width*3//4
@@ -128,7 +134,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
         $ currency = inv.currency if not inv.infinite else buyer.currency
         text "Currency:[currency:>5]" xalign .5
 
-        null height 20
+        null height 60
 
         # sort buttons
         text "Sort by"
@@ -161,7 +167,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
                         # sell/buy
                         if buyer:
-                            action Function(inv.sell_item, name=name, buyer=buyer)
+                            action Confirm(confirm_message, Function(inv.sell_item, name=name, buyer=buyer))
 
                         # reorder after selected
                         elif inv.selected:
@@ -175,8 +181,10 @@ screen inventory(inv, buyer=None, title="Inventory"):
                         # This action uses item.
                         # action Function(inv.use_item, name=name, target=?)
 
+        null height 10
+
         # information window
-        frame xysize width, height//2:
+        frame xysize width, height//3:
             $ tooltip = GetTooltip() or ""
             text [tooltip]
 
