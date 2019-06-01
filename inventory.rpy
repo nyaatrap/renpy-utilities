@@ -50,6 +50,7 @@ label sample_inventory:
     ## remove_item(item) - 所持していれば、そのアイテムを奪います。
     ## score_item(item, score) - 所持している個数を変更します。
     ## buy_item(item, score) - 所持金が足りていれば、それを消費してアイテムを追加します。
+    ## can_buy_item(item, score) - アイテムが購入可能かどうか調べます。
     ## sell_item(item, buyer) - アイテムを buyer に売却し、所持金を受け取ります。
     ## give_item(item, getter) - アイテムを getter に渡します。
     ## use_item(item, target) - アイテムを target に使用します。効果は各アイテムごと定義してください。
@@ -112,11 +113,12 @@ screen inventory(inv, buyer=None, title="Inventory"):
     # screen variables
     default tab = "all"
 
-    # confirm message
     if title=="Buy":
         default confirm_message = "Are you sure to buy it?"
     else:
         default confirm_message = "Are you sure to sell it?"
+
+    default notify_message = "You don't have money or required items"
 
     # frame size
     python:
@@ -165,21 +167,27 @@ screen inventory(inv, buyer=None, title="Inventory"):
                         selected inv.selected == name
                         tooltip obj.info
 
-                        # sell/buy
+                        # Sell/buy mode
                         if buyer:
-                            action Confirm(confirm_message, Function(inv.sell_item, name=name, buyer=buyer))
+                            if buyer.can_buy_item(name):
+                                action Confirm(confirm_message, Function(inv.sell_item, name=name, buyer=buyer))
+                            else:
+                                action Notify(notify_message)
 
-                        # reorder after selected
-                        elif inv.selected:
-                            action [Function(inv.replace_items, first=name, second=inv.selected),
-                                    SetField(inv, "selected", None)]
-
-                        # reorder before selecting
+                        # Arrange mode
                         else:
-                            action SetField(inv, "selected", name)
 
-                        # This action uses item.
-                        # action Function(inv.use_item, name=name, target=?)
+                            # reorder after selected
+                            if inv.selected:
+                                action [Function(inv.replace_items, first=name, second=inv.selected),
+                                        SetField(inv, "selected", None)]
+
+                            # reorder before selecting
+                            else:
+                                action SetField(inv, "selected", name)
+
+                            # This action uses item.
+                            # action Function(inv.use_item, name=name, target=?)
 
         null height 10
 
@@ -350,6 +358,27 @@ init -3 python:
                 else:
                     self.add_item(name, score)
                     self.currency -= value
+
+
+        def can_buy_item(self, name, score = None, prereqs=True):
+            # returns True if this item can be bought
+
+            score = score or self.get_item(name).score
+            value = self.get_item(name).value*score
+            prereqs = self.get_item(name).prereqs
+
+            if self.infinite:
+                return True
+
+            if self.currency < value:
+                return False
+
+            if prereqs:
+                for k,v in prereqs.items():
+                    if not self.has_item(k, score=v*score):
+                        return False
+
+            return True
 
 
         def sell_item(self, name, buyer, prereqs=True):
