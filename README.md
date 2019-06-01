@@ -11,47 +11,57 @@ All files in this repository are in the public domain.
 
 ## keyconf.rpy
 This file modifies key bindings.
+
 マウス・キーボード・ゲームパッドの割り当てを追加・変更するファイルです。
 
 ## animation.rpy
 This file modifies transforms and transitions.
+
 様々な transform（画像変換）や transition（画像遷移）を追加・変更するファイルです。
 
 ## gallery.rpy
 This file implements integrated gallery that searches images and music automatically.
+
 視聴済みの画像や音楽を自動的に検索・追加する、統合型のギャラリーを追加するファイルです。
 
 ## _statements.rpy
 This file contains additional statements
+
 Ren'Py に新しいステートメント（命令文）を追加するファイルです。
 
 ## inventory.rpy
 This file provides inventory system.
+
 アイテムの売買や管理を行う機能を追加するファイルです。
 スキルやクエストなど様々な要素の管理にも汎用的に使えます。
 
 ## dressup.rpy (wip)
 This file adds Doll class and LayeredDisplayable that provides layered sprites.
+
 多層レイヤーのスプライトを提供する Doll クラスと LayeredDisplayable を追加するファイルです。
 Inventory クラスと組み合わせることでドレスアップゲームなども作ることもできます。
 
 ## arena.rpy (wip)
 This file defines Actor and Arena class to add turn-based combat and competition.
+
 ターン制の戦闘や競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。
 基本的な枠組みしかありませんので、実用には改変する必要があります。
 
 ## tilemap.rpy
 This file defines Tilemap class that create single map from small tile images.
+
 小さな画像を並べて一枚の画像にする Tilemap クラスを追加するファイルです。
 
 ## adventure.rpy
 This file provides adventure game framework that uses event maps.
+
 イベントを配置した２Dマップを探索するアドベンチャーゲームのフレームワークを追加するファイルです。
 ラベルをオブジェクトとのペアで管理することで、マップ上にイベントとして配置して呼び出すことができます。
 
 ## adventure_tilemap.rpy
 This file adds tilemap exploring function into adventure framework.
 This framework requires tilemap.rpy and adventure.rpy.
+
 adventure にタイルマップを探索する機能を追加するファイルです。
 tilemap.rpy と adventure.rpy が必要になります。
 
@@ -60,6 +70,7 @@ This file adds pseudo-3D dungeon crawling function into adventurer framework.
 This framework requires adventure.rpy.
 To play the sample game, download the dungeon folder then place it in the game directory.
 To show sample dungeon correctly, set screen size 800x600.
+
 adventure に疑似３Dダンジョン探索機能を追加するファイルです。
 adventure.rpy が必要になります。
 サンプルを実行するには dungeon フォルダーの画像をダウンロードして game ディレクトリに配置する必要があります。
