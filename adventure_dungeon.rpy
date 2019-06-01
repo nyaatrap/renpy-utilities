@@ -87,7 +87,7 @@ default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0)
 ## アクティブはその座標にいる上で、さらにクリックすると呼ばれます。
 ## コリジョンは侵入不可能の座標に移動しようとした時に呼ばれます。
 
-## 通所のパッシブイベントは、プレイヤーが pos の位置に移動した時に呼び出されます。
+## パッシブイベントは、プレイヤーが pos の位置に移動した時に呼び出されます。
 ## dx,dy を与えるとその向きのみイベントが発生します。
 define ev.entrance = Event("dungeon", pos=(1,1), precede=True, once=True)
 label entrance:
@@ -302,12 +302,12 @@ screen dungeon_navigator(player):
 
     # move buttons
     fixed style_prefix "move":
-        textbutton "W" action Return(player.front_pos)  xcenter .5 ycenter .86
-        textbutton "S" action Return(player.back_pos)  xcenter .5 ycenter .96
-        textbutton "E" action Return(player.turnright_pos)  xcenter .58 ycenter .91
-        textbutton "Q" action Return(player.turnleft_pos)   xcenter .42 ycenter .91
-        textbutton "D" action Return(player.right_pos) xcenter .65 ycenter .96
-        textbutton "A" action Return(player.left_pos)  xcenter .35 ycenter .96
+        textbutton "W" action Return(player.front_pos)  xcenter .5 ycenter .85
+        textbutton "S" action Return(player.back_pos)  xcenter .5 ycenter .95
+        textbutton "E" action Return(player.turnright_pos)  xcenter .58 ycenter .90
+        textbutton "Q" action Return(player.turnleft_pos)   xcenter .42 ycenter .90
+        textbutton "D" action Return(player.right_pos) xcenter .65 ycenter .95
+        textbutton "A" action Return(player.left_pos)  xcenter .35 ycenter .95
 
 
     # move keys
@@ -324,14 +324,13 @@ screen dungeon_navigator(player):
         for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
             key i action Return(player.turnright_pos)
 
+        # override rollforward/rollback
+        key  'mousedown_4' action Return(player.front_pos)
+        key  'mousedown_5' action Return(player.back_pos)
+
 
 style move_button_text:
     size 50
-
-init python:
-    config.keymap['self_voicing'].remove('v')
-    config.keymap['accessibility'].remove('K_a')
-    config.keymap['screenshot'].remove('s')
 
 
 ##############################################################################
@@ -342,14 +341,14 @@ init -2 python:
     class Dungeon(Level):
 
         """
-        Expanded Level class that holds collision data.
+        Expanded Level class that holds collision and map change data.
         """
 
-        def __init__(self, image=None, music=None, map = None, collision=None):
+        def __init__(self, image=None, music=None, collision=None):
 
             super(Dungeon, self).__init__(image, music)
-            self.map = map
             self.collision = collision
+            self.changed_tiles = {}
 
 
 ##############################################################################
@@ -366,17 +365,16 @@ init -2 python:
 
             super(DungeonPlayer, self).__init__(level, pos, **kwargs)
 
-            self.next_pos = None
-            self.changed_tiles ={}
+            self.next_pos = self.pos
 
-
-        @property
-        def map(self):
-            return self.get_level(self.level).map
 
         @property
         def collision(self):
             return self.get_level(self.level).collision
+
+        @property
+        def changed_tiles(self):
+            return self.get_level(self.level).changed_tiles
 
         @property
         def turnback_pos(self):
@@ -434,11 +432,12 @@ init -2 python:
             if player.in_dungeon():
                 level = level or self.level
                 pos = pos or self.pos
+                level = self.get_level(level)
 
-                if (level, pos[0], pos[1]) in self.changed_tiles.keys():
-                    return self.changed_tiles[(level, pos[0], pos[1])]
+                if (pos[0], pos[1]) in level.changed_tiles:
+                    return level.changed_tiles[(pos[0], pos[1])]
                 else:
-                    return self.image.map[pos[1]][pos[0]]
+                    return level.image.map[pos[1]][pos[0]]
 
 
         def set_tile(self, tile, level=None, pos=None):
@@ -446,8 +445,9 @@ init -2 python:
             if player.in_dungeon():
                 level = level or self.level
                 pos = pos or self.pos
+                level = self.get_level(level)
 
-                self.changed_tiles[(level, pos[0], pos[1])] = tile
+                level.changed_tiles[(pos[0], pos[1])] = tile
 
 
         def get_active_events(self, pos=None):
@@ -649,17 +649,18 @@ init -3 python:
 
                     # Get index of tileset
                     x,y = coord2.x, coord2.y
-                    try:
-                        if self.tile_mapping:
-                            if self.map[y][x] in self.tile_mapping.keys():
-                                tile = self.tile_mapping[self.map[y][x]]
-                            else:
-                                tile = 0
-                        else:
-                            tile = self.map[y][x]
 
+                    try:
+                        tile = pov.get_tile(pos = (x,y))
                     except IndexError:
                         tile = 0
+
+                    if self.tile_mapping:
+                        if tile in self.tile_mapping.keys():
+                            tile = self.tile_mapping[tile]
+                        else:
+                            tile = 0
+
 
                     # blit image if tile is not None
                     if tile:
