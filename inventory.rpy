@@ -6,13 +6,14 @@
 ## How to Use
 ##############################################################################
 
-## まずアイテムオブジェクトを Item(name, type, value, score, cost, info) で定義します。
+## まずアイテムオブジェクトを Item(name, type, value, score, cost, order, prereqs, info) で定義します。
 ## name は表示される名前、type はカテゴリー、value は価格です。
 ## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
 ## cost が 1（デフォルト）の場合、アイテム使用時に個数が一つ減ります。
+## order はデフォルトのソート順を決めたい時に使います。
+## prereqs はそのアイテムを購入するときに消費するアイテムです。
 ## info はマウスフォーカスした時に表示される情報です。
 ## item の名前空間を使う事もできます。
-## prereqs はそのアイテムを購入するときに消費するアイテムです。
 
 define item.apple = Item("Apple", type="food", value=10, info="This is an apple")
 define item.orange = Item("Orange", type="food", value=20)
@@ -40,7 +41,8 @@ label sample_inventory:
     $ housewife.add_item("apple", score=2)
 
     ## get_all_items(namespace) で名前空間で定義したすべてのアイテムを自動的に追加します。
-    $ merchant.get_all_items(store.item)
+    ## types を与えると、そのリストに含まれるタイプのみを取得します
+    $ merchant.get_all_items(store.item, types=["supply", "food", "outfit"])
 
     ## 他に以下のメソッドがあります。
     ## has_item(item) - 所持していれば True を返します。
@@ -109,7 +111,6 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
     # screen variables
     default tab = "all"
-    default tt = Tooltip("")
 
     # frame size
     python:
@@ -131,7 +132,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
         # sort buttons
         text "Sort by"
-        for i in ["name", "type", "value", "amount"]:
+        for i in ["name", "type", "value", "amount", "order"]:
             textbutton i.capitalize():
                 action Function(inv.sort_items, order=i)
 
@@ -148,15 +149,15 @@ screen inventory(inv, buyer=None, title="Inventory"):
         frame xysize width, height:
 
             vpgrid style_prefix "item":
-                cols 4 mousewheel True draggable True scrollbars "vertical"
+                cols 2 mousewheel True draggable True scrollbars "vertical"
 
                 for name, score, obj in inv.get_items(types=[tab] if tab != "all" else None):
-                        
+
                     $ price = int(obj.value*score*(buyer.tradein if buyer else inv.tradein))
-                        
+
                     textbutton "[obj.name] x[score] ([price])":
                         selected inv.selected == name
-                        hovered tt.Action(obj.info)
+                        tooltip obj.info
 
                         # sell/buy
                         if buyer:
@@ -176,7 +177,8 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
         # information window
         frame xysize width, height//2:
-            text tt.value
+            $ tooltip = GetTooltip() or ""
+            text [tooltip]
 
     textbutton "Return" action Return() yalign 1.0
 
@@ -191,7 +193,7 @@ style item_button:
 ## Inventory class.
 
 init -3 python:
-    
+
     from collections import OrderedDict
 
     class Inventory(object):
@@ -220,7 +222,7 @@ init -3 python:
                 for i in items:
                     self.add_item(i)
             self.item_types = item_types or self._item_types
-            
+
             self.selected = None
 
 
@@ -228,30 +230,30 @@ init -3 python:
         def get_item(self, name):
             # returns item object from name
 
-            if isinstance(name, Item): 
+            if isinstance(name, Item):
                 return name
-                
+
             elif isinstance(name, basestring):
                 obj = getattr(store.item, name, None) or getattr(store, name, None)
-                if obj: 
+                if obj:
                     return obj
-                
+
             raise Exception("Item '{}' is not defined".format(name))
-            
+
 
         def has_item(self, name, score=None):
             # returns True if inventory has this item whose score is higher than given.
-            
+
             # check valid name or not
             self.get_item(name)
 
             return name in [k for k, v in self.items.items() if score==None or v >= score]
-            
-            
+
+
         def has_items(self, name, score=None):
-            # returns True if inventory has these items whose score is higher than give. 
+            # returns True if inventory has these items whose score is higher than give.
             # "a, b, c" means a and b and c, "a | b | c" means a or b or c.
-            
+
             separator = "|" if name.count("|") else ","
             names = name.split(separator)
             for i in names:
@@ -260,39 +262,39 @@ init -3 python:
                     return True
                 elif separator == "," and not self.has_item(i, score):
                     return False
-                    
-            return True if separator == ","  else False      
+
+            return True if separator == ","  else False
 
 
         def count_item(self, name):
             # returns score of this item
-            
+
             if self.has_item(name):
                 return self.items[name]
-            
-            
+
+
         def get_items(self, score=None, types = None, rv=None):
             # returns list of (name, score, object) tuple in conditions
             # if rv is "name" or "obj", it returns them.
-            
+
             items = [k for k, v in self.items.items() if score==None or v >= score]
-            
+
             if types:
                 items = [i for i in items if self.get_item(i).type in types]
-                
+
             if rv == "name":
                 return items
-                
+
             elif rv == "obj":
                 return [self.get_item(i) for i in items]
-                
+
             return  [(i, self.items[i], self.get_item(i)) for i in items]
 
 
         def add_item(self, name, score = None):
             # add an item
             # if score is given, this score is used instead of item's default value.
-            
+
             score = score or self.get_item(name).score
 
             if self.has_item(name):
@@ -314,8 +316,8 @@ init -3 python:
 
             self.add_item(name, score)
             if remove and self.items[name] <= 0:
-                self.remove_item(name)  
-                    
+                self.remove_item(name)
+
 
         def buy_item(self, name, score = None, prereqs=True):
             # buy an item
@@ -324,14 +326,14 @@ init -3 python:
             score = score or self.get_item(name).score
             value = self.get_item(name).value*score
             prereqs = self.get_item(name).prereqs
-            
+
             if not self.infinite and self.currency >= value:
-                
+
                 if prereqs:
                     for k,v in prereqs.items():
                         if not self.has_item(k, score=v*score):
-                            break                            
-                    else:                        
+                            break
+                    else:
                         self.add_item(name, score)
                         for k,v in prereqs.items():
                             self.score_item(k, score=-v*score)
@@ -344,14 +346,14 @@ init -3 python:
 
         def sell_item(self, name, buyer, prereqs=True):
             # remove an item then add this item to buyer for money
-            
+
             if self.has_item(name):
 
                 score = self.get_item(name).score if self.infinite else self.items[name]
                 value = self.get_item(name).value*score
-                
+
                 buyer.buy_item(name, score, prereqs)
-                
+
                 if buyer.infinite or buyer.currency >= value:
                     if not self.infinite:
                         self.currency += int(value*buyer.tradein)
@@ -362,7 +364,7 @@ init -3 python:
             # remove an item slot then add this name to getter
 
             if self.has_item(name):
-                
+
                 getter.add_items(name)
                 self.remove_items(name)
 
@@ -376,13 +378,13 @@ init -3 python:
             i2 = keys.index(second)
             keys[i1], keys[i2] = keys[i2], keys[i1]
             values[i1], values[i2] = values[i2], values[i1]
-            
+
             self.items = OrderedDict(zip(keys, values))
 
 
-        def sort_items(self, order="name"):
+        def sort_items(self, order="order"):
             # sort slots
-            
+
             items = self.items.items()
 
             if order == "name":
@@ -393,25 +395,30 @@ init -3 python:
                 items.sort(key = lambda i: self.get_item(i[0]).value, reverse=True)
             elif order == "amount":
                 items.sort(key = lambda i: i[1], reverse=True)
-                
+            elif order == "order":
+                items.sort(key = lambda i: self.get_item(i[0]).order)
+
             self.items = OrderedDict(items)
 
 
-        def get_all_items(self, namespace=store):
+        def get_all_items(self, namespace=store, types=None, sort="order"):
             # get all Item objects defined under namespace
 
             for i in dir(namespace):
                 if isinstance(getattr(namespace, i), Item):
-                    self.add_item(i)
+                    if self.get_item(i).type in types:
+                       self.add_item(i)
+
+            self.sort_items(order=sort)
 
 
         def use_item(self, name, target):
             # uses item on target
 
             obj = self.get_item(name)
-            
+
             obj.use(target)
-            
+
             if obj.cost:
                 self.score_item(name, -obj.cost)
 
@@ -431,11 +438,12 @@ init -3 python:
         score - default amount of item when it's added into inventory
         cost - if not zero, using this item reduces score.
         prereqs - required items to buy. This should be given in strings like "itemA:1, itemB:2"
+        order - if interger is given, item can be sorted by this number.
         info - description that is shown when an item is focused
         """
 
 
-        def __init__(self, name="", type="", effect="", value=0, score=1, cost=1, prereqs=None, info=""):
+        def __init__(self, name="", type="", effect="", value=0, score=1, cost=1, prereqs=None, order=0, info=""):
 
             self.name = name
             self.type = type
@@ -443,10 +451,11 @@ init -3 python:
             self.value = int(value)
             self.score = int(score)
             self.cost = int(cost)
+            self.order = int(order)
             self.prereqs = {}
             if prereqs:
                 for i in [x.split(":") for x in prereqs.split(",")]:
-                    self.prereqs.setdefault(i[0].strip(), int(i[1]))            
+                    self.prereqs.setdefault(i[0].strip(), int(i[1]))
             self.info = info
 
 
