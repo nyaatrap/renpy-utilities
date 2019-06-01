@@ -9,13 +9,15 @@
 ## まず最初に、管理するアイテムのタイプのリストを作成します。
 define item_types = ["supply", "food", "outfit"]
 
-## それからアイテムの管理者を Inventory(currency, tradein, infinite, item_types) で定義します。
+## それからアイテムの管理者を Inventory(currency, tradein, infinite, item_types, namespace) で定義します。
 ## currency は所持金、tradein はその所持者が下取りする時の価格比です。
 ## infinite を True にすると所持金と在庫が無限になります。
 ## item_types は上で定義したアイテムタイプのリストで、アイテム画面でのカテゴリー分けに使用します。
+## カテゴリーに合わないタイプのアイテムも入手可能ですが、画面には表示されません。
+## namespace を設定すると、その管理者が扱うアイテムを名前空間ごとに分けることが出来ます。
 
-default housewife = Inventory(currency=1000, item_types = item_types)
-default merchant = Inventory(tradein=.25, infinite=True, item_types = item_types)
+default housewife = Inventory(currency=1000, item_types = item_types, namespace = "item")
+default merchant = Inventory(tradein=.25, infinite=True, item_types = item_types, namespace = "item")
 
 
 ## 各アイテムを Item(name, type, value, score, cost, order, prereqs, info) で定義します。
@@ -25,14 +27,13 @@ default merchant = Inventory(tradein=.25, infinite=True, item_types = item_types
 ## order はデフォルトのソート順を決めたい時に使います。
 ## prereqs はそのアイテムを購入するときに消費するアイテムです。
 ## info はマウスフォーカスした時に表示される情報です。
-## item の名前空間を使う事もできます。
+## inventory で与えた namespace の名前空間で定義する必要があります。
 
 define item.apple = Item("Apple", type="food", value=10, info="apple")
 define item.orange = Item("Orange", type="food", value=20, info="orange")
 define item.knife = Item("Knife", type="supply", value=50, info="knife")
 define item.dress = Item("Dress", type="outfit", value=100, info="dress")
 define item.juice = Item("Juice", type="food", value=30, prereqs="orange:1, apple:2", info="It requires two oranges and one apple")
-
 
 
 ## ゲームがスタートしたら jump sample_inventory でここに飛んでください。
@@ -43,8 +44,8 @@ label sample_inventory:
     ## item は item. を外した文字列です。
     $ housewife.add_item("apple", score=2)
 
-    ## get_all_items(namespace) で名前空間で定義したすべてのアイテムのうち、タイプが合致するものを自動的に追加します。
-    $ merchant.get_all_items(store.item)
+    ## get_all_items(types) で名前空間で定義したすべてのアイテムのうち、タイプが合致するものを自動的に追加します。
+    $ merchant.get_all_items()
 
     ## 他に以下のメソッドがあります。
     ## add_items(items) - "a,b,c" のように複数のアイテム名与えると、その全てのアイテムを追加できます。
@@ -163,7 +164,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
             vpgrid style_prefix "item":
                 cols 2 mousewheel True draggable True scrollbars "vertical"
 
-                for name, score, obj in inv.get_items(types=[tab] if tab != "all" else None):
+                for name, score, obj in inv.get_items(types=[tab] if tab != "all" else inv.item_types):
 
                     $ price = int(obj.value*score*(buyer.tradein if buyer else inv.tradein))
 
@@ -225,22 +226,23 @@ init -3 python:
         tradein - when someone buyoff items to this inventory, value is reduced by this value
         infinite - if true, its currency and amont of items are infinite, like NPC merchant.
         item_types - list of item type that are grouped up as tab in the inventory screen.
+        namespace - if give, items defined in this name space are used
         items - dictionary of {"item name": score}.
         selected - selected slot in a current screen.
         """
 
 
-        def __init__(self, currency = 0, tradein = 1.0, infinite = False, item_types=None):
+        def __init__(self, currency = 0, tradein = 1.0, infinite = False, item_types=None, namespace=None):
 
             self.currency = int(currency)
             self.tradein = float(tradein)
             self.infinite = infinite
             self.item_types = item_types
+            self.namespace = getattr(store, namespace) if namespace else store
             self.items = OrderedDict()
             self.selected = None
 
 
-        @classmethod
         def get_item(self, name):
             # returns item object from name
 
@@ -248,7 +250,7 @@ init -3 python:
                 return name
 
             elif isinstance(name, basestring):
-                obj = getattr(store.item, name, None) or getattr(store, name, None)
+                obj = getattr(self.namespace, name, None)
                 if obj:
                     return obj
 
@@ -293,8 +295,8 @@ init -3 python:
 
             items = [k for k, v in self.items.items() if score==None or v >= score]
 
-            if types:
-                items = [i for i in items if self.get_item(i).type in types]
+            types = types or self.item_types
+            items = [i for i in items if self.get_item(i).type in types]
 
             if rv == "name":
                 return items
@@ -444,13 +446,13 @@ init -3 python:
             self.items = OrderedDict(items)
 
 
-        def get_all_items(self, namespace=store, types=None, sort="order"):
+        def get_all_items(self, types=None, sort="order"):
             # get all Item objects defined under namespace
 
             types = types or self.item_types
 
-            for i in dir(namespace):
-                if isinstance(getattr(namespace, i), Item):
+            for i in dir(self.namespace):
+                if isinstance(getattr(self.namespace, i), Item):
                     if self.get_item(i).type in types:
                        self.add_item(i)
 
@@ -528,12 +530,4 @@ init -3 python:
             #   do something
 
             return
-
-
-##############################################################################
-## Create namespace
-
-init -999 python in item:
-    pass
-
 
