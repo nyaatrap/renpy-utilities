@@ -389,7 +389,6 @@ init -3 python:
                     raise Exception("{} is not defined attributes".format(k))
 
 
-        @classmethod
         def get_skill(self, name):
             # returns skill object from name
 

@@ -473,7 +473,7 @@ init -3 python:
 
 
         @classmethod
-        def get_level(self, name):
+        def get_level(cls, name):
             # returns level object from name
 
             if isinstance(name, Level):
@@ -486,7 +486,7 @@ init -3 python:
 
 
         @classmethod
-        def get_place(self, name):
+        def get_place(cls, name):
             # returns place object from name
 
             if isinstance(name, Place):
@@ -499,7 +499,7 @@ init -3 python:
 
 
         @classmethod
-        def get_event(self, name):
+        def get_event(cls, name):
             # returns event object from name
 
             if isinstance(name, Event):

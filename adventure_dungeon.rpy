@@ -1,7 +1,10 @@
-## This file adds pseudo-3D dungeon crawling function into adventure framework.
+## This file adds pseudo-3D dungeon crawling function into adventurer framework.
+## This framework requires adventure.rpy.
 ## To play the sample game, download the dungeon folder then place it in the game directory.
+## To show sample dungeon correctly, set screen size 800x600.
 ## adventure に疑似３Dダンジョン探索機能を追加するファイルです。
-## サンプルを実行するには dungeon フォルダーの画像をダウンロードする必要があります。
+## adventure.rpy が必要になります。
+## サンプルを実行するには dungeon フォルダーの画像をダウンロードして game ディレクトリに配置する必要があります。
 ## サンプルを正しく表示するには、スクリーンサイズを 800x600 に設定する必要があります。
 
 ##############################################################################

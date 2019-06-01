@@ -25,17 +25,17 @@ This file implements integrated gallery that searches images and music automatic
 This file contains additional statements
 Ren'Py に新しいステートメント（命令文）を追加するファイルです。
 
-## dressup.rpy
+## inventory.rpy
+This file provides inventory system.
+アイテムの売買や管理を行う機能を追加するファイルです。
+スキルやクエストなど様々な要素の管理にも汎用的に使えます。
+
+## dressup.rpy (wip)
 This file adds Doll class and LayeredDisplayable that provides layered sprites.
 多層レイヤーのスプライトを提供する Doll クラスと LayeredDisplayable を追加するファイルです。
 Inventory クラスと組み合わせることでドレスアップゲームなども作ることもできます。
 
-## inventory.rpy
-This file provides inventory system.
-アイテムの売買や管理を行う機能を追加するファイルです。
-多少の改変でスキルやクエストなど様々な要素の管理に汎用的に使えます。
-
-## arena.rpy
+## arena.rpy (wip)
 This file defines Actor and Arena class to add turn-based combat and competition.
 ターン制の戦闘や競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。
 基本的な枠組みしかありませんので、実用には改変する必要があります。
@@ -57,6 +57,10 @@ tilemap.rpy と adventure.rpy が必要になります。
 
 ## adventure_dungeon.rpy
 This file adds pseudo-3D dungeon crawling function into adventurer framework.
+This framework requires adventure.rpy.
 To play the sample game, download the dungeon folder then place it in the game directory.
+To show sample dungeon correctly, set screen size 800x600.
 adventure に疑似３Dダンジョン探索機能を追加するファイルです。
-サンプルを実行するには dungeon フォルダーの画像をダウンロードする必要があります。
+adventure.rpy が必要になります。
+サンプルを実行するには dungeon フォルダーの画像をダウンロードして game ディレクトリに配置する必要があります。
+サンプルを正しく表示するには、スクリーンサイズを 800x600 に設定する必要があります。
