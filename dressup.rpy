@@ -11,22 +11,31 @@
 
 ## 事前に以下のような構成のフォルダーを用意しておきます。
 
-## name
-##  ├base
-##  │ └base.png
-##  └face
-##      └happy.png
-##      └angry.png
+# dollname
+#     └stand
+#         ├base
+#         │    └base.png
+#         ├outfit
+#         │    ├dress.png
+#         │    └swimsuit.png
+#         └face
+#             ├happy.png
+#             └angry.png
 
 
-## それからドールオブジェクトを Doll(フォルダー名、各レイヤーのフォルダー名のリスト、デフォルトの画像)
+## それからドールオブジェクトを Doll(フォルダー名、各ポーズのフォルダー名のリスト、各レイヤーのフォルダー名のリスト、デフォルトの画像)
 ## の形で定義します。各レイヤーの状態を保存できるように、default を使います。
 ## layers のパラメーターを省略すると ["base", "feet", "bottom", "top", "face"] がデフォルトで使われます。
-## デフォルトの画像は、フォルダー名="ファイル名（拡張子なし）"で指定します。これも省略可能です。
-default erin = Doll("erin", layers=["base", "face"], base="base", face="happy")
+## デフォルトのポーズは、pose="ファイル名"で指定します。base 以外は省略可能です。
+## デフォルトの画像は、フォルダー名="ファイル名（拡張子なし）"で指定します。base 以外は省略可能です。
+default erin = Doll(folder="erin", poses = ["stand"], layers=["base", "outfit", "face"], pose = "stand", base="base", outfit="dress", face="happy")
 
 ## 次に、さきほど定義したドールオブジェクトを""で囲み LayeredDisplayable に渡して画像を定義します。
-image erin = LayeredDisplayable("erin")
+image erin auto= LayeredDisplayable("erin")
+
+## layer="画像" を指定すると、各レイヤーの状態が固定されます。
+image erin happy= LayeredDisplayable("erin", face="happy")
+image erin angry= LayeredDisplayable("erin", face="angry")
 
 ## 以上で準備完了です。
 
@@ -35,12 +44,18 @@ image erin = LayeredDisplayable("erin")
 
 label sample_doll:
     ## ゲームがスタートしたら、 イメージで定義した画像を表示します。
-    show erin
+    show erin auto
     pause
 
     ## 表示した画像は $ doll.layer = "filename" の形で、各レイヤーの画像を切り変えることができます。
-    ## 下の例では face レイヤーの画像を "angry.png" に変更します。
+    ## 下の例では outfit レイヤーの画像を "dress.png", face レイヤーの画像を "angry.png" に変更します。
+    $ erin.outfit = "dress"
     $ erin.face = "angry"
+    pause
+
+    ## 同じタグの画像を別に定義しておけば、dissolve で表情変化をさせることが出来ます。
+    show erin happy
+    with dissolve
     pause
 
     ## reset_layers() でデフォルトの状態に戻します。
@@ -144,24 +159,35 @@ init -3 python:
         class that stores equips and layer information. It has the following fields:
 
         folder - folder name that this doll's images are stored.
-        layers - folder names that this doll's each layer images are stored.
+        poses - folder names that this doll's each layer group are store
+        pose - current pose that determines which layer group is used.
+        layers - folder names that this doll's each layer image are stored.
+        images - dictionary whose keys are layer names and values are lists of images
 
         It also has fields as same as layer names. For example, self.base=None
+        default values are stored in _layername. For example, self._base=None
+        if also has state property of each layer. For example, self.base_state=None
+        if layer_state is not None, it used as suffix of filename.
         These field values are filenames of each layer.
         """
 
         # Define default layers from bottom.
         # デフォルトのレイヤーを下から順番に定義します。
+        _poses = ["stand"]
         _layers = ["base", "feet", "bottom", "top", "face"]
 
 
-        def __init__(self, folder="", layers = None, **kwargs):
+        def __init__(self, folder="", poses = None, layers = None, pose = None, **kwargs):
 
             self.folder = folder
+            self.poses = poses or self._poses
             self.layers = layers or self._layers
+            self._pose = pose or self._poses[0]
+            self.pose = self._pose
 
             # set default image on each layer
             for i in self.layers:
+                setattr(self, i+"_state", None)
                 if i in kwargs.keys():
                     setattr(self, "_"+i, kwargs[i])
                     setattr(self, i, kwargs[i])
@@ -169,7 +195,6 @@ init -3 python:
                     setattr(self, "_"+i, None)
                     setattr(self, i, None)
 
-            # dictionary whose keys are layer names and values are lists of images
             self.images = {}
             for i in self.layers:
                 self.images.setdefault(i, [])
@@ -179,15 +204,19 @@ init -3 python:
                         self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace(".png", ""))
 
 
-        def reset_layers(self):
+        def reset_layers(self, pose=True, state=True):
             # reset layers to the default
 
             for i in self.layers:
                 setattr(self, i, getattr(self, "_"+i))
+                if state:
+                    setattr(self, i, None)
+            if pose:
+                self.pose = self._pose
 
 
         @staticmethod
-        def draw_doll(st, at, doll, flatten=False, **kwargs):
+        def draw_doll(st, at, doll, flatten=False, suffix="", **kwargs):
             # Function that is used for dynamic displayable.
 
             doll = getattr(store, doll, None)
@@ -197,11 +226,13 @@ init -3 python:
 
             layers=[]
             folder = doll.folder
+            pose = doll.pose
 
             for layer in doll.layers:
                 item = kwargs.get(layer) or getattr(doll, layer)
+                state = getattr(doll, layer+"_state") or ""
                 if item:
-                    image = "{}/{}/{}.png".format(folder, layer, item)
+                    image = "{}/{}/{}/{}{}.png".format(folder, pose, layer, item, state)
                     if renpy.loadable(image):
                         layers.append(image)
 
@@ -221,7 +252,8 @@ init -3 python:
         If kwargs is given, given file is always used.
         """
 
-        return DynamicDisplayable(Doll.draw_doll, doll, flatten, **kwargs)
+        return DynamicDisplayable(Doll.draw_doll, doll, flatten,
+        **kwargs)
 
 
 ##############################################################################
