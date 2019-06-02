@@ -334,6 +334,14 @@ init -3 python:
                 del self.items[name]
 
 
+        def remove_items(self, items):
+            # remove items
+
+            for i in items.split(","):
+                i = i.strip()
+                self.remove_item(i)
+
+
         def score_item(self, name, score, remove = True):
             # changes score of name
             # if remove is True, item is removed when score reaches 0

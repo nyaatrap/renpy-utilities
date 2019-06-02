@@ -26,7 +26,7 @@
 ## それからドールオブジェクトを Doll(フォルダー名、各ポーズのフォルダー名のリスト、各レイヤーのフォルダー名のリスト、デフォルトの画像)
 ## の形で定義します。各レイヤーの状態を保存できるように、default を使います。
 ## layers のパラメーターを省略すると ["base", "feet", "bottom", "top", "face"] がデフォルトで使われます。
-## デフォルトのポーズは、pose="ファイル名"で指定します。base 以外は省略可能です。
+## デフォルトのポーズは、pose="フォルダー名"で指定します。
 ## デフォルトの画像は、フォルダー名="ファイル名（拡張子なし）"で指定します。base 以外は省略可能です。
 default erin = Doll(folder="erin", poses = ["stand"], layers=["base", "outfit", "face"], pose = "stand", base="base", outfit="dress", face="happy")
 
@@ -70,24 +70,27 @@ label sample_doll:
 
 ## inventory からアイテムを受け取って装備することで、レイヤーを切り替えることもできます。
 ## この機能を使うためには inventory.rpy が必要です。
+define equip_types = ["outfit_bottom", "outfit_top"]
 
 ## まずドールオブジェクトを Doll2(フォルダー名、 レイヤーのリスト、装備タイプのリスト、デフォルトの画像)
 ## で定義します。装備タイプはレイヤー名を使う必要があります。
-default erin2 = Doll2("erin", layers=["base", "bottom", "top", "face"], equip_types = ["bottom", "top"], base="base", face="happy")
+default erin2 = Doll2(folder="erin", poses = ["stand"], layers=["base", "bottom", "top", "face"],
+    equip_types = equip_types, namespace = "item", pose = "stand", base="base", face="happy")
 image erin2 = LayeredDisplayable("erin2")
 
 ## 次にアイテムの保管者を定義します。
 ## getattr は Inventory が見つからない場合にエラーが起きないようにしています。
-default closet = Inventory() if getattr(store, "Inventory", None) else None
+default closet = Inventory(item_types = equip_types, namespace="item") if getattr(store, "Inventory", None) else None
 
-## 各アイテムを Item(名前、装備タイプ、効果) で定義します。item の名前空間も使えます。
-## 装備タイプがフォルダ名、効果がそのフォルダの画像ファイル名になるようにします。
+## 各アイテムを Item(名前、装備タイプ、効果) で namespace の名前空間で定義します。
+## 変更するレイヤー="画像ファイル名"を与えます。
+
 init python:
     if getattr(store, "Item", None):
-        item.pleated_skirt = Item("Pleated Skirt", type="bottom", effect = "pleated_skirt")
-        item.buruma = Item("Buruma", type="bottom", effect = "buruma")
-        item.school_sailor = Item("School Sailer", type="top", effect = "school_sailor")
-        item.gym_shirt = Item("Gym Shirt", type="top", effect = "gym_shirt")
+        item.pleated_skirt = Item("Pleated Skirt", type="outfit_bottom", bottom = "pleated_skirt")
+        item.buruma = Item("Buruma", type="outfit_bottom", bottom = "buruma")
+        item.school_sailor = Item("School Sailer", type="outfit_top", top = "school_sailor")
+        item.gym_shirt = Item("Gym Shirt", type="outfit_top", top = "gym_shirt")
 
 ## 以上で準備完了です。
 
@@ -96,8 +99,8 @@ init python:
 
 label sample_dressup:
 
-    ## item で定義された全てのアイテムを closet に追加
-    $ closet.get_all_items(store.item)
+    ## equip_types に含まれる定義された全てのアイテムを closet に追加
+    $ closet.get_all_items(types=equip_types)
 
     ## 次の命令はロールバックをブロックして、ゲームの全ての変化をセーブできるようにします。
     ## （デフォルトでは現在の入力待ちの開始時点のみをセーブするので必要になります。）
@@ -124,19 +127,18 @@ screen dressup(im, doll, inv):
     # doll
     vbox:
         label "Equipped"
-        for i in doll.equip_types:
+        for i in doll.equipment.item_types:
             hbox:
                 text i yoffset 8
-                if doll.equips.get(i):
-                    $ name = inv.get_item(doll.equips[i]).name
-                    textbutton name action Function(doll.unequip_item, i, inv)
+                for name, score, obj in doll.equipment.get_items():
+                    if obj.type == i:
+                        textbutton "[obj.name]" action Function(doll.unequip_item, name, inv)
 
     # inv
     vbox xalign 1.0:
         label "Closet"
-        for i in inv.items.keys():
-            $ name = inv.get_item(i).name
-            textbutton name action Function(doll.equip_item, i, inv)
+        for name, score, obj in inv.get_items():
+            textbutton "[obj.name]" action Function(doll.equip_item, name, inv)
 
     vbox yalign 1.0:
         textbutton "Auto" action Function(doll.equip_all_items, inv)
@@ -265,76 +267,34 @@ init -2 python:
 
         """
         Class that adds equipments on doll class. It adds following fields:
-        equip_types - layer and type names that can be equipped when inventory system is using.
-        equips - dictionary of {"type": "name"}
+        equipment - an object of Inventory class
+        equip_types is passed to its item_types
+        this inventory can have only one item per each item type
         """
 
-        # Default equipable item types. It's used when item_types are not defined.
-        # デフォルトの装備できるアイテムのタイプを定義します。
-        _equip_types = []
+        def __init__(self, folder="", poses = None, layers = None, pose = None, equip_types = None, namespace = None, **kwargs):
 
-        def __init__(self, folder="", layers = None, equip_types = None, **kwargs):
+            super(Doll2, self).__init__(folder, poses, layers, pose, **kwargs)
 
-            super(Doll2, self).__init__(folder, layers, **kwargs)
-
-            self.equip_types = equip_types or self._equip_types
-
-            # dictionary whose keys are item types and values are item names
-            self.equips = {}
-            for i in self.equip_types:
-                self.equips.setdefault(i, None)
-
-
-        def has_equip(self, name):
-            # returns True if doll equipped this item.
-
-            # check valid name or not
-            Inventory.get_item(name)
-
-            return name in [v for k, v in self.equips.items()]
-
-
-        def has_equips(self, name):
-            # returns True if doll equipped these items.
-            # "a, b, c" means a and b and c, "a | b | c" means a or b or c.
-
-            separator = "|" if name.count("|") else ","
-            names = name.split(separator)
-            for i in names:
-                i = i.strip()
-                if separator == "|" and self.has_equip(i):
-                    return True
-                elif separator == "," and not self.has_equip(i):
-                    return False
-
-            return True if separator == ","  else False
+            self.equip_types = equip_types
+            self.equipment = Inventory(item_types=equip_types, namespace = namespace)
 
 
         def equip_item(self, name, inv):
             # equip an item from inv
 
-            type = inv.get_item(name).type
-
-            if type in self.equip_types:
-
-                if self.equips.get(type):
-                    self.unequip_item(type, inv)
-
-                self.equips[type] = name
-                inv.score_item(name, -1)
-
-                self.update_layers(inv)
+            for i, score, obj in self.equipment.get_items():
+                if obj.type == inv.get_item(name).type:
+                   self.equipment.give_item(i, inv)
+            inv.give_item(name, self.equipment)
+            self.update_layers()
 
 
-        def unequip_item(self, type, inv):
+        def unequip_item(self, name, inv):
             # remove item in this equip type then add this to inv
 
-            if self.equips.get(type):
-
-                inv.score_item(self.equips[type], 1)
-                self.equips[type] = None
-
-                self.update_layers(inv)
+            self.equipment.give_item(name, inv)
+            self.update_layers()
 
 
         def equip_all_items(self, inv):
@@ -345,30 +305,26 @@ init -2 python:
 
             for i in items:
                 obj = inv.get_item(i)
-                if obj.type in self.equip_types and not self.equips.get(obj.type):
+                if obj.type in self.equip_types and not self.equipment.get_items(obj.type):
                     self.equip_item(i, inv)
 
 
         def unequip_all_items(self, inv):
             # remove all items
 
-            for i in self.equip_types:
+            for i in self.equipment.get_items(rv="name"):
                 self.unequip_item(i, inv)
 
 
-        def update_layers(self, inv):
+        def update_layers(self):
             # call this method each time to change layers
 
-            for i in self.layers:
-                if i in self.equip_types:
-                    if self.equips.get(i):
-                        obj = inv.get_item(self.equips.get(i))
-                        if obj.effect:
-                            setattr(self, i, obj.effect)
-                        else:
-                            setattr(self, i, getattr(self, "_"+i))
-                    else:
-                        setattr(self, i, getattr(self, "_"+i))
+            self.reset_layers(False, False)
+
+            for name, score, obj in self.equipment.get_items():
+                for i in self.layers:
+                    if getattr(obj, i, None):
+                        setattr(self, i, getattr(obj, i))
 
 
 
