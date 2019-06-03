@@ -89,6 +89,9 @@ label sample_inventory:
                 $ block()
                 call screen inventory(housewife, buyer=merchant, title="Sell")
 
+            "return":
+                $ renpy.full_restart()
+
 
 ##############################################################################
 ## Definitions

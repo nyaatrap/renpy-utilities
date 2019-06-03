@@ -1,6 +1,7 @@
 ﻿## This file adds Doll class and LayeredDisplayable that provides layered sprites.
 ## 多層レイヤーのスプライトを提供する Doll クラスと LayeredDisplayable を追加するファイルです。
-## Inventory クラスと組み合わせることでドレスアップゲームなども作ることもできます。
+## Doll クラスは Inventory クラスを所有し、所持アイテムに応じて自動的にレイヤーが変化します。
+## Inventory.rpy が必要になります。
 
 ##############################################################################
 ## How to Use
@@ -15,23 +16,30 @@
 #     └stand
 #         ├base
 #         │    └base.png
-#         ├outfit
+#         ├bottom
+#         │    ├dress.png
+#         │    └swimsuit.png
+#         ├top
 #         │    ├dress.png
 #         │    └swimsuit.png
 #         └face
 #             ├happy.png
 #             └angry.png
 
+## まず上のフォルダを反映するように、ポーズとレイヤーのリストを定義しておきます
+define poses = ["stand"]
+define layers=["base", "bottom", "top", "face"]
 
-## それからドールオブジェクトを Doll(フォルダー名、各ポーズのフォルダー名のリスト、各レイヤーのフォルダー名のリスト、デフォルトの画像)
-## の形で定義します。各レイヤーの状態を保存できるように、default を使います。
-## layers のパラメーターを省略すると ["base", "feet", "bottom", "top", "face"] がデフォルトで使われます。
+## それからドールオブジェクトを Doll(image, folder, poses, layers, デフォルトのポーズ、デフォルトの画像) の形で default で定義します。
+## image は下で定義する image のタグになります。
 ## デフォルトのポーズは、pose="フォルダー名"で指定します。
 ## デフォルトの画像は、フォルダー名="ファイル名（拡張子なし）"で指定します。base 以外は省略可能です。
-default erin = Doll(folder="erin", poses = ["stand"], layers=["base", "outfit", "face"], pose = "stand", base="base", outfit="dress", face="happy")
+default erin = Doll(image="erin", folder="erin", poses = poses, layers= layers,
+    pose = "stand", base="base", bottom="buruma", top="gym_shirt", face="happy")
 
-## 次に、さきほど定義したドールオブジェクトを""で囲み LayeredDisplayable に渡して画像を定義します。
-image erin auto= LayeredDisplayable("erin")
+
+## 次に、上で定義するドールオブジェクトを""で囲み LayeredDisplayable に渡して画像を定義します。
+image erin = LayeredDisplayable("erin")
 
 ## layer="画像" を指定すると、各レイヤーの状態が固定されます。
 image erin happy= LayeredDisplayable("erin", face="happy")
@@ -44,18 +52,23 @@ image erin angry= LayeredDisplayable("erin", face="angry")
 
 label sample_doll:
     ## ゲームがスタートしたら、 イメージで定義した画像を表示します。
-    show erin auto
+    show erin
     pause
 
     ## 表示した画像は $ doll.layer = "filename" の形で、各レイヤーの画像を切り変えることができます。
     ## 下の例では outfit レイヤーの画像を "dress.png", face レイヤーの画像を "angry.png" に変更します。
-    $ erin.outfit = "dress"
+    $ erin.top = "school_sailor"
     $ erin.face = "angry"
     pause
 
     ## 同じタグの画像を別に定義しておけば、dissolve で表情変化をさせることが出来ます。
     show erin happy
     with dissolve
+    pause
+
+    ## 属性を渡さない場合は元の画像に戻ります。
+    show erin:
+        ease .5 xalign 0.0
     pause
 
     ## reset_layers() でデフォルトの状態に戻します。
@@ -70,27 +83,26 @@ label sample_doll:
 
 ## inventory からアイテムを受け取って装備することで、レイヤーを切り替えることもできます。
 ## この機能を使うためには inventory.rpy が必要です。
-define equip_types = ["outfit_bottom", "outfit_top"]
 
-## まずドールオブジェクトを Doll2(フォルダー名、 レイヤーのリスト、装備タイプのリスト、デフォルトの画像)
-## で定義します。装備タイプはレイヤー名を使う必要があります。
-default erin2 = Doll2(folder="erin", poses = ["stand"], layers=["base", "bottom", "top", "face"],
+## まず、装備可能なアイテムのカテゴリーを定義しておきます。
+define equip_types = ["bottom", "top"]
+
+## ドールオブジェクトを Doll(image, folder, poses, layers, equip_types, namespace, デフォルトのポーズ、デフォルトの画像)
+default erin2 = Doll(image = "erin2", folder="erin", poses = ["stand"], layers=["base", "bottom", "top", "face"],
     equip_types = equip_types, namespace = "item", pose = "stand", base="base", face="happy")
 image erin2 = LayeredDisplayable("erin2")
 
 ## 次にアイテムの保管者を定義します。
-## getattr は Inventory が見つからない場合にエラーが起きないようにしています。
-default closet = Inventory(item_types = equip_types, namespace="item") if getattr(store, "Inventory", None) else None
+default closet = Inventory(item_types = equip_types, namespace="item")
 
 ## 各アイテムを Item(名前、装備タイプ、効果) で namespace の名前空間で定義します。
 ## 変更するレイヤー="画像ファイル名"を与えます。
 
 init python:
-    if getattr(store, "Item", None):
-        item.pleated_skirt = Item("Pleated Skirt", type="outfit_bottom", bottom = "pleated_skirt")
-        item.buruma = Item("Buruma", type="outfit_bottom", bottom = "buruma")
-        item.school_sailor = Item("School Sailer", type="outfit_top", top = "school_sailor")
-        item.gym_shirt = Item("Gym Shirt", type="outfit_top", top = "gym_shirt")
+    item.pleated_skirt = Item("Pleated Skirt", type="bottom", bottom = "pleated_skirt")
+    item.buruma = Item("Buruma", type="bottom", bottom = "buruma")
+    item.school_sailor = Item("School Sailer", type="top", top = "school_sailor")
+    item.gym_shirt = Item("Gym Shirt", type="top", top = "gym_shirt")
 
 ## 以上で準備完了です。
 
@@ -106,8 +118,8 @@ label sample_dressup:
     ## （デフォルトでは現在の入力待ちの開始時点のみをセーブするので必要になります。）
     $ block()
 
-    ## dressup スクリーンを（"画像"、ドール、保管者）で呼び出します。
-    call screen dressup("erin2", erin2, closet)
+    ## dressup スクリーンを（ドール、保管者）で呼び出します。
+    call screen dressup(erin2, closet)
 
     show erin2
 
@@ -119,20 +131,19 @@ label sample_dressup:
 ##############################################################################
 ## Dressup screen
 
-screen dressup(im, doll, inv):
+screen dressup(doll, inv):
 
     # image
-    add im at center
+    add doll.image at center
 
     # doll
     vbox:
         label "Equipped"
-        for i in doll.equipment.item_types:
+        for i in doll.equip_types:
             hbox:
                 text i yoffset 8
-                for name, score, obj in doll.equipment.get_items():
-                    if obj.type == i:
-                        textbutton "[obj.name]" action Function(doll.unequip_item, name, inv)
+                for name, score, obj in doll.equipment.get_items(types=[i]):
+                    textbutton "[obj.name]" action Function(doll.unequip_item, name, inv)
 
     # inv
     vbox xalign 1.0:
@@ -160,10 +171,12 @@ init -3 python:
         """
         class that stores equips and layer information. It has the following fields:
 
+        image - image tag that this object linked to.
         folder - folder name that this doll's images are stored.
         poses - folder names that this doll's each layer group are store
         pose - current pose that determines which layer group is used.
         layers - folder names that this doll's each layer image are stored.
+        substitution - dictionary {"pose1":"pose2"}. if images are not found in pose1, it searches in pose2.
         images - dictionary whose keys are layer names and values are lists of images
 
         It also has fields as same as layer names. For example, self.base=None
@@ -171,6 +184,10 @@ init -3 python:
         if also has state property of each layer. For example, self.base_state=None
         if layer_state is not None, it used as suffix of filename.
         These field values are filenames of each layer.
+
+        equipment - an object of Inventory class
+            this inventory can have only one item per each item type
+        equip_types is passed to its item_types
         """
 
         # Define default layers from bottom.
@@ -179,13 +196,20 @@ init -3 python:
         _layers = ["base", "feet", "bottom", "top", "face"]
 
 
-        def __init__(self, folder="", poses = None, layers = None, pose = None, **kwargs):
+        def __init__(self, image = "",folder="", poses = None, layers = None, pose = None, substitution = None,
+            equip_types = None, namespace = None, **kwargs):
 
+            self.image = image
             self.folder = folder
             self.poses = poses or self._poses
             self.layers = layers or self._layers
             self._pose = pose or self._poses[0]
             self.pose = self._pose
+            self.substitution = None
+
+            if equip_types:
+                self.equip_types = equip_types
+                self.equipment = Inventory(item_types=equip_types, namespace = namespace)
 
             # set default image on each layer
             for i in self.layers:
@@ -206,92 +230,55 @@ init -3 python:
                         self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace(".png", ""))
 
 
-        def reset_layers(self, pose=True, state=True):
+        def get_center(self, doll=None, width=None, height=None, layer='master'):
+            tag = doll.image if doll else self.image
+            rv = renpy.get_image_bounds(tag, width, height, layer)
+            if rv:
+                x, y, width, height = rv
+                return int((x+width)/2), int((y+height)/2)
+
+
+        def get_distance(self, target, doll=None, width=None, height=None, layer='master'):
+            doll = doll or self
+            pos1 = self.get_center(doll, width, height, layer)
+            pos2 = self.get_center(target, width, height, layer)
+            if pos1 and pos2:
+                return pos2[0]-pos1[0], pos2[1]-pos1[1]
+
+
+        def reset_layers(self, reset_pose=True, reset_state=True):
             # reset layers to the default
 
             for i in self.layers:
                 setattr(self, i, getattr(self, "_"+i))
-                if state:
-                    setattr(self, i, None)
-            if pose:
+                if reset_state:
+                    setattr(self, i+"_state", None)
+            if reset_pose:
                 self.pose = self._pose
 
 
-        @staticmethod
-        def draw_doll(st, at, doll, flatten=False, suffix="", **kwargs):
-            # Function that is used for dynamic displayable.
-
-            doll = getattr(store, doll, None)
-
-            if not doll:
-                return Null(), None
-
-            layers=[]
-            folder = doll.folder
-            pose = doll.pose
-
-            for layer in doll.layers:
-                item = kwargs.get(layer) or getattr(doll, layer)
-                state = getattr(doll, layer+"_state") or ""
-                if item:
-                    image = "{}/{}/{}/{}{}.png".format(folder, pose, layer, item, state)
-                    if renpy.loadable(image):
-                        layers.append(image)
-
-            if flatten:
-                return Flatten(Fixed(*layers, fit_first=True)), None
-            else:
-                return Fixed(*layers, fit_first=True), None
+        def reset_state(self, name):
+            for i in self.layers:
+                if getattr(self.equipment.get_item(name), i, None):
+                    setattr(self, i+"_state", None)
 
 
-##############################################################################
-## Displayable
-
-    def LayeredDisplayable(doll, flatten =False, **kwargs):
-        """
-        Function that returns displayable that composite image files.
-        If flatten is true, image is flatten to render alpha properly.
-        If kwargs is given, given file is always used.
-        """
-
-        return DynamicDisplayable(Doll.draw_doll, doll, flatten,
-        **kwargs)
-
-
-##############################################################################
-## Doll2 class
-
-init -2 python:
-
-    class Doll2(Doll):
-
-        """
-        Class that adds equipments on doll class. It adds following fields:
-        equipment - an object of Inventory class
-        equip_types is passed to its item_types
-        this inventory can have only one item per each item type
-        """
-
-        def __init__(self, folder="", poses = None, layers = None, pose = None, equip_types = None, namespace = None, **kwargs):
-
-            super(Doll2, self).__init__(folder, poses, layers, pose, **kwargs)
-
-            self.equip_types = equip_types
-            self.equipment = Inventory(item_types=equip_types, namespace = namespace)
-
-
-        def equip_item(self, name, inv):
+        def equip_item(self, name, inv, reset_state=True):
             # equip an item from inv
 
             for i, score, obj in self.equipment.get_items():
                 if obj.type == inv.get_item(name).type:
-                   self.equipment.give_item(i, inv)
+                   self.unequip_item(i, inv, reset_state)
+
             inv.give_item(name, self.equipment)
             self.update_layers()
 
 
-        def unequip_item(self, name, inv):
+        def unequip_item(self, name, inv, reset_state=True):
             # remove item in this equip type then add this to inv
+
+            if reset_state:
+                self.reset_state(name)
 
             self.equipment.give_item(name, inv)
             self.update_layers()
@@ -316,15 +303,60 @@ init -2 python:
                 self.unequip_item(i, inv)
 
 
-        def update_layers(self):
+        def update_layers(self, reset_pose=False, reset_state=False):
             # call this method each time to change layers
 
-            self.reset_layers(False, False)
+            self.reset_layers(reset_pose, reset_state)
 
             for name, score, obj in self.equipment.get_items():
                 for i in self.layers:
                     if getattr(obj, i, None):
                         setattr(self, i, getattr(obj, i))
 
+
+        @staticmethod
+        def draw_doll(st, at, doll, flatten=False, **kwargs):
+            # Function that is used for dynamic displayable.
+
+            doll = getattr(store, doll, None)
+
+            if not doll:
+                return Null(), None
+
+            layers=[]
+            folder = doll.folder
+            pose = doll.pose
+
+            for layer in doll.layers:
+                item = kwargs.get(layer) or getattr(doll, layer)
+                state = getattr(doll, layer+"_state") or ""
+                if item:
+                    image = "{}/{}/{}/{}{}.png".format(folder, pose, layer, item, state)
+                    if renpy.loadable(image):
+                        layers.append(image)
+                    elif pose in doll.substitution.keys():
+                        sb = doll.substitution[pose]
+                        image = "{}/{}/{}/{}{}.png".format(folder, sb, layer, item, state)
+                        if renpy.loadable(image):
+                            layers.append(image)
+
+
+            if flatten:
+                return Flatten(Fixed(*layers, fit_first=True)), None
+            else:
+                return Fixed(*layers, fit_first=True), None
+
+
+##############################################################################
+## Displayable
+
+    def LayeredDisplayable(doll, flatten =False, **kwargs):
+        """
+        Function that returns displayable that composite image files.
+        If flatten is true, image is flatten to render alpha properly.
+        If kwargs is given, given file is always used.
+        """
+
+        return DynamicDisplayable(Doll.draw_doll, doll, flatten, **kwargs)
 
 
