@@ -9,20 +9,24 @@
 ## まず最初に、管理するアイテムのタイプのリストを作成します。
 define item_types = ["supply", "food", "outfit"]
 
-## それからアイテムの管理者を Inventory(currency, tradein, infinite, item_types, namespace) で定義します。
-## currency は所持金、tradein はその所持者が下取りする時の価格比です。
-## infinite を True にすると所持金と在庫が無限になります。
+## それからアイテムの管理者を Inventory(currency, item_types, namespace, tradein, infinite) で定義します。
+## currency は所持金です。
+## tradein はその所持者が下取りする時の価格比です。
+## infinite を True にすると所持金が無限になります。
+## recharge を True にすると、常に在庫が補充されます。
+## removable を False にすると、在庫がゼロになってもアイテム覧から消去されません。
 ## item_types は上で定義したアイテムタイプのリストで、アイテム画面でのカテゴリー分けに使用します。
 ## カテゴリーに合わないタイプのアイテムも入手可能ですが、画面には表示されません。
 ## namespace を設定すると、その管理者が扱うアイテムを名前空間ごとに分けることが出来ます。
 
 default housewife = Inventory(currency=1000, item_types = item_types, namespace = "item")
-default merchant = Inventory(tradein=.25, infinite=True, item_types = item_types, namespace = "item")
+default merchant = Inventory(currency=0, item_types = item_types, namespace = "item", tradein=.25, infinite=True, recharge=True, removable=False)
 
 
-## 各アイテムを Item(name, type, value, score, cost, order, prereqs, info) で定義します。
+## 各アイテムを Item(name, type, value, score, max_score, cost, order, prereqs, info) で定義します。
 ## name は表示される名前、type はカテゴリー、value は価格です。
 ## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
+## max_score は所持できるアイテムの最大数で、省略すると無限大になります(=0)。
 ## cost が 1（デフォルト）の場合、アイテム使用時に個数が一つ減ります。
 ## order はデフォルトのソート順を決めたい時に使います。
 ## prereqs はそのアイテムを購入するときに消費するアイテムです。
@@ -48,18 +52,21 @@ label sample_inventory:
     $ merchant.get_all_items()
 
     ## 他に以下のメソッドがあります。
-    ## add_items(items) - "a,b,c" のように複数のアイテム名与えると、その全てのアイテムを追加できます。
     ## has_item(item) - 所持していれば True を返します。
     ## count_item(item) - 所持している合計の個数を返します。
-    ## remove_item(item) - 所持していれば、そのアイテムを奪います。
+    ## charge_item(item) - 所持しているアイテムを最大数までチャージします。
+    ## charge_all_items() - 所持しているすべてのアイテムを最大数までチャージします。
+    ## add_items(items, score) - "a,b,c" のように複数のアイテム名与えると、その全てのアイテムを追加できます。
+    ## remove_item(item) - 所持していれば、そのアイテムを消去します。
+    ## remove_items(items) - "a,b,c" のように複数のアイテム名与えると、所持していれば、そのアイテムを消去します。
     ## score_item(item, score) - 所持している個数を変更します。
-    ## buy_item(item, score) - 所持金が足りていれば、それを消費してアイテムを追加します。
+    ## buy_item(item, score) - 所持金と要求アイテムが足りていれば、それを消費してアイテムを追加します。
     ## can_buy_item(item, score) - アイテムが購入可能かどうか調べます。
-    ## sell_item(item, buyer) - アイテムを buyer に売却し、所持金を受け取ります。
-    ## give_item(item, getter) - アイテムを getter に渡します。
+    ## sell_item(item, buyer, score) - アイテムを buyer に売却し、所持金を受け取ります。
+    ## give_item(item, getter, score) - アイテムを getter に渡します。
     ## use_item(item, target, cost="cost") - アイテムを target に使用します。効果は各アイテムごと定義してください。
     ## can_use_item(item, target, cost="cost") - アイテムが使用可能かどうか調べます。アイテムごとに定義してください。
-    ## get_items(score, types) - score 以上で types に含まれるアイテムのリストを (name, score, obj) のタプルで返します。
+    ## get_items(types, score) - score 以上で types に含まれるアイテムのリストを (name, score, obj) のタプルで返します。
 
 
     while True:
@@ -225,23 +232,26 @@ init -3 python:
         """
         Class that stores items. It has following fields:
 
-        currency - score of money this object has
+        currency - score of money this object has.
         tradein - when someone buyoff items to this inventory, value is reduced by this value
-        infinite - if true, its currency and amont of items are infinite, like NPC merchant.
         item_types - list of item type that are grouped up as tab in the inventory screen.
-        namespace - if give, items defined in this name space are used
+        namespace - if given, items defined in this name space are used
+        infinite - if True, minimum sore is pinned at 1.
+        removable = if False, an item is removed when score reached at 0.
         items - dictionary of {"item name": score}.
         selected - selected slot in a current screen.
         """
 
 
-        def __init__(self, currency = 0, tradein = 1.0, infinite = False, item_types=None, namespace=None):
+        def __init__(self, currency = 0, item_types=[], namespace=None, tradein = 1.0, infinite = False, recharge=False, removable = True):
 
             self.currency = int(currency)
-            self.tradein = float(tradein)
-            self.infinite = infinite
             self.item_types = item_types
             self.namespace = getattr(store, namespace) if namespace else store
+            self.tradein = float(tradein)
+            self.infinite = infinite
+            self.recharge = recharge
+            self.removable = removable
             self.items = OrderedDict()
             self.selected = None
 
@@ -292,7 +302,7 @@ init -3 python:
                 return self.items[name]
 
 
-        def get_items(self, score=None, types = None, rv=None):
+        def get_items(self, types = None, score=None, rv=None):
             # returns list of (name, score, object) tuple in conditions
             # if rv is "name" or "obj", it returns them.
 
@@ -310,24 +320,46 @@ init -3 python:
             return  [(i, self.items[i], self.get_item(i)) for i in items]
 
 
+        def charge_item(self, name):
+            # changes score of name to its maximum value
+
+            if self.has_item(name):
+                self.items[name] = max(self.get_item(name).max_score, 1)
+
+
+        def charge_all_items(self):
+            # charges all items it has.
+
+            for i in self.items.keys():
+                self.charge_item(i)
+
+
         def add_item(self, name, score = None):
             # add an item
             # if score is given, this score is used instead of item's default value.
 
             score = score or self.get_item(name).score
+            max_score = self.get_item(name).max_score
 
             if self.has_item(name):
                 self.items[name] += score
             else:
                 self.items[name] = score
 
+            if max_score > 0:
+                self.items[name] = min(self.items[name], max_score)
 
-        def add_items(self, items):
+            if self.recharge:
+                self.charge_item(name)
+
+
+        def add_items(self, items, score=None):
             # add items
 
             for i in items.split(","):
                 i = i.strip()
-                self.add_item(i)
+                score = score or self.get_item(i).score
+                self.add_item(i, score=score)
 
 
         def remove_item(self, name):
@@ -345,12 +377,12 @@ init -3 python:
                 self.remove_item(i)
 
 
-        def score_item(self, name, score, remove = True):
+        def score_item(self, name, score):
             # changes score of name
             # if remove is True, item is removed when score reaches 0
 
             self.add_item(name, score)
-            if remove and self.items[name] <= 0:
+            if self.removable and self.items[name] <= 0:
                 self.remove_item(name)
 
 
@@ -362,7 +394,7 @@ init -3 python:
             value = self.get_item(name).value*score
             prereqs = self.get_item(name).prereqs
 
-            if not self.infinite and self.currency >= value:
+            if self.infinite or self.currency >= value:
 
                 if prereqs:
                     for k,v in prereqs.items():
@@ -372,11 +404,13 @@ init -3 python:
                         self.add_item(name, score)
                         for k,v in prereqs.items():
                             self.score_item(k, score=-v*score)
-                        self.currency -= value
+                        if not self.infinite:
+                            self.currency -= value
 
                 else:
                     self.add_item(name, score)
-                    self.currency -= value
+                    if not self.infinite:
+                        self.currency -= value
 
 
         def can_buy_item(self, name, score = None, prereqs=True):
@@ -400,29 +434,31 @@ init -3 python:
             return True
 
 
-        def sell_item(self, name, buyer, prereqs=True):
+        def sell_item(self, name, buyer, score = None, prereqs=True):
             # remove an item then add this item to buyer for money
 
             if self.has_item(name):
 
-                score = self.get_item(name).score if self.infinite else self.items[name]
+                score = score or self.get_item(name).score
                 value = self.get_item(name).value*score
 
                 buyer.buy_item(name, score, prereqs)
 
                 if buyer.infinite or buyer.currency >= value:
+                    self.score_item(name, score=-score)
                     if not self.infinite:
                         self.currency += int(value*buyer.tradein)
-                        self.remove_item(name)
 
 
-        def give_item(self, name, getter):
+        def give_item(self, name, getter, score=None):
             # remove an item slot then add this name to getter
 
-            if self.has_item(name):
+            score = score or self.get_item(name).score
 
-                getter.add_items(name)
-                self.remove_items(name)
+            if self.has_item(name, score):
+
+                getter.score_item(name, score)
+                self.score_item(name, -score)
 
 
         def replace_items(self, first, second):
@@ -457,7 +493,7 @@ init -3 python:
             self.items = OrderedDict(items)
 
 
-        def get_all_items(self, types=None, sort="order"):
+        def get_all_items(self, types=None, charge=True, sort="order"):
             # get all Item objects defined under namespace
 
             types = types or self.item_types
@@ -465,7 +501,9 @@ init -3 python:
             for i in dir(self.namespace):
                 if isinstance(getattr(self.namespace, i), Item):
                     if self.get_item(i).type in types:
-                       self.add_item(i)
+                        self.add_item(i)
+                        if charge:
+                            self.charge_item(i)
 
             self.sort_items(order=sort)
 
@@ -480,7 +518,7 @@ init -3 python:
             if cost=="cost" and obj.cost:
                 self.score_item(name, -obj.cost)
 
-            elif cost=="value" and obj.value:
+            elif cost=="value" and obj.value and not self.infinite:
                 self.currency -= value
 
 
@@ -491,7 +529,7 @@ init -3 python:
 
             if cost=="cost" and self.count_item(name) > obj.score:
                 return False
-            elif cost=="value" and self.currency > obj.value:
+            elif cost=="value" and self.currency > obj.value and not self.infinite:
                 return False
 
             return True
@@ -509,6 +547,7 @@ init -3 python:
         type - item category
         value - price that is used for trading
         score - default amount of item when it's added into inventory
+        max_score - maximum score. Score higher than this is ignored. 0 is infinite.
         cost - if not zero, using this item reduces score.
         order - if integer is given, item can be sorted by this number.
         prereqs - required items to buy. This should be given in strings like "itemA:1, itemB:2"
@@ -516,12 +555,13 @@ init -3 python:
         """
 
 
-        def __init__(self, name="", type="", value=0, score=1, cost=1, order=0, prereqs=None, info="", **kwargs):
+        def __init__(self, name="", type="", value=0, score=1, max_score = 0, cost=1, order=0, prereqs=None, info="", **kwargs):
 
             self.name = name
             self.type = type
             self.value = int(value)
             self.score = int(score)
+            self.max_score = int(max_score)
             self.cost = int(cost)
             self.order = int(order)
 
