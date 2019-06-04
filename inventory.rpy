@@ -9,18 +9,18 @@
 ## まず最初に、管理するアイテムのタイプのリストを作成します。
 define item_types = ["supply", "food", "outfit"]
 
-## それからアイテムの管理者を Inventory(currency, item_types, namespace, tradein, infinite) で定義します。
+## それからアイテムの管理者を Inventory(currency, item_types, namespace, tradein, infinite, recharge, removable) で定義します。
 ## currency は所持金です。
+## item_types は上で定義したアイテムタイプのリストで、アイテム画面でのカテゴリー分けに使用します。
+## カテゴリーに合わないタイプのアイテムも入手可能ですが、画面には表示されません。
+## namespace を設定すると、その管理者が扱うアイテムを名前空間ごとに分けることが出来ます。
 ## tradein はその所持者が下取りする時の価格比です。
 ## infinite を True にすると所持金が無限になります。
 ## recharge を True にすると、常に在庫が補充されます。
 ## removable を False にすると、在庫がゼロになってもアイテム覧から消去されません。
-## item_types は上で定義したアイテムタイプのリストで、アイテム画面でのカテゴリー分けに使用します。
-## カテゴリーに合わないタイプのアイテムも入手可能ですが、画面には表示されません。
-## namespace を設定すると、その管理者が扱うアイテムを名前空間ごとに分けることが出来ます。
 
 default housewife = Inventory(currency=1000, item_types = item_types, namespace = "item")
-default merchant = Inventory(currency=0, item_types = item_types, namespace = "item", tradein=.25, infinite=True, recharge=True, removable=False)
+default merchant = Inventory(item_types = item_types, namespace = "item", tradein=.25, infinite=True, recharge=True, removable=False)
 
 
 ## 各アイテムを Item(name, type, value, score, max_score, cost, order, prereqs, info) で定義します。
@@ -233,12 +233,13 @@ init -3 python:
         Class that stores items. It has following fields:
 
         currency - score of money this object has.
-        tradein - when someone buyoff items to this inventory, value is reduced by this value
         item_types - list of item type that are grouped up as tab in the inventory screen.
         namespace - if given, items defined in this name space are used
-        infinite - if True, minimum sore is pinned at 1.
-        removable = if False, an item is removed when score reached at 0.
-        items - dictionary of {"item name": score}.
+        tradein - when someone buyoff items to this inventory, value is reduced by this value
+        infinite - if True, currency is infinite.
+        recharge - if True, an item score is charged at max_score (or 1) when its score is changed
+        removable = if False, an item is not removed when score reached at 0.
+        items - ordered dictionary of {"item name": score}.
         selected - selected slot in a current screen.
         """
 
@@ -328,7 +329,7 @@ init -3 python:
 
 
         def charge_all_items(self):
-            # charges all items it has.
+            # charges all items in self.items.
 
             for i in self.items.keys():
                 self.charge_item(i)
@@ -379,7 +380,6 @@ init -3 python:
 
         def score_item(self, name, score):
             # changes score of name
-            # if remove is True, item is removed when score reaches 0
 
             self.add_item(name, score)
             if self.removable and self.items[name] <= 0:

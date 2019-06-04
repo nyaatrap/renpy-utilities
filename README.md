@@ -35,11 +35,12 @@ This file provides inventory system.
 アイテムの売買や管理を行う機能を追加するファイルです。
 スキルやクエストなど様々な要素の管理にも汎用的に使えます。
 
-## dressup.rpy (wip)
+## dressup.rpy
 This file adds Doll class and LayeredDisplayable that provides layered sprites.
 
 多層レイヤーのスプライトを提供する Doll クラスと LayeredDisplayable を追加するファイルです。
-Inventory クラスと組み合わせることでドレスアップゲームなども作ることもできます。
+Doll クラスは Inventory クラスを所有し、所持アイテムに応じて自動的にレイヤーが変化します。
+Inventory.rpy が必要になります。
 
 ## arena.rpy (wip)
 This file defines Actor and Arena class to add turn-based combat and competition.
