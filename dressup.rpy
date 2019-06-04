@@ -87,22 +87,25 @@ label sample_doll:
 ## まず、装備可能なアイテムのカテゴリーを定義しておきます。
 define equip_types = ["bottom", "top"]
 
-## ドールオブジェクトを Doll(image, folder, poses, layers, equip_types, namespace, デフォルトのポーズ、デフォルトの画像)
-default erin2 = Doll(image = "erin2", folder="erin", poses = ["stand"], layers=["base", "bottom", "top", "face"],
-    equip_types = equip_types, namespace = "item", pose = "stand", base="base", face="happy")
-image erin2 = LayeredDisplayable("erin2")
-
-## 次にアイテムの保管者を定義します。
-default closet = Inventory(item_types = equip_types, namespace="item")
-
-## 各アイテムを Item(名前、装備タイプ、効果) で namespace の名前空間で定義します。
-## 変更するレイヤー="画像ファイル名"を与えます。
+## 次に各アイテム namespace.itemname = Item(名前、装備タイプ) で定義します。
+## doll に与える namespace の名前空間で定義する必要があります。
+## 各プロパティーには、変更するレイヤー="画像ファイル名"を与えます。
 
 init python:
     item.pleated_skirt = Item("Pleated Skirt", type="bottom", bottom = "pleated_skirt")
     item.buruma = Item("Buruma", type="bottom", bottom = "buruma")
     item.school_sailor = Item("School Sailer", type="top", top = "school_sailor")
     item.gym_shirt = Item("Gym Shirt", type="top", top = "gym_shirt")
+
+
+## ドールオブジェクトを Doll(image, folder, poses, layers, equip_types, namespace, items, デフォルトのポーズ、デフォルトの画像) で定義します。
+default erin2 = Doll(image = "erin2", folder="erin", poses = ["stand"], layers=["base", "bottom", "top", "face"],
+    equip_types = equip_types, namespace = "item", pose = "stand", base="base", face="happy")
+image erin2 = LayeredDisplayable("erin2")
+
+## 最後にアイテムの保管者を定義します。
+default closet = Inventory(item_types = equip_types, namespace="item")
+
 
 ## 以上で準備完了です。
 
@@ -164,7 +167,7 @@ screen dressup(doll, inv):
 ##############################################################################
 ## Doll class
 
-init -3 python:
+init -5 python:
 
     class Doll(object):
 
@@ -180,7 +183,7 @@ init -3 python:
         images - dictionary whose keys are layer names and values are lists of images
 
         It also has fields as same as layer names. For example, self.base=None
-        default values are stored in _layername. For example, self._base=None
+        default values are stored in default_layername. For example, self.default_base=None
         if also has state property of each layer. For example, self.base_state=None
         if layer_state is not None, it used as suffix of filename.
         These field values are filenames of each layer.
@@ -197,7 +200,7 @@ init -3 python:
 
 
         def __init__(self, image = "",folder="", poses = None, layers = None, pose = None, substitution = None,
-            equip_types = None, namespace = None, **kwargs):
+            equip_types = None, namespace = None, items=None, **kwargs):
 
             self.image = image
             self.folder = folder
@@ -207,18 +210,17 @@ init -3 python:
             self.pose = self._pose
             self.substitution = None
 
-            if equip_types:
-                self.equip_types = equip_types
-                self.equipment = Inventory(item_types=equip_types, namespace = namespace)
+            self.equip_types = equip_types or None
+            self.equipment = Inventory(item_types=equip_types, namespace = namespace, items=items) if equip_types else None
 
             # set default image on each layer
             for i in self.layers:
                 setattr(self, i+"_state", None)
                 if i in kwargs.keys():
-                    setattr(self, "_"+i, kwargs[i])
+                    setattr(self, "default_"+i, kwargs[i])
                     setattr(self, i, kwargs[i])
                 else:
-                    setattr(self, "_"+i, None)
+                    setattr(self, "default_"+i, None)
                     setattr(self, i, None)
 
             self.images = {}
@@ -228,6 +230,8 @@ init -3 python:
                 for j in self.layers:
                     if self.folder and i.startswith(self.folder+"/"+j):
                         self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace(".png", ""))
+
+            self.update_layers()
 
 
         def get_center(self, doll=None, width=None, height=None, layer='master'):
@@ -250,17 +254,18 @@ init -3 python:
             # reset layers to the default
 
             for i in self.layers:
-                setattr(self, i, getattr(self, "_"+i))
+                setattr(self, i, getattr(self, "default_"+i))
                 if reset_state:
-                    setattr(self, i+"_state", None)
+                    self.reset_state
             if reset_pose:
                 self.pose = self._pose
 
 
         def reset_state(self, name):
-            for i in self.layers:
-                if getattr(self.equipment.get_item(name), i, None):
-                    setattr(self, i+"_state", None)
+            if self.equipment:
+                for i in self.layers:
+                    if getattr(self.equipment.get_item(name), i, None):
+                        setattr(self, i+"_state", None)
 
 
         def equip_item(self, name, inv, reset_state=True):
@@ -308,10 +313,11 @@ init -3 python:
 
             self.reset_layers(reset_pose, reset_state)
 
-            for name, score, obj in self.equipment.get_items():
-                for i in self.layers:
-                    if getattr(obj, i, None):
-                        setattr(self, i, getattr(obj, i))
+            if self.equipment:
+                for name, score, obj in self.equipment.get_items():
+                    for i in self.layers:
+                        if getattr(obj, i, None):
+                            setattr(self, i, getattr(obj, i))
 
 
         @staticmethod

@@ -9,7 +9,23 @@
 ## まず最初に、管理するアイテムのタイプのリストを作成します。
 define item_types = ["supply", "food", "outfit"]
 
-## それからアイテムの管理者を Inventory(currency, item_types, namespace, tradein, infinite, recharge, removable) で定義します。
+## それから各アイテムを Item(name, type, value, score, max_score, cost, order, prereqs, info) で定義します。
+## name は表示される名前、type はカテゴリー、value は価格です。
+## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
+## max_score は所持できるアイテムの最大数で、省略すると無限大になります(=0)。
+## cost が 1（デフォルト）の場合、アイテム使用時に個数が一つ減ります。
+## order はデフォルトのソート順を決めたい時に使います。
+## prereqs はそのアイテムを購入するときに消費するアイテムです。
+## info はマウスフォーカスした時に表示される情報です。
+## inventory に与える namespace の名前空間で定義する必要があります。
+
+define item.apple = Item("Apple", type="food", value=10, info="apple")
+define item.orange = Item("Orange", type="food", value=20, info="orange")
+define item.knife = Item("Knife", type="supply", value=50, info="knife")
+define item.dress = Item("Dress", type="outfit", value=100, info="dress")
+define item.juice = Item("Juice", type="food", value=30, prereqs="orange:1, apple:2", info="It requires two oranges and one apple")
+
+## 最後にアイテムの管理者を Inventory(currency, item_types, namespace, tradein, infinite, recharge, removable, items) で定義します。
 ## currency は所持金です。
 ## item_types は上で定義したアイテムタイプのリストで、アイテム画面でのカテゴリー分けに使用します。
 ## カテゴリーに合わないタイプのアイテムも入手可能ですが、画面には表示されません。
@@ -21,23 +37,6 @@ define item_types = ["supply", "food", "outfit"]
 
 default housewife = Inventory(currency=1000, item_types = item_types, namespace = "item")
 default merchant = Inventory(item_types = item_types, namespace = "item", tradein=.25, infinite=True, recharge=True, removable=False)
-
-
-## 各アイテムを Item(name, type, value, score, max_score, cost, order, prereqs, info) で定義します。
-## name は表示される名前、type はカテゴリー、value は価格です。
-## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
-## max_score は所持できるアイテムの最大数で、省略すると無限大になります(=0)。
-## cost が 1（デフォルト）の場合、アイテム使用時に個数が一つ減ります。
-## order はデフォルトのソート順を決めたい時に使います。
-## prereqs はそのアイテムを購入するときに消費するアイテムです。
-## info はマウスフォーカスした時に表示される情報です。
-## inventory で与えた namespace の名前空間で定義する必要があります。
-
-define item.apple = Item("Apple", type="food", value=10, info="apple")
-define item.orange = Item("Orange", type="food", value=20, info="orange")
-define item.knife = Item("Knife", type="supply", value=50, info="knife")
-define item.dress = Item("Dress", type="outfit", value=100, info="dress")
-define item.juice = Item("Juice", type="food", value=30, prereqs="orange:1, apple:2", info="It requires two oranges and one apple")
 
 
 ## ゲームがスタートしたら jump sample_inventory でここに飛んでください。
@@ -223,7 +222,7 @@ style item_button:
 ##############################################################################
 ## Inventory class.
 
-init -3 python:
+init -10 python:
 
     from collections import OrderedDict
 
@@ -244,16 +243,18 @@ init -3 python:
         """
 
 
-        def __init__(self, currency = 0, item_types=[], namespace=None, tradein = 1.0, infinite = False, recharge=False, removable = True):
+        def __init__(self, currency = 0, item_types= None, namespace=None, tradein = 1.0, infinite = False, recharge=False, removable = True, items=None):
 
             self.currency = int(currency)
-            self.item_types = item_types
+            self.item_types = item_types or []
             self.namespace = getattr(store, namespace) if namespace else store
             self.tradein = float(tradein)
             self.infinite = infinite
             self.recharge = recharge
             self.removable = removable
             self.items = OrderedDict()
+            if items:
+                self.add_items(items)
             self.selected = None
 
 
@@ -508,7 +509,7 @@ init -3 python:
             self.sort_items(order=sort)
 
 
-        def use_item(self, name, target, cost="cost"):
+        def use_item(self, name, target=None, cost="cost"):
             # uses item on target
 
             obj = self.get_item(name)
@@ -522,17 +523,16 @@ init -3 python:
                 self.currency -= value
 
 
-        def can_use_item(self, name, target, cost="cost"):
+        def can_use_item(self, name, target=None, cost="cost"):
             # returns True if inv can use this item
 
             obj = self.get_item(name)
 
-            if cost=="cost" and self.count_item(name) > obj.score:
-                return False
-            elif cost=="value" and self.currency > obj.value and not self.infinite:
-                return False
-
-            return True
+            if cost=="cost" and self.count_item(name) > obj.cost:
+                return True
+            elif cost=="value" and (self.currency > obj.value or self.infinite):
+                return True
+            return False
 
 
 ##############################################################################
@@ -575,7 +575,7 @@ init -3 python:
                 setattr(self, i, kwargs[i])
 
 
-        def use(self, target):
+        def use(self, target=None):
 
             # if self.keyword == xxx:
             #   do something

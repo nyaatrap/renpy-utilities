@@ -215,7 +215,7 @@ screen tilemap_navigator(player):
 ##############################################################################
 ## TilemapPlayer class
 
-init -2 python:
+init -5 python:
 
     class TilemapPlayer(Player):
 

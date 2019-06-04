@@ -211,7 +211,7 @@ screen eventmap_navigator(player):
 ##############################################################################
 ## Level class
 
-init -3 python:
+init -10 python:
 
     class Level(object):
 

@@ -339,7 +339,7 @@ style move_button_text:
 ##############################################################################
 ## Dungeon class.
 
-init -2 python:
+init -5 python:
 
     class Dungeon(Level):
 
@@ -500,7 +500,7 @@ init -2 python:
 ##############################################################################
 ## Coordinate class
 
-init -3 python:
+init -10 python:
 
     class Coordinate(object):
 
