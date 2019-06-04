@@ -1,6 +1,6 @@
 ## This file defines Actor and Arena class to add turn-based combat.
 ## ターン制の戦闘や競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。
-## Inventory をスキルのように扱います。
+## Actor クラスは Inventory を継承し、Item をスキルのように扱います。
 ## Inventory.rpy が必要になります。
 
 ##############################################################################
@@ -11,20 +11,18 @@
 ## まず最初に、管理するアイテムのタイプのリストを作成します。
 define skill_types = ["active"]
 
-## それから各アイテムを Item(name, type, value, score, max_score, cost, order, prereqs, info,
-##    target, effect, damage) で定義します。
+## それから各アイテムを Item(name, type, value, score, max_score, cost, order, prereqs, info, target, effect, damage) で定義します。
 ## actor に与える namespace の名前空間で定義する必要があります。
 
-define skill.attack = Item("Attack", type="active", cost=0, target="foe", effect="attack", damage=5)
-define skill.heal = Item("Heal", type="active", max_score=2, cost=1, target="friend", effect="heal", damage=20)
-
+define skill.attack = Item("Attack", type="active", target="foe", effect="attack", damage=5)
+define skill.heal = Item("Heal", type="active", score=2, max_score=2, cost=1, target="friend", effect="heal", damage=20)
 
 ## 次にスキルの管理者を Actor(name, currency, item_types, namespace, tradein, infinite, recharge, removable, items, 能力値) で定義します。
 ## hp は能力値です。Actor クラスを書き換えることで追加できます。
 
-default knight = Actor("Knight", item_types = skill_types, namespace = "skill", items="attack", removable=False, hp=30)
-default bishop = Actor("Bishop", item_types = skill_types, namespace = "skill", items="attack, heal", removable=False, hp=20)
-default pawn = Actor("Pawn A", item_types = skill_types, namespace = "skill", items="attack", removable=False, hp=10)
+default knight = Actor("Knight", item_types = skill_types, namespace = "skill", removable=False, items="attack", hp=30)
+default bishop = Actor("Bishop", item_types = skill_types, namespace = "skill", removable=False, items="attack, heal", hp=20)
+default pawn = Actor("Pawn A", item_types = skill_types, namespace = "skill", removable=False, items="attack", hp=10)
 
 ## actor.copy(name) で同じ能力のアクターを名前を変えてコピーします。
 default pawn2 = pawn.copy("Pawn B")
@@ -92,7 +90,7 @@ label _combat(arena):
 
             # enemy
             else:
-                arena.actor.skill = arena.get_item()
+                arena.actor.skill = arena.get_random_item()
                 arena.actor.target = arena.get_target()
 
             # perform skill
@@ -222,7 +220,7 @@ init -5 python:
 
 
         def reset_actors(self):
-            # reset actor's states
+            # reset actor's attributes
 
             for i in self.player_actors + self.enemy_actors:
                 i.reset_attributes()
@@ -238,7 +236,7 @@ init -5 python:
                     return actor
 
 
-        def get_item(self, actor=None):
+        def get_random_item(self, actor=None):
             # returns a random skill name
 
             actor = actor or self.actor
@@ -321,9 +319,6 @@ init -5 python:
         # This will create self.hp and self.default_hp.
         _attributes = ["hp"]
 
-        # Default skill categories. It's used when skill_types are not defined.
-        _item_types = ["active"]
-
 
         def __init__(self, name="", currency = 0, item_types=None, namespace=None, tradein = 1.0, infinite = False, recharge=False, removable = True, items=None, **kwargs):
 
@@ -333,7 +328,6 @@ init -5 python:
             self.name = name
             self.skill = None
             self.target = None
-            self.charge_all_items()
 
             # creates attributes as field value
             for i in self._attributes:
@@ -343,6 +337,8 @@ init -5 python:
                 else:
                     setattr(self, "default_"+i, None)
                     setattr(self, i, None)
+
+            self.reset_attributes()
 
 
         def copy(self, name=None):

@@ -28,7 +28,7 @@
 
 ## まず上のフォルダを反映するように、ポーズとレイヤーのリストを定義しておきます
 define poses = ["stand"]
-define layers=["base", "bottom", "top", "face"]
+define layers = ["base", "bottom", "top", "face"]
 
 ## それからドールオブジェクトを Doll(image, folder, poses, layers, デフォルトのポーズ、デフォルトの画像) の形で default で定義します。
 ## image は下で定義する image のタグになります。
@@ -87,7 +87,7 @@ label sample_doll:
 ## まず、装備可能なアイテムのカテゴリーを定義しておきます。
 define equip_types = ["bottom", "top"]
 
-## 次に各アイテム namespace.itemname = Item(名前、装備タイプ) で定義します。
+## 次に各アイテム Item(名前、装備タイプ、各レイヤーのプロパティ) で定義します。
 ## doll に与える namespace の名前空間で定義する必要があります。
 ## 各プロパティーには、変更するレイヤー="画像ファイル名"を与えます。
 
@@ -101,6 +101,8 @@ init python:
 ## ドールオブジェクトを Doll(image, folder, poses, layers, equip_types, namespace, items, デフォルトのポーズ、デフォルトの画像) で定義します。
 default erin2 = Doll(image = "erin2", folder="erin", poses = ["stand"], layers=["base", "bottom", "top", "face"],
     equip_types = equip_types, namespace = "item", pose = "stand", base="base", face="happy")
+
+## 上で定義するドールオブジェクトを""で囲み LayeredDisplayable に渡して画像を定義します。
 image erin2 = LayeredDisplayable("erin2")
 
 ## 最後にアイテムの保管者を定義します。
@@ -115,7 +117,7 @@ default closet = Inventory(item_types = equip_types, namespace="item")
 label sample_dressup:
 
     ## equip_types に含まれる定義された全てのアイテムを closet に追加
-    $ closet.get_all_items(types=equip_types)
+    $ closet.get_all_items()
 
     ## 次の命令はロールバックをブロックして、ゲームの全ての変化をセーブできるようにします。
     ## （デフォルトでは現在の入力待ちの開始時点のみをセーブするので必要になります。）
@@ -191,6 +193,7 @@ init -5 python:
         equipment - an object of Inventory class
             this inventory can have only one item per each item type
         equip_types is passed to its item_types
+        items are added using by add_items methods
         """
 
         # Define default layers from bottom.
@@ -204,10 +207,10 @@ init -5 python:
 
             self.image = image
             self.folder = folder
-            self.poses = poses or self._poses
+            self.poses = poses or self.default_poses
             self.layers = layers or self._layers
-            self._pose = pose or self._poses[0]
-            self.pose = self._pose
+            self.default_pose = pose or self.default_poses[0]
+            self.pose = self.default_pose
             self.substitution = None
 
             self.equip_types = equip_types or None
@@ -250,40 +253,35 @@ init -5 python:
                 return pos2[0]-pos1[0], pos2[1]-pos1[1]
 
 
-        def reset_layers(self, reset_pose=True, reset_state=True):
+        def reset_layers(self, reset_pose=True, reset_layer_state=True):
             # reset layers to the default
 
             for i in self.layers:
                 setattr(self, i, getattr(self, "default_"+i))
-                if reset_state:
-                    self.reset_state
+                if reset_layer_state:
+                    setattr(self, i+"_state", None)
             if reset_pose:
-                self.pose = self._pose
+                self.pose = self.default_pose
 
 
-        def reset_state(self, name):
-            if self.equipment:
-                for i in self.layers:
-                    if getattr(self.equipment.get_item(name), i, None):
-                        setattr(self, i+"_state", None)
-
-
-        def equip_item(self, name, inv, reset_state=True):
+        def equip_item(self, name, inv, reset_layer_state=True):
             # equip an item from inv
 
             for i, score, obj in self.equipment.get_items():
                 if obj.type == inv.get_item(name).type:
-                   self.unequip_item(i, inv, reset_state)
+                   self.unequip_item(i, inv, reset_layer_state)
 
             inv.give_item(name, self.equipment)
             self.update_layers()
 
 
-        def unequip_item(self, name, inv, reset_state=True):
+        def unequip_item(self, name, inv, reset_layer_state=True):
             # remove item in this equip type then add this to inv
 
-            if reset_state:
-                self.reset_state(name)
+            if reset_layer_state:
+                for i in self.layers:
+                    if getattr(self.equipment.get_item(name), i, None):
+                        setattr(self, i+"_state", None)
 
             self.equipment.give_item(name, inv)
             self.update_layers()
@@ -308,10 +306,10 @@ init -5 python:
                 self.unequip_item(i, inv)
 
 
-        def update_layers(self, reset_pose=False, reset_state=False):
+        def update_layers(self, reset_pose=False, reset_layer_state=False):
             # call this method each time to change layers
 
-            self.reset_layers(reset_pose, reset_state)
+            self.reset_layers(reset_pose, reset_layer_state)
 
             if self.equipment:
                 for name, score, obj in self.equipment.get_items():

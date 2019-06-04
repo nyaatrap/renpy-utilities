@@ -46,7 +46,8 @@ Inventory.rpy が必要になります。
 This file defines Actor and Arena class to add turn-based combat and competition.
 
 ターン制の戦闘や競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。
-基本的な枠組みしかありませんので、実用には改変する必要があります。
+Actor クラスは Inventory を継承し、Item をスキルのように扱います。
+Inventory.rpy が必要になります。
 
 ## tilemap.rpy
 This file defines Tilemap class that create single map from small tile images.

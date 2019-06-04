@@ -12,8 +12,8 @@ define item_types = ["supply", "food", "outfit"]
 ## それから各アイテムを Item(name, type, value, score, max_score, cost, order, prereqs, info) で定義します。
 ## name は表示される名前、type はカテゴリー、value は価格です。
 ## score はアイテムを追加時のデフォルトの個数で、省略すると１になります。
-## max_score は所持できるアイテムの最大数で、省略すると無限大になります(=0)。
-## cost が 1（デフォルト）の場合、アイテム使用時に個数が一つ減ります。
+## max_score は所持できるアイテムの最大数で、省略またはゼロにすると無限大になります。
+## cost を設定すると、アイテム使用時にコスト分の個数が減ります。
 ## order はデフォルトのソート順を決めたい時に使います。
 ## prereqs はそのアイテムを購入するときに消費するアイテムです。
 ## info はマウスフォーカスした時に表示される情報です。
@@ -34,6 +34,7 @@ define item.juice = Item("Juice", type="food", value=30, prereqs="orange:1, appl
 ## infinite を True にすると所持金が無限になります。
 ## recharge を True にすると、常に在庫が補充されます。
 ## removable を False にすると、在庫がゼロになってもアイテム覧から消去されません。
+## items を設定すると下で説明する add_items と同じ効果があります。
 
 default housewife = Inventory(currency=1000, item_types = item_types, namespace = "item")
 default merchant = Inventory(item_types = item_types, namespace = "item", tradein=.25, infinite=True, recharge=True, removable=False)
@@ -47,7 +48,8 @@ label sample_inventory:
     ## item は item. を外した文字列です。
     $ housewife.add_item("apple", score=2)
 
-    ## get_all_items(types) で名前空間で定義したすべてのアイテムのうち、タイプが合致するものを自動的に追加します。
+    ## get_all_items(types,charge=True) で名前空間で定義したすべてのアイテムのうち、タイプが合致するものを自動的に追加します。
+    ## charge が True の場合、max_score まで追加されます。
     $ merchant.get_all_items()
 
     ## 他に以下のメソッドがあります。
@@ -64,8 +66,9 @@ label sample_inventory:
     ## sell_item(item, buyer, score) - アイテムを buyer に売却し、所持金を受け取ります。
     ## give_item(item, getter, score) - アイテムを getter に渡します。
     ## use_item(item, target, cost="cost") - アイテムを target に使用します。効果は各アイテムごと定義してください。
-    ## can_use_item(item, target, cost="cost") - アイテムが使用可能かどうか調べます。アイテムごとに定義してください。
+    ## can_use_item(item, target, cost="cost") - アイテムが使用可能かどうか調べます。
     ## get_items(types, score) - score 以上で types に含まれるアイテムのリストを (name, score, obj) のタプルで返します。
+    ## sort_items(order="order") - アイテムをソートします。
 
 
     while True:
@@ -239,6 +242,7 @@ init -10 python:
         recharge - if True, an item score is charged at max_score (or 1) when its score is changed
         removable = if False, an item is not removed when score reached at 0.
         items - ordered dictionary of {"item name": score}.
+            if items property given at the init time, they are added by add_items method,
         selected - selected slot in a current screen.
         """
 
@@ -528,9 +532,9 @@ init -10 python:
 
             obj = self.get_item(name)
 
-            if cost=="cost" and self.count_item(name) > obj.cost:
+            if cost=="cost" and self.count_item(name) >= obj.cost:
                 return True
-            elif cost=="value" and (self.currency > obj.value or self.infinite):
+            elif cost=="value" and (self.currency >= obj.value or self.infinite):
                 return True
             return False
 
@@ -555,7 +559,7 @@ init -10 python:
         """
 
 
-        def __init__(self, name="", type="", value=0, score=1, max_score = 0, cost=1, order=0, prereqs=None, info="", **kwargs):
+        def __init__(self, name="", type="", value=0, score=1, max_score = 0, cost=0, order=0, prereqs=None, info="", **kwargs):
 
             self.name = name
             self.type = type
