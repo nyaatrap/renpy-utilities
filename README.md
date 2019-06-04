@@ -42,7 +42,7 @@ This file adds Doll class and LayeredDisplayable that provides layered sprites.
 Doll クラスは Inventory クラスを所有し、所持アイテムに応じて自動的にレイヤーが変化します。
 Inventory.rpy が必要になります。
 
-## arena.rpy (wip)
+## arena.rpy
 This file defines Actor and Arena class to add turn-based combat and competition.
 
 ターン制の戦闘や競争を行うためのアクタークラスとアリーナクラスを追加するファイルです。
