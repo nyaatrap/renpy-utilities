@@ -391,33 +391,6 @@ init -10 python:
                 self.remove_item(name)
 
 
-        def buy_item(self, name, score = None, prereqs=True):
-            # buy an item
-            # if prereqs is True, it requires items listed in prereqs
-
-            score = score or self.get_item(name).score
-            value = self.get_item(name).value*score
-            prereqs = self.get_item(name).prereqs
-
-            if self.infinite or self.currency >= value:
-
-                if prereqs:
-                    for k,v in prereqs.items():
-                        if not self.has_item(k, score=v*score):
-                            break
-                    else:
-                        self.add_item(name, score)
-                        for k,v in prereqs.items():
-                            self.score_item(k, score=-v*score)
-                        if not self.infinite:
-                            self.currency -= value
-
-                else:
-                    self.add_item(name, score)
-                    if not self.infinite:
-                        self.currency -= value
-
-
         def can_buy_item(self, name, score = None, prereqs=True):
             # returns True if this item can be bought
 
@@ -437,6 +410,26 @@ init -10 python:
                         return False
 
             return True
+
+
+        def buy_item(self, name, score = None, prereqs=True):
+            # buy an item
+            # if prereqs is True, it requires items listed in prereqs
+
+            if not self.can_buy_item(name, score, prereqs):
+                return False
+
+            score = score or self.get_item(name).score
+            value = self.get_item(name).value*score
+            prereqs = self.get_item(name).prereqs
+
+            self.add_item(name, score)
+            if not self.infinite:
+                self.currency -= value
+
+            if prereqs:
+                for k,v in prereqs.items():
+                    self.score_item(k, score=-v*score)
 
 
         def sell_item(self, name, buyer, score = None, prereqs=True):
@@ -513,20 +506,6 @@ init -10 python:
             self.sort_items(order=sort)
 
 
-        def use_item(self, name, target=None, cost="cost"):
-            # uses item on target
-
-            obj = self.get_item(name)
-
-            obj.use(target)
-
-            if cost=="cost" and obj.cost:
-                self.score_item(name, -obj.cost)
-
-            elif cost=="value" and obj.value and not self.infinite:
-                self.currency -= value
-
-
         def can_use_item(self, name, target=None, cost="cost"):
             # returns True if inv can use this item
 
@@ -537,6 +516,25 @@ init -10 python:
             elif cost=="value" and (self.currency >= obj.value or self.infinite):
                 return True
             return False
+
+
+        def use_item(self, name, target=None, cost="cost"):
+            # uses item on target
+
+            if not self.can_use_item(name, target, cost):
+                return False
+
+            obj = self.get_item(name)
+
+            if cost=="cost" and obj.cost:
+                self.score_item(name, -obj.cost)
+
+            elif cost=="value" and obj.value and not self.infinite:
+                self.currency -= value
+
+
+            ## write script here
+
 
 
 ##############################################################################
@@ -578,11 +576,4 @@ init -10 python:
             for i in kwargs.keys():
                 setattr(self, i, kwargs[i])
 
-
-        def use(self, target=None):
-
-            # if self.keyword == xxx:
-            #   do something
-
-            return
 
