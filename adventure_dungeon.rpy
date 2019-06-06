@@ -618,6 +618,9 @@ init -10 python:
 
         def render(self, width, height, st, at):
 
+            import re
+            pattern = "[0-9]+?"
+
             render = renpy.Render(width, height)
 
             # render background
@@ -659,11 +662,16 @@ init -10 python:
                         tile = 0
 
                     if self.tile_mapping:
-                        if tile in self.tile_mapping.keys():
-                            tile = self.tile_mapping[tile]
-                        else:
+                        if not tile:
                             tile = 0
-
+                        else:
+                            tile = re.findall(pattern, tile)[0]
+                            for k in self.tile_mapping.keys():
+                                if tile in k.replace(" ", "").split(","):
+                                    tile = self.tile_mapping[k]
+                                    break
+                    else:
+                        tile = int(tile)
 
                     # blit image if tile is not None
                     if tile:

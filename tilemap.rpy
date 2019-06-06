@@ -12,7 +12,7 @@ init python:
     ## 例： tileset = ["water.png", "forest.png", ...]
     ## ここでは Ren'py の機能を使って単色の四角形を描画しています。
 
-    tileset = [Solid("#77f", xysize=(32,32)), Solid("#ff9", xysize=(32,32)), Solid("#3f6", xysize=(32,32))]
+    tileset = [Solid("#77f", xysize=(32,32)), Solid("#ff9", xysize=(32,32)), Solid("#3f6", xysize=(32,32)), Solid("#656", xysize=(32,32))]
 
     ## タイルを並べた一枚の画像を分割したい時は、次の関数も使えます。
     # tileset = read_spritesheet(filename, sprite_width, sprite_height, columns=1, rows=1, spacing=0, margin=0)
@@ -41,20 +41,21 @@ init python:
 
     ## テキストファイルで定義したマップを次の関数で読み込むことも出来ます。
     ## numeral を True にすると、文字列を整数に変換して読み込みます。
-    # map1 = read_spreadsheet(file, separator="\t", numeral=False):
+    # map1 = read_spreadsheet("cave.tsv", separator="\t", numeral=False)
 
 
     ## 最後にタイルマップを Tilemap(map, tileset, tile_width, tile_height, tile_mapping) の形で定義します。
     ## map, tileset は上で定義したもので、tile_width, tile_height は各タイルのサイズです。
 
-    tilemap = Tilemap(map1, tileset, 32, 32)
-
-    ## tile_mapping は整数以外の文字を使ってマップを作る場合に必要になります。
-    ## 次のように tile_mapping を定義して、どの文字がどのインデックスに対応するか定めます。
-    # tile_mapping = {"w":0, "f":1, ...}
+    ## tile_mapping は整数から始まる文字列を使ってマップを作る場合に必要になります。
+    ## tile_mapping を定義すると、その文字列の先頭部部の整数を参照して、タイルセットのインデックスに対応させます。
+    ## 次の例では、"0a", "11b" などを 0 に、 "1", "2xy3" などを 1 に、"3", "3t" などを 3 にマッピングさせます。
+    # tile_mapping = {"0, 11, 12":0, "1, 2":1, "3":3}
 
     ## isometric を True にすると斜め見下ろしの視点で描画します。
-    # tilemap = Tilemap(map1, tileset, 32, 32, isometric=True)
+
+    tilemap = Tilemap(map1, tileset, 32, 32)
+
 
 # Tilemap は displayable です。show 文で使う場合は画像タグに関連付けてから使います。
 image map = tilemap
@@ -189,18 +190,26 @@ init -3 python:
 
         def _render(self, render, st, at, x, y):
 
+            import re
+            pattern = "[0-9]+?"
+
             # don't render if mask is given
             if self.mask and not self.mask[y][x]:
                 return
 
             # Get index of tileset
+            tile = self.map[y][x]
             if self.tile_mapping:
-                if self.map[y][x] in self.tile_mapping.keys():
-                    tile = self.tile_mapping[self.map[y][x]]
-                else:
+                if not tile:
                     tile = 0
+                else:
+                    tile = re.findall(pattern, tile)[0]
+                    for k in self.tile_mapping.keys():
+                        if tile in k.replace(" ", "").split(","):
+                            tile = self.tile_mapping[k]
+                            break
             else:
-                tile = self.map[y][x]
+                tile = int(tile)
 
             # Get tile position
             if self.isometric:
@@ -279,12 +288,12 @@ init -3 python:
             l = l.decode("utf-8")
             a = l.rstrip().split(separator)
             rv2 = []
-            for n, x in enumerate(a):
+            for x in a:
                 if x.isdecimal() and numeral:
                     x = int(x)
                 elif numeral:
                     x = 0
-                rv2.append(x)
+                rv2.append(x.strip())
             rv.append(rv2)
         f.close()
 
