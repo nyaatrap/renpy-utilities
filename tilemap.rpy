@@ -263,14 +263,16 @@ init -3 python:
            return self.tileset
 
 
-    def read_spritesheet(file, sprite_width, sprite_height=None, columns=1, rows=1, spacing=0, margin=0):
+    def read_spritesheet(file, sprite_width, sprite_height=None, cols=1, rows=1, spacing=0, margin=0, transpose=False):
 
         # Function that returns a list of displayables from a spritesheet.
 
         sprite_height = sprite_height or sprite_width
         sprites=[]
+        if transpose:
+            cols, rows = rows, cols
         for r in xrange(rows):
-            for c in xrange(columns):
+            for c in xrange(cols):
                 rect = ((sprite_width+spacing)*c+margin, (sprite_height+spacing)*r+margin, sprite_width, sprite_height)
                 sprites.append(im.Crop(file, rect))
 
