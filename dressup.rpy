@@ -117,7 +117,7 @@ default closet = Inventory(item_types = equip_types, namespace="item")
 label sample_dressup:
 
     ## equip_types に含まれる定義された全てのアイテムを closet に追加
-    $ closet.get_all_items()
+    $ closet.add_all_items()
 
     ## 次の命令はロールバックをブロックして、ゲームの全ての変化をセーブできるようにします。
     ## （デフォルトでは現在の入力待ちの開始時点のみをセーブするので必要になります。）

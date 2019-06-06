@@ -48,25 +48,29 @@ label sample_inventory:
     ## item は item. を外した文字列です。
     $ housewife.add_item("apple", score=2)
 
-    ## get_all_items(types,charge=True) で名前空間で定義したすべてのアイテムのうち、タイプが合致するものを自動的に追加します。
+    ## add_all_items(types, charge=True) で名前空間で定義したすべてのアイテムのうち、タイプが合致するものを自動的に追加します。
     ## charge が True の場合、max_score まで追加されます。
-    $ merchant.get_all_items()
+    $ merchant.add_all_items()
 
     ## 他に以下のメソッドがあります。
     ## has_item(item) - 所持していれば True を返します。
     ## count_item(item) - 所持している合計の個数を返します。
-    ## charge_item(item) - 所持しているアイテムを最大数までチャージします。
-    ## charge_all_items() - 所持しているすべてのアイテムを最大数までチャージします。
+    ## charge_item(item, score) - 所持しているアイテムを最大数までチャージします。スコアを与えるとスコア分チャージします。
+    ## charge_all_items(types, score) - 所持している types に含まれるアイテムを最大数またはスコア分までチャージします。
     ## add_items(items, score) - "a,b,c" のように複数のアイテム名与えると、その全てのアイテムを追加できます。
-    ## remove_item(item) - 所持していれば、そのアイテムを消去します。
-    ## remove_items(items) - "a,b,c" のように複数のアイテム名与えると、所持していれば、そのアイテムを消去します。
-    ## score_item(item, score) - 所持している個数を変更します。
-    ## buy_item(item, score) - 所持金と要求アイテムが足りていれば、それを消費してアイテムを追加します。
-    ## can_buy_item(item, score) - アイテムが購入可能かどうか調べます。
-    ## sell_item(item, buyer, score) - アイテムを buyer に売却し、所持金を受け取ります。
+    ## remove_item(item) - 所持していればそのアイテムを消去します。
+    ## remove_items(items) - "a,b,c" のように複数のアイテム名与えると、所持していればそのアイテムを消去します。
+    ## score_item(item, score) - アイテムの個数を変更して、１以上なら獲得、０以下なら消去します。
+    ## score_items(item, score) - "a,b,c" のように複数のアイテム名与えると、複数の個数を変更・獲得・消去します。
     ## give_item(item, getter, score) - アイテムを getter に渡します。
+    ## can_buy_item(item, score) - アイテムが購入可能かどうか調べます。
+    ## buy_item(item, score) - 所持金と要求アイテムが足りていれば、それを消費してアイテムを追加します。
+    ## sell_item(item, buyer, score) - アイテムを buyer に売却し、所持金を受け取ります。
+    ## can_use_item(item, target, cost="cost") - アイテムが使用可能かどうか調べます。cost="currency" にすると currency を消費します。
     ## use_item(item, target, cost="cost") - アイテムを target に使用します。効果は各アイテムごと定義してください。
-    ## can_use_item(item, target, cost="cost") - アイテムが使用可能かどうか調べます。
+
+    ## 次のメソッドは内部使用です。
+    ## get_item(name) - 文字列の name から Item オブジェクトを取得します。
     ## get_items(types, score) - score 以上で types に含まれるアイテムのリストを (name, score, obj) のタプルで返します。
     ## sort_items(order="order") - アイテムをソートします。
 
@@ -178,7 +182,7 @@ screen inventory(inv, buyer=None, title="Inventory"):
 
                 for name, score, obj in inv.get_items(types=[tab] if tab != "all" else inv.item_types):
 
-                    $ price = int(obj.value*score*(buyer.tradein if buyer else inv.tradein))
+                    $ price = int(obj.value*(buyer.tradein if buyer else inv.tradein))
 
                     textbutton "[obj.name] x[score] ([price])":
                         selected inv.selected == name
@@ -276,6 +280,24 @@ init -10 python:
             raise Exception("Item '{}' is not defined".format(name))
 
 
+        def get_items(self, types = None, score=None, rv=None):
+            # returns list of (name, score, object) tuple in conditions
+            # if rv is "name" or "obj", it returns them.
+
+            items = [k for k, v in self.items.items() if score==None or v >= score]
+
+            types = types or self.item_types
+            items = [i for i in items if self.get_item(i).type in types]
+
+            if rv == "name":
+                return items
+
+            elif rv == "obj":
+                return [self.get_item(i) for i in items]
+
+            return  [(i, self.items[i], self.get_item(i)) for i in items]
+
+
         def has_item(self, name, score=None):
             # returns True if inventory has this item whose score is higher than given.
 
@@ -308,36 +330,24 @@ init -10 python:
                 return self.items[name]
 
 
-        def get_items(self, types = None, score=None, rv=None):
-            # returns list of (name, score, object) tuple in conditions
-            # if rv is "name" or "obj", it returns them.
-
-            items = [k for k, v in self.items.items() if score==None or v >= score]
-
-            types = types or self.item_types
-            items = [i for i in items if self.get_item(i).type in types]
-
-            if rv == "name":
-                return items
-
-            elif rv == "obj":
-                return [self.get_item(i) for i in items]
-
-            return  [(i, self.items[i], self.get_item(i)) for i in items]
-
-
-        def charge_item(self, name):
+        def charge_item(self, name, score=None):
             # changes score of name to its maximum value
 
             if self.has_item(name):
-                self.items[name] = max(self.get_item(name).max_score, 1)
+                if score:
+                    self.items[name] += score
+                else:
+                    self.items[name] = max(self.get_item(name).max_score, 1)
 
 
-        def charge_all_items(self):
+        def charge_all_items(self, types=None):
             # charges all items in self.items.
 
+            types = types or self.item_types
+
             for i in self.items.keys():
-                self.charge_item(i)
+                if self.get_item(i).type in types:
+                    self.charge_item(i)
 
 
         def add_item(self, name, score = None):
@@ -368,6 +378,21 @@ init -10 python:
                 self.add_item(i, score=score)
 
 
+        def add_all_items(self, types=None, charge=True, sort="order"):
+            # get all Item objects defined under namespace
+
+            types = types or self.item_types
+
+            for i in dir(self.namespace):
+                if isinstance(getattr(self.namespace, i), Item):
+                    if self.get_item(i).type in types:
+                        self.add_item(i)
+                        if charge:
+                            self.charge_item(i)
+
+            self.sort_items(order=sort)
+
+
         def remove_item(self, name):
             # remove an item
 
@@ -389,6 +414,26 @@ init -10 python:
             self.add_item(name, score)
             if self.removable and self.items[name] <= 0:
                 self.remove_item(name)
+
+
+        def score_items(self, name, score):
+            # changes score of name
+
+            for i in items.split(","):
+                self.add_item(name, score)
+                if self.removable and self.items[name] <= 0:
+                    self.remove_item(name)
+
+
+        def give_item(self, name, getter, score=None):
+            # remove an item slot then add this name to getter
+
+            score = score or self.get_item(name).score
+
+            if self.has_item(name, score):
+
+                getter.score_item(name, score)
+                self.score_item(name, -score)
 
 
         def can_buy_item(self, name, score = None, prereqs=True):
@@ -425,6 +470,7 @@ init -10 python:
 
             self.add_item(name, score)
             if not self.infinite:
+                renpy.notify("{}".format(self.currency))
                 self.currency -= value
 
             if prereqs:
@@ -446,17 +492,7 @@ init -10 python:
                     self.score_item(name, score=-score)
                     if not self.infinite:
                         self.currency += int(value*buyer.tradein)
-
-
-        def give_item(self, name, getter, score=None):
-            # remove an item slot then add this name to getter
-
-            score = score or self.get_item(name).score
-
-            if self.has_item(name, score):
-
-                getter.score_item(name, score)
-                self.score_item(name, -score)
+                        renpy.notify("{}".format(self.currency))
 
 
         def replace_items(self, first, second):
@@ -489,21 +525,6 @@ init -10 python:
                 items.sort(key = lambda i: self.get_item(i[0]).order)
 
             self.items = OrderedDict(items)
-
-
-        def get_all_items(self, types=None, charge=True, sort="order"):
-            # get all Item objects defined under namespace
-
-            types = types or self.item_types
-
-            for i in dir(self.namespace):
-                if isinstance(getattr(self.namespace, i), Item):
-                    if self.get_item(i).type in types:
-                        self.add_item(i)
-                        if charge:
-                            self.charge_item(i)
-
-            self.sort_items(order=sort)
 
 
         def can_use_item(self, name, target=None, cost="cost"):
