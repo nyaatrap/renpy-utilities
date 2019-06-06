@@ -191,7 +191,7 @@ init -3 python:
         def _render(self, render, st, at, x, y):
 
             import re
-            pattern = "[0-9]+?"
+            pattern = "[0-9]+"
 
             # don't render if mask is given
             if self.mask and not self.mask[y][x]:

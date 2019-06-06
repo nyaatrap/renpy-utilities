@@ -619,7 +619,7 @@ init -10 python:
         def render(self, width, height, st, at):
 
             import re
-            pattern = "[0-9]+?"
+            pattern = "[0-9]+"
 
             render = renpy.Render(width, height)
 
