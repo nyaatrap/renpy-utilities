@@ -470,7 +470,6 @@ init -10 python:
 
             self.add_item(name, score)
             if not self.infinite:
-                renpy.notify("{}".format(self.currency))
                 self.currency -= value
 
             if prereqs:
@@ -492,7 +491,6 @@ init -10 python:
                     self.score_item(name, score=-score)
                     if not self.infinite:
                         self.currency += int(value*buyer.tradein)
-                        renpy.notify("{}".format(self.currency))
 
 
         def replace_items(self, first, second):
