@@ -73,6 +73,11 @@ label ev2:
     "mapchip'2' is clicked"
     return
 
+define ev.outside_map = Event("field", trigger = "click", priority=99)
+label outside_map:
+    "You clicked outside of the map"
+    return
+
 
 ## start ラベルから adventure_tilemap へジャンプすると探索を開始します。
 
@@ -93,7 +98,6 @@ label adventure_tilemap:
     # Update event list in the current level
     $ player.update_events()
     $ player.action = "stay"
-    $ player.next_pos = None
 
     # Play music
     if player.music:
@@ -114,7 +118,7 @@ label adventure_tilemap_loop:
 
         # check passive events
         $ block()
-        $ _events = player.get_events(player.next_pos, player.action)
+        $ _events = player.get_events(player.pos, player.action)
 
         # sub loop to execute all passive events
         $ _loop = 0
@@ -124,8 +128,6 @@ label adventure_tilemap_loop:
             $ block()
             $ player.happened_events.add(player.event.name)
             call expression player.event.label or player.event.name
-            if player.event.trigger == "move":
-                $ player.pos = player.next_pos
             $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
                 jump adventure_tilemap
@@ -139,14 +141,23 @@ label adventure_tilemap_loop:
         else:
             call screen eventmap_navigator(player)
 
-        $ player.action = "move"
-        $ player.next_pos = _return if _return else None
+        if _return == "click":
+            $player.action = "click"
+
+        else:
+            $ player.action = "move"
+            $ player.move_pos(_return)
 
 
 ##############################################################################
 ## Tilemap navigator screen
 
 screen tilemap_navigator(player):
+
+    # When outside of map is clicked.
+    button:
+        xysize (config.screen_width, config.screen_height)
+        action Return("click")
 
     # show coordinate
     python:
@@ -173,6 +184,7 @@ screen tilemap_navigator(player):
 
         ## returns coordinate of tiles
         key "button_select" action Return((x, y))
+
 
     ## show events
     for i in player.get_events():
@@ -212,13 +224,17 @@ init -5 python:
             # returns event list that happens in the given pos.
             # this overwrites the same method in player class.
 
-            actions = ["stay"] if action=="stay" else ["moveto", "move", "stay",]
+            actions = ["stay"]
+            if action == "move":
+                actions += ["move"]
+            if action == "click":
+                actions += ["click"]
 
             events = []
             for i in self.current_events:
                 if i.once and self.happened(i):
                     continue
-                if i.trigger not in actions:
+                if action and i.trigger not in actions:
                     continue
                 if action == None or i.pos == None or i.pos == pos:
                     if eval(i.cond):

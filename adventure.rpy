@@ -79,10 +79,11 @@ label shop2:
     return
 
 
-## レベルのみを与えると、画面のどこをクリックしてもイベントが発生します。
+## レベルのみを与えると、どの座標でもイベントが発生します。
+## trigger を "click" にすると、マップ上の移動場所がない所をクリックした時にイベントを確認します。
 ## また label を定義すると、イベント名の代わりにそのラベル名を呼び出します。
-define ev.west_nothing = Event("west", priority=99)
-define ev.east_nothing = Event("east", priority=99, label="west_nothing")
+define ev.west_nothing = Event("west", trigger = "click", priority=99)
+define ev.east_nothing = Event("east", trigger = "click", priority=99, label="west_nothing")
 label west_nothing:
     "There is nothing there"
     return
@@ -112,7 +113,6 @@ label adventure:
     # Update event list in the current level
     $ player.update_events()
     $ player.action = "stay"
-    $ player.next_pos = None
 
     # Play music
     if player.music:
@@ -133,7 +133,7 @@ label adventure_loop:
 
         # returns event list events
         $ block()
-        $ _events = player.get_events(player.next_pos, player.action)
+        $ _events = player.get_events(player.pos, player.action)
 
         # sub loop to execute events
         $ _loop = 0
@@ -142,8 +142,6 @@ label adventure_loop:
             $ player.event = _events[_loop]
             $ block()
             $ player.happened_events.add(player.event.name)
-            if player.event.trigger == "move":
-                $ player.pos = player.next_pos
             call expression player.event.label or player.event.name
             $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
@@ -155,8 +153,12 @@ label adventure_loop:
         # show eventmap navigator
         call screen eventmap_navigator(player)
 
-        $ player.action = "move"
-        $ player.next_pos = _return.pos if _return else None
+        if _return == "click":
+            $player.action = "click"
+
+        else:
+            $ player.action = "move"
+            $ player.move_pos(_return)
 
 
 label after_load():
@@ -184,9 +186,10 @@ init python:
 
 screen eventmap_navigator(player):
 
+    # When outside of places is clicked.
     button:
         xysize (config.screen_width, config.screen_height)
-        action Return(False)
+        action Return("click")
 
     ## show places
     for i in player.get_places():
@@ -203,6 +206,7 @@ screen eventmap_navigator(player):
             if i.image:
                 pos i.pos
                 add i.image
+
 
 
 ##############################################################################
@@ -325,7 +329,7 @@ init -10 python:
             place = Player.get_place(level)
             self.level = place.level if place else level
             self.pos = place.pos if place else pos
-            self.next_pos = None
+            self.previous_pos = self.pos
 
             self.action = "stay"
             self.event = None
@@ -409,13 +413,17 @@ init -10 python:
         def get_events(self, pos = None, action= None):
             # returns event list that happens in the given pos.
 
-            actions = ["stay"] if action=="stay" else ["moveto", "move", "stay",]
+            actions = ["stay"]
+            if action == "move":
+                actions += ["move"]
+            if action == "click":
+                actions += ["click"]
 
             events = []
             for i in self.current_events:
                 if i.once and self.happened(i):
                     continue
-                if i.trigger not in actions:
+                if action and i.trigger not in actions:
                     continue
                 if action == None or i.pos == None or i.pos == pos:
                     if eval(i.cond):

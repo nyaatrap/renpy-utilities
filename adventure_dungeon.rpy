@@ -187,7 +187,6 @@ label adventure_dungeon:
     # Update event list in the current level
     $ player.update_events()
     $ player.action = "stay"
-    $ player.next_pos = None
 
     # Play music
     if player.music:
@@ -208,7 +207,7 @@ label adventure_dungeon_loop:
 
         # check passive events
         $ block()
-        $ _events = player.get_events(player.next_pos, player.action)
+        $ _events = player.get_events(player.pos, player.action)
 
         # sub loop to execute all passive events
         $ _loop = 0
@@ -218,8 +217,6 @@ label adventure_dungeon_loop:
             $ block()
             $ player.happened_events.add(player.event.name)
             call expression player.event.label or player.event.name
-            if player.event.trigger == "move":
-                $ player.pos = player.next_pos
             $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
                 jump adventure_dungeon
@@ -233,32 +230,30 @@ label adventure_dungeon_loop:
         else:
             call screen eventmap_navigator(player)
 
-            $ player.action = "move"
-            $ player.next_pos = _return.pos if _return else None
-
-        if _return == False:
-            $ player.next_pos = player.pos
+        if _return == "click":
             $ player.action = "click"
 
         elif isinstance(_return, tuple):
 
-            $ player.next_pos = _return
-
             if player.get_tile(pos = _return) in player.collision:
-                $ player.action = "collision"
+                $ player.action = "collide"
+                $ player.next_pos = _return
 
-            elif player.compare(player.next_pos):
+            elif player.compare(_return):
                 $ player.action = "rotate"
-                $ player.pos = player.next_pos
+                $ player.move_pos(_return)
 
             else:
                 $ player.action = "move"
-                $ player.pos = player.next_pos
+                $ player.move_pos(_return)
 
             # Show background
             if player.image:
                 scene expression player.image at topleft
 
+        else:
+            $ player.action = "move"
+            $ player.move_pos(_return)
 
 
 ##############################################################################
@@ -267,9 +262,10 @@ label adventure_dungeon_loop:
 
 screen dungeon_navigator(player):
 
+    # When outside of navigation is clicked
     button:
         xysize (config.screen_width, config.screen_height)
-        action Return(False)
+        action Return("click")
 
 
     # move buttons
@@ -336,6 +332,8 @@ init -5 python:
         def __init__(self, level=None, pos=None, **kwargs):
 
             super(DungeonPlayer, self).__init__(level, pos, **kwargs)
+
+            self.next_pos = self.pos
 
 
         @property
@@ -430,21 +428,37 @@ init -5 python:
                 actions += ["move", "movefrom", "nextto", "faceto"]
             if action == "rotate":
                 actions += ["faceto"]
-            if action == "collision":
+            if action == "collide":
                 actions += ["moveto"]
+
+            if self.in_dungeon() and action:
+                loop = [player.pos, player.front_pos, player.back_pos, player.left_pos, player.right_pos]
+            else:
+                loop = [pos]
 
             events = []
             for i in self.current_events:
-                if i.once and self.happened(i):
-                    continue
-                if i.trigger not in actions:
-                    continue
-                if action == None or i.pos == None or i.pos == pos:
-                    if eval(i.cond):
-                        events.append(i)
-                elif self.in_dungeon() and (i.pos == self.get_tile(pos=pos) or Coordinate(*pos).compare(i.pos)):
-                    if eval(i.cond):
-                        events.append(i)
+                for pos in loop:
+                    if i.once and self.happened(i):
+                        continue
+                    if action and i.trigger not in actions:
+                        continue
+                    if action == None or i.pos == None or i.pos == pos:
+                        if eval(i.cond):
+                            events.append(i)
+                    elif self.in_dungeon() and (i.pos == self.get_tile(pos=pos) or Coordinate(*pos).compare(i.pos)):
+                        if i.trigger in ("clickto", "faceto") and not Coordinate(*player.front_pos).compare(pos):
+                            continue
+                        elif i.trigger == "movefrom" and not Coordinate(*player.previous_pos).compare(pos):
+                            continue
+                        elif i.trigger == "nextto" and Coordinate(*player.pos).compare(pos):
+                            continue
+                        elif i.trigger == "moveto" and not Coordinate(*player.next_pos).compare(pos):
+                            continue
+                        elif i.trigger in ("stay", "click", "move") and not Coordinate(*player.pos).compare(pos):
+                            continue
+                        elif eval(i.cond):
+                            events.append(i)
 
             if action:
                 return self.cut_events(events)
