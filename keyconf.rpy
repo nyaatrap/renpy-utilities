@@ -45,6 +45,7 @@ init 1 python:
     # config.keymap['screenshot'].remove('s')
     # config.keymap['hide_windows'].remove('h')
     # config.keymap['accessibility'].remove('K_a')
+    # config.keymap['director'].remove('d')
 
     # Make button action immediately when pressed.
     # 以下は、マウスボタンが離したときではなく、押した時に即反応するようにします。
