@@ -18,7 +18,7 @@ init python:
     # tileset = read_spritesheet(filename, sprite_width, sprite_height, columns=1, rows=1, spacing=0, margin=0)
 
 
-    ## 次に描画したいマップを整数の二次元配列で表現します。
+    ## 次に描画したいマップを整数または整数から始まる文字列の二次元配列で表現します。
     ## 配列の値は上で定義したリストのインデックスで
     ## tileset = ["water.png", "forest.png", ...] の場合 0 は "water.png" を表します。
 
@@ -43,14 +43,8 @@ init python:
     ## numeral を True にすると、文字列を整数に変換して読み込みます。
     # map1 = read_spreadsheet("cave.tsv", separator="\t", numeral=False)
 
-
-    ## 最後にタイルマップを Tilemap(map, tileset, tile_width, tile_height, tile_mapping) の形で定義します。
+    ## 最後にタイルマップを Tilemap(map, tileset, tile_width, tile_height) の形で定義します。
     ## map, tileset は上で定義したもので、tile_width, tile_height は各タイルのサイズです。
-
-    ## tile_mapping は整数から始まる文字列を使ってマップを作る場合に必要になります。
-    ## tile_mapping を定義すると、その文字列の先頭部部の整数を参照して、タイルセットのインデックスに対応させます。
-    ## 次の例では、"0a", "11b" などを 0 に、 "1", "2xy3" などを 1 に、"3", "3t" などを 3 にマッピングさせます。
-    # tile_mapping = {"0, 11, 12":0, "1, 2":1, "3":3}
 
     ## isometric を True にすると斜め見下ろしの視点で描画します。
 
@@ -87,7 +81,7 @@ label sample_tilemap:
 
 screen track_coordinate(tilemap):
 
-    text "Click a tile to return its coodinate" align .5, .9
+    text "Click a tile to return its coordinate" align .5, .9
 
     # show coordinate
     if tilemap.coordinate:
@@ -99,7 +93,7 @@ screen track_coordinate(tilemap):
 ## Definitions
 ##############################################################################
 
-init -3 python:
+init -10 python:
 
     class Tilemap(renpy.Displayable):
 
@@ -110,8 +104,6 @@ init -3 python:
         tileset -  A list of displayables that is used as a tile of tilemap.
         tile_width - width of each tile.
         tile_height - height of each tile.
-        tile_mapping - a dictionary that maps string of map to index of tileset.
-           If None, each coordinate of map should be integer.
         tile_offset - blank pixel of (left, top) side of each tile
         isometric - if true, isometric tile is used.
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
@@ -120,7 +112,7 @@ init -3 python:
         coordinate - (x, y) coordinate of a tile where mouse is hovering.
         """
 
-        def __init__(self, map, tileset, tile_width, tile_height = None, tile_mapping = None, tile_offset = (0,0),
+        def __init__(self, map, tileset, tile_width, tile_height = None, tile_offset = (0,0),
             isometric = False, area = None, mask = None, interact = True, **properties):
 
             super(Tilemap, self).__init__(**properties)
@@ -128,7 +120,6 @@ init -3 python:
             self.tileset = tileset
             self.tile_width = tile_width
             self.tile_height = tile_height or tile_width
-            self.tile_mapping = tile_mapping
             self.tile_offset = tile_offset
             self.isometric = isometric
             self.area = area
@@ -199,17 +190,12 @@ init -3 python:
 
             # Get index of tileset
             tile = self.map[y][x]
-            if self.tile_mapping:
-                if not tile:
-                    tile = 0
-                else:
-                    tile = re.findall(pattern, tile)[0]
-                    for k in self.tile_mapping.keys():
-                        if tile in k.replace(" ", "").split(","):
-                            tile = self.tile_mapping[k]
-                            break
-            else:
+            if not tile:
+                tile = 0
+            elif isinstance(tile, int):
                 tile = int(tile)
+            else:
+                tile = int(re.findall(pattern, tile)[0])
 
             # Get tile position
             if self.isometric:
