@@ -35,15 +35,13 @@ default player = Player("home", turn=0)
 
 
 ## 各イベントは define と label のペアで定義します。
-## define ラベル名 = Event(place, cond, priority, once, multi, precede) または、
-## define ラベル名 = Event(level, pos, cond, priority, once, multi, precede) で定義します。
+## define ラベル名 = Event(place, cond, priority, once, multi) または、
+## define ラベル名 = Event(level, pos, cond, priority, once, multi) で定義します。
 ## 探索者が place の場所に移動すると、そのイベントと同じ名前のラベルを呼び出します。
 ## cond が与えられると、その条件式を満たした場合にのみイベントを実行します。
 ## priority は発生の優先度で、数字が小さい順に実行されます。デフォルトは０です。
 ## once を True にすると一度しか実行されません。デフォルトでは何度も実行されます。
-## multi を True にすると他のイベントも同時に発生します。ただし active＝True のイベントは発生しません。
-## precede を True にすると、プレイヤーが操作する前にイベントを確認します。
-## デフォルトでは、プレイヤーが１度操作した後からイベントを確認します。
+## multi を True にすると他のイベントも同時に発生します。
 ## event、ev の名前空間でも定義できます。
 
 define ev.myhome = Event("home")
@@ -70,26 +68,29 @@ label shop:
     return
 
 
-## イベントに image を与えると、イベントマップ上にその画像が表示されます。
-## さらに active を True にすると place を使わずに画像を直接クリックしてイベントを呼び出せるようになります。
 ## player.happened(ev) でそのイベントが過去に呼び出されたかどうか評価できます。
 ## player.done(ev) でそのイベントが過去に最後まで実行されたかどうか評価できます。
-define ev.shop2 = Event("west", pos=(.1,.1), cond="player.happened(ev.shop)", active = True, image=Text("hidden shop"))
+define place.shop2 = Place(level="west", pos=(.1,.1), cond="player.done(ev.shop)", image=Text("hidden shop"))
+
+## image を与えると、イベントマップのその場所の上に追加で画像が表示されます。
+define ev.shop2 = Event("shop2", cond="player.done(ev.shop)", image=Text("(Now on sale)", size=20, yoffset=30))
 label shop2:
     "this is a hidden shop."
     return
 
 
-## active = True にして image を与えない場合、画面のどこをクリックしてもイベントが発生します。
+## レベルのみを与えると、画面のどこをクリックしてもイベントが発生します。
 ## また label を定義すると、イベント名の代わりにそのラベル名を呼び出します。
-define ev.west_nothing = Event("west", active=True, priority=99)
-define ev.east_nothing = Event("east", active=True, priority=99, label="west_nothing")
+define ev.west_nothing = Event("west", priority=99)
+define ev.east_nothing = Event("east", priority=99, label="west_nothing")
 label west_nothing:
     "There is nothing there"
     return
 
+
+## trigger を "stay" にすると、移動画面が現れる度にイベントを確認します。
 ## このラベルは毎ターン操作の直前に呼ばれ、ターンの経過を記録しています。
-define ev.turn = Event(priority = 999, precede =True, multi=True)
+define ev.turn = Event(priority = 999, trigger = "stay", multi=True)
 label turn:
     $ player.turn += 1
     return
@@ -110,7 +111,8 @@ label adventure:
 
     # Update event list in the current level
     $ player.update_events()
-    $ player.after_interact = False
+    $ player.action = "stay"
+    $ player.next_pos = None
 
     # Play music
     if player.music:
@@ -129,49 +131,39 @@ label adventure:
 label adventure_loop:
     while True:
 
-        # check passive events
+        # returns event list events
         $ block()
-        $ _events = player.get_passive_events()
+        $ _events = player.get_events(player.next_pos, player.action)
 
-        # sub loop to execute all passive events
+        # sub loop to execute events
         $ _loop = 0
         while _loop < len(_events):
 
             $ player.event = _events[_loop]
             $ block()
             $ player.happened_events.add(player.event.name)
+            if player.event.trigger == "move":
+                $ player.pos = player.next_pos
             call expression player.event.label or player.event.name
             $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
                 jump adventure
             $ _loop += 1
 
-        $ player.after_interact = True
         $ block()
 
         # show eventmap navigator
         call screen eventmap_navigator(player)
 
-        # If return value is a place, move to there
-        if isinstance(_return, Place):
-            $ player.pos = _return.pos
-
-        # If return value is an active event, execute it.
-        elif isinstance(_return, Event):
-            $ player.pos = _return.pos
-            $ player.event = _return
-            $ block()
-            $ player.happened_events.add(player.event.name)
-            call expression player.event.label or player.event.name
-            $ player.done_events.add(player.event.name)
-            if player.move_pos(_return):
-                jump adventure
+        $ player.action = "move"
+        $ player.next_pos = _return.pos if _return else None
 
 
 label after_load():
 
     # Update event list in the current level
     $ player.update_events()
+
     return
 
 
@@ -192,19 +184,24 @@ init python:
 
 screen eventmap_navigator(player):
 
-    ## show places and active events
-    for i in player.get_active_events():
+    button:
+        xysize (config.screen_width, config.screen_height)
+        action Return(False)
+
+    ## show places
+    for i in player.get_places():
         button:
-            if i.pos:
-                pos i.pos
-            else:
-                xysize (config.screen_width, config.screen_height)
+            pos i.pos
+            action Return(i)
 
-            if i.active:
-                action Return(i)
-
-            # show image on screen. you can also show them on the background.
             if i.image:
+                add i.image
+
+    ## show event images
+    for i in player.get_events():
+        button:
+            if i.image:
+                pos i.pos
                 add i.image
 
 
@@ -218,8 +215,8 @@ init -10 python:
         """
         Class that represents level that places events on it. It has following fields:
 
-        image - image that is shown behind events.
-        music - music that is played while player is in this level.
+        image - Image that is shown behind events.
+        music - Music that is played while player is in this level.
         """
 
         def __init__(self, image=None, music=None):
@@ -247,8 +244,6 @@ init -10 python:
             self.image = image
             self.once = False
             self.multi = False
-            self.precede = False
-            self.active = True
 
 
 ##############################################################################
@@ -262,18 +257,21 @@ init -10 python:
         level - String of level where this events placed onto.
         pos - (x, y) coordinate on the screen.
         cond - Condition that evaluates this event happen or not. This should be quoted expression.
+            If self.call is None, this determines to show its image.
         priority - An event with higher value happens earlier. default is 0.
         once - Set this true prevents calling this event second time.
         multi - Set this true don't prevent other events in the same interaction.
-        precede - Set this true searches this event before showing event map screen.
-        active - Set this true makes this event as 'active event'.
-                An active event is executed when you clicked its image on an eventmap.
         image - Image that is shown on an eventmap.
+        trigger - Determine when to evaluate this event happen.
+            "move", default, is evaluated after moved to this pos,
+            "moveto" is evaluated when trying to move this pos, and returns to the previous pos.
+            "stay" is evaluated every time before screen is event map screen is shown.
+            None never call this linked event. It's used to show only image.
         label - If it's given this label is called instead of object name.
         """
 
-        def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False, precede=False,
-            active=False, image=None, label=None):
+        def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False,
+            trigger="move", image=None, label=None):
 
             self.place = level if Player.get_place(level) else None
             self._level = None if self.place else level
@@ -282,8 +280,7 @@ init -10 python:
             self.priority = int(priority)
             self.once = once
             self.multi = multi
-            self.precede = precede
-            self.active = active
+            self.trigger = trigger
             self.image = image
             self.label = label
 
@@ -312,11 +309,12 @@ init -10 python:
         """
         Class that stores various methods and data for exploring. It has the following fields:
 
-        level - current level.
-        pos - current coordinate.
-        event - current event.
-        image - shortcut to level.image.
-        music - shortcut to level.music.
+        level - Current level.
+        pos - Current coordinate that event is happening.
+        previous_pos - Previous coordinate. when moving failed, player returns to this pos.
+        event - Current event.
+        image - Shortcut to level.image.
+        music - Shortcut to level.music.
 
         happening(event) - returns True if an event is happened.
         done(event) - returns True if an event is happened and done.
@@ -327,9 +325,9 @@ init -10 python:
             place = Player.get_place(level)
             self.level = place.level if place else level
             self.pos = place.pos if place else pos
-            self.previous_pos = self.pos
+            self.next_pos = None
 
-            self.after_interact = False
+            self.action = "stay"
             self.event = None
             self.current_events = []
             self.current_places = []
@@ -393,37 +391,44 @@ init -10 python:
             self.current_places.sort(key = lambda pl: pl.priority)
 
 
-        def get_active_events(self):
-            # returns event and place list that is shown in the navigation screen.
+        def get_places(self):
+            # returns place list that is shown in the navigation screen.
 
             events = []
-            for i in self.current_events+self.current_places:
-                if not i.once or not self.happened(i):
-                    if eval(i.cond):
-                        events.append(i)
+            for i in self.current_places:
+                if i.once and self.happened(i):
+                    continue
+                if eval(i.cond):
+                    events.append(i)
 
             events.sort(key = lambda ev: -ev.priority)
 
             return events
 
 
-        def get_passive_events(self):
+        def get_events(self, pos = None, action= None):
             # returns event list that happens in the given pos.
+
+            actions = ["stay"] if action=="stay" else ["moveto", "move", "stay",]
 
             events = []
             for i in self.current_events:
-                if not i.once or not self.happened(i):
-                    if i.precede or self.after_interact:
-                        if i.pos == None or i.pos == self.pos:
-                            if not i.active and eval(i.cond):
-                                events.append(i)
+                if i.once and self.happened(i):
+                    continue
+                if i.trigger not in actions:
+                    continue
+                if action == None or i.pos == None or i.pos == pos:
+                    if eval(i.cond):
+                        events.append(i)
 
-            return self.cut_events(events)
+            if action:
+                return self.cut_events(events)
+            else:
+                return events
 
 
         def cut_events(self, events):
-            # If multi is True, remove second or later
-            # This is only used in passive events
+            # If non-multi is found, remove second or later non-multi events
 
             found = False
             for i in events[:]:

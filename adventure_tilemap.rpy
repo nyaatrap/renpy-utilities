@@ -11,11 +11,11 @@
 ## まずタイルマップを作成します。
 # tilemap = Tilemap(map1, tileset, 32, 32)
 
-## 次にそれを使ってレベルを Level(image, music) を default で定義します。
+## 次にそれを使ってレベルを Level(image, music) で定義します。
 ## image は画像ではなく、タイルマップオブジェクトです。
-## ここでは、tilemap.rpy で定義した tilemap を使います。
-
-default level.field = Level(tilemap)
+## ここでは、tilemap.rpy で定義した tilemap を使うため、init offset を設定しています。
+init offset = 1
+define level.field = Level(tilemap)
 
 
 ## それから冒険者を TilemapPlayer(level, pos, cursor) を使って default で定義します。
@@ -30,7 +30,7 @@ default tilemapplayer = TilemapPlayer("field", pos=(0,0),
 
 
 ## タイルマップ上のイベントを定義します。
-## define ラベル名 = Event(level, pos, cond, priority, once, multi, precede, label) で定義します。
+## define ラベル名 = Event(level, pos, cond, priority, once, multi) で定義します。
 
 ## クリックで発生するイベントです。 image を与えると tilemap の上にその画像が表示されます。
 ## タイルマップはすべての座標がクリック可能となるので place や active を設定する必要はありません。
@@ -54,8 +54,8 @@ label ev0:
     return
 
 
-## 次のイベントは、プレイヤーがその座標にいる時に、プレイヤーの操作前に呼び出されるイベントです。
-define ev.enter = Event("field", pos=(0,0), precede=True, priority=999)
+## 次のイベントは、プレイヤーの操作前に呼び出されるイベントです。
+define ev.enter = Event("field", once=True, trigger="stay")
 label enter:
     "enter point"
     return
@@ -92,7 +92,8 @@ label adventure_tilemap:
 
     # Update event list in the current level
     $ player.update_events()
-    $ player.after_interact = False
+    $ player.action = "stay"
+    $ player.next_pos = None
 
     # Play music
     if player.music:
@@ -113,7 +114,7 @@ label adventure_tilemap_loop:
 
         # check passive events
         $ block()
-        $ _events = player.get_passive_events()
+        $ _events = player.get_events(player.next_pos, player.action)
 
         # sub loop to execute all passive events
         $ _loop = 0
@@ -123,12 +124,13 @@ label adventure_tilemap_loop:
             $ block()
             $ player.happened_events.add(player.event.name)
             call expression player.event.label or player.event.name
+            if player.event.trigger == "move":
+                $ player.pos = player.next_pos
             $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
                 jump adventure_tilemap
             $ _loop += 1
 
-        $ player.after_interact = True
         $ block()
 
         # show eventmap or tilemap navigator
@@ -137,24 +139,8 @@ label adventure_tilemap_loop:
         else:
             call screen eventmap_navigator(player)
 
-        #  If return value is a place, move to there
-        if isinstance(_return, Place):
-            $ player.pos = _return.pos
-
-        # If return value is an active event, execute it.
-        elif isinstance(_return, Event):
-            $ player.pos = _return.pos
-            $ player.event = _return
-            $ block()
-            $ player.happened_events.add(player.event.name)
-            call expression player.event.label or player.event.name
-            $ player.done_events.add(player.event.name)
-            if player.move_pos(_return):
-                jump adventure_tilemap
-
-        # If return value is coordinate, move to there
-        elif isinstance(_return, tuple):
-            $ player.pos = _return
+        $ player.action = "move"
+        $ player.next_pos = _return if _return else None
 
 
 ##############################################################################
@@ -188,10 +174,10 @@ screen tilemap_navigator(player):
         ## returns coordinate of tiles
         key "button_select" action Return((x, y))
 
-    ## show places and active events
-    for i in player.get_active_events():
+    ## show events
+    for i in player.get_events():
         button:
-            if isinstance(i.pos, tuple):
+            if i.image and isinstance(i.pos, tuple):
                 xysize (width, height)
                 if tilemap.isometric:
                     xoffset (i.pos[0]-i.pos[1])*width/2 - tilemap.tile_offset[0]
@@ -200,14 +186,7 @@ screen tilemap_navigator(player):
                 else:
                     xoffset i.pos[0]*width - tilemap.tile_offset[0]
                     yoffset i.pos[1]*height- tilemap.tile_offset[1]
-            else:
-                xysize (config.screen_width, config.screen_height)
 
-            if i.active:
-                action Return(i)
-
-            # show image on screen. you can also show them on the background.
-            if i.image:
                 add i.image
 
 
@@ -229,22 +208,28 @@ init -5 python:
             return isinstance(self.image, Tilemap)
 
 
-        def get_passive_events(self):
+        def get_events(self, pos=None, action=None):
             # returns event list that happens in the given pos.
             # this overwrites the same method in player class.
 
+            actions = ["stay"] if action=="stay" else ["moveto", "move", "stay",]
+
             events = []
             for i in self.current_events:
-                if not i.once or not self.happened(i):
-                    if i.precede or self.after_interact:
-                        if i.pos == None or i.pos == self.pos:
-                            if not i.active and eval(i.cond):
-                                events.append(i)
-                        elif self.in_tilemap() and i.pos == self.image.map[self.pos[1]][self.pos[0]]:
-                            if not i.active and eval(i.cond):
-                                events.append(i)
+                if i.once and self.happened(i):
+                    continue
+                if i.trigger not in actions:
+                    continue
+                if action == None or i.pos == None or i.pos == pos:
+                    if eval(i.cond):
+                        events.append(i)
+                elif self.in_tilemap() and pos and i.pos == self.image.map[pos[1]][pos[0]]:
+                    if eval(i.cond):
+                        events.append(i)
 
-
-            return self.cut_events(events)
+            if action:
+                return self.cut_events(events)
+            else:
+                return events
 
 
