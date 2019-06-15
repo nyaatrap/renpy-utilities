@@ -41,7 +41,7 @@ init python:
 
     ## テキストファイルで定義したマップを次の関数で読み込むことも出来ます。
     ## numeral を True にすると、文字列を整数に変換して読み込みます。
-    # map1 = read_spreadsheet("cave.tsv", separator="\t", numeral=False)
+    # map1 = read_spreadsheet("cave.tsv", separator=",", numeral=False)
 
     ## 最後にタイルマップを Tilemap(map, tileset, tile_width, tile_height) の形で定義します。
     ## map, tileset は上で定義したもので、tile_width, tile_height は各タイルのサイズです。
@@ -108,7 +108,7 @@ init -10 python:
         isometric - if true, isometric tile is used.
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
         mask - 2- dimensional list of 0 or 1. If it's 0, tile will not be rendered.
-        interact - If True, it restarts interaction when mouse position is changed onto another tile. default is True.
+        interact - If True, default, it restarts interaction when mouse is moved to another tile.
         coordinate - (x, y) coordinate of a tile where mouse is hovering.
         """
 
@@ -265,7 +265,7 @@ init -10 python:
         return sprites
 
 
-    def read_spreadsheet(file, separator="\t", numeral=False):
+    def read_spreadsheet(file, separator=",", numeral=False):
 
         # Function that returns a 2-dimensional list from a text file.
         # If numeral is True, string will convert to integer.
