@@ -72,7 +72,7 @@ define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dung
 
 
 ## それらを使ってレベルを Dungeon(image, music, collision) で定義します。
-default level.dungeon = Dungeon(image=map_image, collision=collision)
+define level.dungeon = Dungeon(image=map_image, collision=collision)
 
 
 ## 最後に冒険者を DungeonPlayer クラスで定義します。
@@ -85,37 +85,40 @@ default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0)
 
 ## ダンジョンのイベントを定義します。
 
-## イベントにはパッシブ、アクティブ、コリジョンの三種類があります。
-## デフォルトはパッシブで、その座標に移動した時に呼ばれます。
-## アクティブはその座標にいる上で、さらにクリックすると呼ばれます。
-## コリジョンは侵入不可能の座標に移動しようとした時に呼ばれます。
+## イベントには trigger によって発生条件が別れます。
+## デフォルトの trigger = "move" は、その座標の上に移動した時に呼ばれます。
+## "movefrom" - その座標から離れた時
+## "nextto" - その座標の隣に移動した時
+## "moveto" - 侵入不可能タイルに移動しようとした時
+## "faceto" - 移動、または向きを変えて正面一歩前にタイルを捉えた時
+## "click" - そのタイルの上でクリックした時
+## "clickto" - そのタイルの正面一歩前でクリックした時
+## "stay" - 状態にかかわらずそのタイルにいる時。これは行動前にも判定されます。
 
-## パッシブイベントは、プレイヤーが pos の位置に移動した時に呼び出されます。
-## dx,dy を与えるとその向きのみイベントが発生します。
-define ev.entrance = Event("dungeon", pos=(1,1), precede=True, once=True)
+
+## パッシブイベントは、プレイヤーが pos の上下左右に移動した時に呼び出されます。
+define ev.entrance = Event("dungeon", pos=(1,1), once=True)
 label entrance:
     "Enter point"
     return
 
 
 ## pos が与えられていないイベントは、そのレベル内ならどこでも発生します。
-## active を True にすると、その座標でクリックした時のみ呼び出されるアクティブイベントになります。
-define ev.nothing = Event("dungeon", priority=100, active=True)
+define ev.nothing = Event("dungeon", trigger = "click", priority=100)
 label nothing:
     "There is nothing"
     return
 
 
-## pos を整数もしくは文字列にすると、その文字列がマップを定義した二元配列の値と一致する座標の場合に、イベントが発生します。
-## 移動しようとした場所が衝突する座標の場合、その座標のコリジョンイベントが呼ばれます。
+## pos をマップを定義した二元配列の値と一致する整数または文字列にすると、そのイベントが発生します。
 
-define ev.collision_wall = Event("dungeon", pos=2)
+define ev.collision_wall = Event("dungeon", pos=2, trigger="moveto")
 label collision_wall:
     with vpunch
     return
 
 
-define ev.collision_pit = Event("dungeon", pos=0)
+define ev.collision_pit = Event("dungeon", pos=0, trigger="moveto")
 label collision_pit:
     "There is a pit"
     return
@@ -126,7 +129,7 @@ label collision_pit:
 ## player.front2_pos, back2_pos は２歩前、２歩後ろの座標です。
 ## 返り値に (x,y) 座標を与えるとその場所に移動します。
 
-define ev.collision_door = Event("dungeon", pos=3)
+define ev.collision_door = Event("dungeon", pos=3, trigger="moveto")
 label collision_door:
     if player.front_pos == player.next_pos:
         scene black with dissolve
@@ -137,7 +140,7 @@ label collision_door:
 
 
 ## 返り値に文字列と移動先の座標を与えるとそのレベルの場所に移動します。
-define ev.exit = Event("dungeon", pos=(1,0), priority = -1)
+define ev.exit = Event("dungeon", pos=(1,0), trigger="moveto", priority = -1)
 label exit:
     menu:
         "Do you exit?"
@@ -152,7 +155,7 @@ label exit:
 
 ## イベントに image を与えると、ダンジョンのタイル上に表示できます。
 image sp = "dungeon/sprite.png"
-define ev.sprite = Event("dungeon", pos=(1, 8), active=True, image = "sp")
+define ev.sprite = Event("dungeon", pos=(1, 8), trigger = "click", image = "sp")
 label sprite:
     "Hello"
     return
@@ -183,7 +186,8 @@ label adventure_dungeon:
 
     # Update event list in the current level
     $ player.update_events()
-    $ player.after_interact = False
+    $ player.action = "stay"
+    $ player.next_pos = None
 
     # Play music
     if player.music:
@@ -204,7 +208,7 @@ label adventure_dungeon_loop:
 
         # check passive events
         $ block()
-        $ _events = player.get_passive_events()
+        $ _events = player.get_events(player.next_pos, player.action)
 
         # sub loop to execute all passive events
         $ _loop = 0
@@ -214,78 +218,47 @@ label adventure_dungeon_loop:
             $ block()
             $ player.happened_events.add(player.event.name)
             call expression player.event.label or player.event.name
+            if player.event.trigger == "move":
+                $ player.pos = player.next_pos
             $ player.done_events.add(player.event.name)
             if player.move_pos(_return):
                 jump adventure_dungeon
             $ _loop += 1
 
-        $ player.after_interact = True
+        $ block()
 
-        # sub loop to execute active/collision events without moving.
-        while True:
+        # show eventmap or dungeon navigator
+        if player.in_dungeon():
+            call screen dungeon_navigator(player)
+        else:
+            call screen eventmap_navigator(player)
 
-            # show eventmap or dungeon navigator
-            $ block()
-            if player.in_dungeon():
-                call screen dungeon_navigator(player)
+            $ player.action = "move"
+            $ player.next_pos = _return.pos if _return else None
+
+        if _return == False:
+            $ player.next_pos = player.pos
+            $ player.action = "click"
+
+        elif isinstance(_return, tuple):
+
+            $ player.next_pos = _return
+
+            if player.get_tile(pos = _return) in player.collision:
+                $ player.action = "collision"
+
+            elif player.compare(player.next_pos):
+                $ player.action = "rotate"
+                $ player.pos = player.next_pos
+
             else:
-                call screen eventmap_navigator(player)
+                $ player.action = "move"
+                $ player.pos = player.next_pos
 
-            #  If return value is a place, move to there
-            if isinstance(_return, Place):
-                $ player.pos = _return.pos
-                jump adventure_dungeon
+            # Show background
+            if player.image:
+                scene expression player.image at topleft
 
-            # If return value is an active event, execute it.
-            elif isinstance(_return, Event):
-                if not player.in_dungeon():
-                    $ player.pos = _return.pos
-                $ player.event = _return
-                $ block()
-                $ player.happened_events.add(player.event.name)
-                call expression player.event.label or player.event.name
-                $ player.done_events.add(player.event.name)
-                if player.move_pos(_return):
-                    jump adventure_dungeon
-                jump adventure_dungeon_loop
-
-            # if return value is coordinate and it's coordinate is in collision,
-            # then execute collision events.
-            elif isinstance(_return, tuple) and player.get_tile(pos = _return) in player.collision:
-
-                # check collision events
-                $ block()
-                $ player.next_pos = _return
-                $ _events = player.get_passive_events(pos = player.next_pos)
-
-                # sub loop to execute all collision events
-                $ _loop = 0
-                while _loop < len(_events):
-
-                    $ player.event = _events[_loop]
-                    $ block()
-                    $ player.happened_events.add(player.event.name)
-                    call expression player.event.label or player.event.name
-                    $ player.done_events.add(player.event.name)
-                    if player.move_pos(_return):
-                        jump adventure_dungeon
-                    $ _loop += 1
-
-                jump adventure_dungeon_loop
-
-            # if return value is coordinate, move to the new coordinate
-            elif isinstance(_return, tuple):
-
-                $ player.next_pos = _return
-                $ player.move_pos(player.next_pos)
-
-                # Show background
-                if player.image:
-                    scene expression player.image at topleft
-
-                # if movement is not rotation, jump up to the outer loop
-                if not player.compare(player.previous_pos):
-                    jump adventure_dungeon_loop
 
 
 ##############################################################################
@@ -294,13 +267,9 @@ label adventure_dungeon_loop:
 
 screen dungeon_navigator(player):
 
-    ## show active events
-    for i in player.get_active_events():
-        button:
-            xysize (config.screen_width, config.screen_height)
-
-            if i.active:
-                action Return(i)
+    button:
+        xysize (config.screen_width, config.screen_height)
+        action Return(False)
 
 
     # move buttons
@@ -367,8 +336,6 @@ init -5 python:
         def __init__(self, level=None, pos=None, **kwargs):
 
             super(DungeonPlayer, self).__init__(level, pos, **kwargs)
-
-            self.next_pos = self.pos
 
 
         @property
@@ -453,47 +420,38 @@ init -5 python:
                 level.changed_tiles[(pos[0], pos[1])] = tile
 
 
-        def get_active_events(self, pos=None):
-            # returns event and place list that is shown in the navigation screen.
-            # this overwrites the same method in player class.
-            # if pos is give, it gets events on the given pos
-
-            pos = pos or self.pos
-
-            events = []
-            for i in self.current_events+self.current_places:
-                if not i.once or not self.happened(i):
-                    if not self.in_dungeon():
-                        if eval(i.cond):
-                            events.append(i)
-                    elif i.pos == None or i.pos == self.get_tile(pos=pos) or Coordinate(*pos).compare(i.pos):
-                        if eval(i.cond):
-                            events.append(i)
-
-            events.sort(key = lambda ev: -ev.priority)
-
-            return events
-
-
-        def get_passive_events(self, pos=None):
+        def get_events(self, pos = None, action= None):
             # returns event list that happens in the given pos.
-            # this overwrites the same method in player class.
-            # if pos is give, it gets events on the given pos
 
-            pos = pos or self.pos
+            actions = ["stay"]
+            if action == "click":
+                actions += ["click", "clickto"]
+            if action == "move":
+                actions += ["move", "movefrom", "nextto", "faceto"]
+            if action == "rotate":
+                actions += ["faceto"]
+            if action == "collision":
+                actions += ["moveto"]
 
             events = []
             for i in self.current_events:
-                if not i.once or not self.happened(i):
-                    if i.precede or self.after_interact:
-                        if i.pos == None or i.pos == pos:
-                            if not i.active and eval(i.cond):
-                                events.append(i)
-                        elif self.in_dungeon() and (i.pos == self.get_tile(pos=pos) or Coordinate(*pos).compare(i.pos)):
-                            if not i.active and eval(i.cond):
-                                events.append(i)
+                if i.once and self.happened(i):
+                    continue
+                if i.trigger not in actions:
+                    continue
+                if action == None or i.pos == None or i.pos == pos:
+                    if eval(i.cond):
+                        events.append(i)
+                elif self.in_dungeon() and (i.pos == self.get_tile(pos=pos) or Coordinate(*pos).compare(i.pos)):
+                    if eval(i.cond):
+                        events.append(i)
 
-            return self.cut_events(events)
+            if action:
+                return self.cut_events(events)
+            else:
+                return events
+
+
 
 
 
