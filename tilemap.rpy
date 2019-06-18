@@ -48,7 +48,7 @@ init python:
 
     ## isometric を True にすると斜め見下ろしの視点で描画します。
 
-    tilemap = Tilemap(map1, tileset, 32, 32)
+    tilemap = Tilemap(map1, tileset, 32, 32, cursor = Solid("#faa6", xysize=(32,32)))
 
 
 # Tilemap は displayable です。show 文で使う場合は画像タグに関連付けてから使います。
@@ -108,12 +108,13 @@ init -10 python:
         isometric - if true, isometric tile is used.
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
         mask - 2- dimensional list of 0 or 1. If it's 0, tile will not be rendered.
+        cursor - If not NOne, it's a displayable that is shown under mouse.
         interact - If True, default, it restarts interaction when mouse is moved to another tile.
         coordinate - (x, y) coordinate of a tile where mouse is hovering.
         """
 
         def __init__(self, map, tileset, tile_width, tile_height = None, tile_offset = (0,0),
-            isometric = False, area = None, mask = None, interact = True, **properties):
+            isometric = False, area = None, mask = None, cursor = None, interact = True, **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
@@ -124,6 +125,7 @@ init -10 python:
             self.isometric = isometric
             self.area = area
             self.mask = mask
+            self.cursor = cursor
             self.interact = interact
             self.coordinate = None
 
@@ -206,6 +208,12 @@ init -10 python:
             # Blit
             render.blit(renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at), tile_pos)
 
+            # show cursor
+            if self.cursor and self.coordinate:
+                if self.coordinate == (x, y):
+                    render.blit(renpy.render(self.cursor, self.tile_width, self.tile_height, st, at), tile_pos)
+
+
 
         def event(self, ev, x, y, st):
 
@@ -219,6 +227,11 @@ init -10 python:
             else:
                 tile_x = (x-self.tile_offset[0])/self.tile_width
                 tile_y = (y-self.tile_offset[1])/self.tile_height
+
+            # if area is given, adjust coordinate
+            if self.area:
+                tile_x = tile_x + self.area[0]/self.tile_width
+                tile_y = tile_y + self.area[1]/self.tile_height
 
             # Make coordinate None if it's out of displayable
             if tile_x < 0 or tile_y < 0 or tile_x >= len(self.map[0]) or tile_y >= len(self.map):
