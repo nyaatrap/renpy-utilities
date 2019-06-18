@@ -15,16 +15,16 @@ define level.east = Level(image=Solid("#6a6"))
 define level.west = Level(image=Solid("#339"))
 
 
-## 次にイベントが発生する場所を place(level, pos, cond, image) で定義します。
+## 次にイベントが発生する場所を place(level, pos, cond, icon) で定義します。
 ## level はその場所が置かれるレベルで、上で定義した level を文字列で与えます。
 ## pos はその場所のモニターに対する相対座標になります。 (0.5, 0.5) が画面中央です。
-## cond が満たされると image がレベルの背景上に表示され、クリックするとその場所に移動します。
+## cond が満たされると icon がレベルの背景上に表示され、クリックするとその場所に移動します。
 ## place の名前空間でも定義できます。
 
-define place.home = Place(level="east", pos=(.8,.5), image=Text("home"))
-define place.e_station = Place(level="east", pos=(.6,.7), image=Text("east-station"))
-define place.w_station = Place(level="west", pos=(.4,.4), image=Text("west-station"))
-define place.shop = Place(level="west", pos=(.2,.5), image=Text("shop"))
+define place.home = Place(level="east", pos=(.8,.5), icon=Text("home"))
+define place.e_station = Place(level="east", pos=(.6,.7), icon=Text("east-station"))
+define place.w_station = Place(level="west", pos=(.4,.4), icon=Text("west-station"))
+define place.shop = Place(level="west", pos=(.2,.5), icon=Text("shop"))
 
 
 ## それから現在位置や達成イベントなどを保持する探検者を Player(place)
@@ -70,10 +70,10 @@ label shop:
 
 ## player.happened(ev) でそのイベントが過去に呼び出されたかどうか評価できます。
 ## player.done(ev) でそのイベントが過去に最後まで実行されたかどうか評価できます。
-define place.shop2 = Place(level="west", pos=(.1,.1), cond="player.done(ev.shop)", image=Text("hidden shop"))
+define place.shop2 = Place(level="west", pos=(.1,.1), cond="player.done(ev.shop)", icon=Text("hidden shop"))
 
-## image を与えると、イベントマップのその場所の上に追加で画像が表示されます。
-define ev.shop2 = Event("shop2", cond="player.done(ev.shop)", image=Text("(Now on sale)", size=20, yoffset=30))
+## icon を与えると、イベントマップのその場所の上に追加で画像が表示されます。
+define ev.shop2 = Event("shop2", cond="player.done(ev.shop)", icon=Text("(Now on sale)", size=20, yoffset=30))
 label shop2:
     "this is a hidden shop."
     return
@@ -199,15 +199,15 @@ screen eventmap_navigator(player):
             pos i.pos
             action Return(i)
 
-            if i.image:
-                add i.image
+            if i.icon:
+                add i.icon
 
-    ## show event images
+    ## show event icons
     for i in player.get_events():
         button:
-            if i.image:
+            if i.icon:
                 pos i.pos
-                add i.image
+                add i.icon
 
 
 
@@ -241,13 +241,13 @@ init -10 python:
         This class's fields are same to event class
         """
 
-        def __init__(self, level=None, pos=None, cond="True", priority=0, image=None):
+        def __init__(self, level=None, pos=None, cond="True", priority=0, icon=None):
 
             self.level = level
             self.pos = pos
             self.cond = cond
             self.priority = int(priority)
-            self.image = image
+            self.icon = icon
             self.once = False
             self.multi = False
 
@@ -263,21 +263,22 @@ init -10 python:
         level - String of level where this events placed onto.
         pos - (x, y) coordinate on the screen.
         cond - Condition that evaluates this event happen or not. This should be quoted expression.
-            If self.call is None, this determines to show its image.
+            If self.call is None, this determines to show its icon.
         priority - An event with higher value happens earlier. default is 0.
         once - Set this true prevents calling this event second time.
         multi - Set this true don't prevent other events in the same interaction.
-        image - Image that is shown on an eventmap.
         trigger - Determine when to evaluate this event happen.
             "move", default, is evaluated after moved to this pos,
             "moveto" is evaluated when trying to move this pos, and returns to the previous pos.
             "stay" is evaluated every time before screen is event map screen is shown.
-            None never call this linked event. It's used to show only image.
+            None never call this linked event. It's used to show only icon.
+        icon - icon that is shown on an eventmap.
+        image - it's reserved for later use.
         label - If it's given this label is called instead of object name.
         """
 
         def __init__(self, level=None, pos=None, cond="True", priority=0, once=False, multi=False,
-            trigger="move", image=None, label=None):
+            trigger="move", icon=None, image=None, label=None):
 
             self.place = level if Player.get_place(level) else None
             self._level = None if self.place else level
@@ -287,6 +288,7 @@ init -10 python:
             self.once = once
             self.multi = multi
             self.trigger = trigger
+            self.icon = icon
             self.image = image
             self.label = label
 

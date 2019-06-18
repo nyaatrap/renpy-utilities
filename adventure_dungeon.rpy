@@ -70,9 +70,12 @@ define collision = (0, 2, 3)
 ## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して描画します。
 define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left")
 
+define mm_tileset = [Solid("#000", xysize=(16,16)), Solid("#633", xysize=(16,16)), Solid("#ea3", xysize=(16,16)), Solid("#f33", xysize=(16,16))]
+
+define mm_tile = Tilemap(map2, mm_tileset, 16)
 
 ## それらを使ってレベルを Dungeon(image, music, collision) で定義します。
-define level.dungeon = Dungeon(image=map_image, collision=collision)
+define level.dungeon = Dungeon(image=map_image, tilemap = mm_tile, collision=collision)
 
 
 ## 最後に冒険者を DungeonPlayer クラスで定義します。
@@ -80,7 +83,13 @@ define level.dungeon = Dungeon(image=map_image, collision=collision)
 ## adventure.rpy との定義の重複を避けるため別名にしていますが、
 ## ゲームスタート後は player に戻して使います。
 
-default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0)
+image p_icon = ConditionSwitch(
+        'player.pos[3]==-1', Transform(Text("▶", size=16), rotate =270, rotate_pad=False),
+        'player.pos[2]==1', Transform(Text("▶", size=16), rotate =0, rotate_pad=False),
+        'player.pos[3]==1', Transform(Text("▶", size=16), rotate =90, rotate_pad=False),
+        'True', Transform(Text("▶", size=16), rotate =180, rotate_pad=False))
+
+default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0, icon = Text("P"))
 
 
 ## ダンジョンのイベントを定義します。
@@ -154,8 +163,9 @@ label exit:
 
 
 ## イベントに image を与えると、ダンジョンのタイル上に表示できます。
-image sp = "dungeon/sprite.png"
-define ev.sprite = Event("dungeon", pos=(1, 8), trigger = "click", image = "sp")
+image sp = Solid("#4a3", xysize=(16,16))
+image sp2 = "dungeon/sprite.png"
+define ev.sprite = Event("dungeon", pos=(1, 8), trigger = "click", icon = "sp", image="sp2")
 label sprite:
     "Hello"
     return
@@ -187,6 +197,7 @@ label adventure_dungeon:
     # Update event list in the current level
     $ player.update_events()
     $ player.action = "stay"
+    $ player.update_dungeonmap()
 
     # Play music
     if player.music:
@@ -249,6 +260,7 @@ label adventure_dungeon_loop:
 
             # Show background
             if player.image:
+                $ player.update_dungeonmap()
                 scene expression player.image at topleft
 
         else:
@@ -261,6 +273,8 @@ label adventure_dungeon_loop:
 ## screen that shows orientation buttons in dungeon
 
 screen dungeon_navigator(player):
+
+    on "show" action Show("blocking_screen")
 
     # When outside of navigation is clicked
     button:
@@ -296,9 +310,30 @@ screen dungeon_navigator(player):
         key  'mousedown_4' action Return(player.front_pos)
         key  'mousedown_5' action Return(player.back_pos)
 
+    add player.tilemap align 0.98, 0.97
+
 
 style move_button_text:
     size 50
+
+
+screen blocking_screen():
+    zorder 1000
+
+    for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
+        key i action NullAction()
+    for i in ["repeat_s", "s","repeat_S","S", "focus_down"]:
+        key i action NullAction()
+    for i in ["repeat_d","d", "repeat_D","D", "rollforward"]:
+        key i action NullAction()
+    for i in ["repeat_a","a", "repeat_A","A", "rollback"]:
+        key i action NullAction()
+    for i in ["repeat_q", "q","repeat_Q","Q", "focus_left"]:
+        key i action NullAction()
+    for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
+        key i action NullAction()
+
+    timer 0.025 action Hide("blocking_screen")
 
 
 ##############################################################################
@@ -306,32 +341,31 @@ style move_button_text:
 
 init -5 python:
 
-    class Dungeon(Level):
+    class Dungeon(TiledLevel):
 
         """
-        Expanded Level class that holds collision and map change data.
+        Expanded Level class that holds collision.
         """
 
-        def __init__(self, image=None, music=None, collision=None):
+        def __init__(self, image=None, music=None, tilemap = None, collision=None):
 
-            super(Dungeon, self).__init__(image, music)
+            super(Dungeon, self).__init__(image, music, tilemap)
             self.collision = collision
-            self.changed_tiles = {}
 
 
 ##############################################################################
 ## DungeonPlayer class
 
-    class DungeonPlayer(Player):
+    class DungeonPlayer(TilemapPlayer):
 
         """
         Expanded Player Class that stores various methods and data for dungeon crawling.
         """
 
 
-        def __init__(self, level=None, pos=None, **kwargs):
+        def __init__(self, level=None, pos=None, icon=None, **kwargs):
 
-            super(DungeonPlayer, self).__init__(level, pos, **kwargs)
+            super(DungeonPlayer, self).__init__(level, pos, icon, **kwargs)
 
             self.next_pos = self.pos
 
@@ -394,30 +428,6 @@ init -5 python:
             return isinstance(self.get_level(self.level), Dungeon)
 
 
-        def get_tile(self, level=None, pos=None):
-            # returns tile from current or given pos
-
-            if player.in_dungeon():
-                level = level or self.level
-                pos = pos or self.pos
-                level = self.get_level(level)
-
-                if (pos[0], pos[1]) in level.changed_tiles:
-                    return level.changed_tiles[(pos[0], pos[1])]
-                else:
-                    return level.image.map[pos[1]][pos[0]]
-
-
-        def set_tile(self, tile, level=None, pos=None):
-
-            if player.in_dungeon():
-                level = level or self.level
-                pos = pos or self.pos
-                level = self.get_level(level)
-
-                level.changed_tiles[(pos[0], pos[1])] = tile
-
-
         def get_events(self, pos = None, action= None):
             # returns event list that happens in the given pos.
 
@@ -465,6 +475,10 @@ init -5 python:
             else:
                 return events
 
+
+        def update_dungeonmap(self):
+
+            self.update_tilemap()
 
 
 

@@ -30,16 +30,16 @@ default tilemapplayer = TilemapPlayer("field", pos=(0,0), turn=0, icon = Text("P
 ## タイルマップ上のイベントを定義します。
 ## define ラベル名 = Event(level, pos, cond, priority, once, multi) で定義します。
 
-## クリックで発生するイベントです。 image を与えると tilemap の上にその画像が表示されます。
+## クリックで発生するイベントです。 icon を与えると tilemap の上にその画像が表示されます。
 ## タイルマップはすべての座標がクリック可能となるので place や active を設定する必要はありません。
 
-define ev.iconA = Event("field", pos=(5,0), image=Text("A"))
+define ev.iconA = Event("field", pos=(5,0), icon=Text("A"))
 label iconA:
     "icon A is clicked"
     return
 
 
-define ev.iconB = Event("field", pos=(8,7), image=Text("B"))
+define ev.iconB = Event("field", pos=(8,7), icon=Text("B"))
 label iconB:
     "icon B is clicked"
     return
@@ -181,9 +181,9 @@ screen tilemap_navigator(player):
 
 
 ##############################################################################
-## Dungeon class.
+## TiledLevel class.
 
-init -5 python:
+init -9 python:
 
     class TiledLevel(Level):
 
@@ -200,7 +200,6 @@ init -5 python:
 ##############################################################################
 ## TilemapPlayer class
 
-init -5 python:
 
     class TilemapPlayer(Player):
 
@@ -215,7 +214,7 @@ init -5 python:
             self.replaced_tiles = {}
             self.seen_tiles = {}
             self.icon = icon
-            self.mask_tilemap = False
+            self.mask_tilemap = True
 
 
         @property
@@ -327,11 +326,11 @@ init -5 python:
 
             objects = {}
             for i in self.get_events():
-                if i.image and isinstance(i.pos, tuple):
-                    objects[i.pos] = i.image
+                if i.icon and isinstance(i.pos, tuple):
+                    objects[i.pos] = i.icon
 
             if self.icon and self.pos:
-                objects[self.pos] = self.icon
+                objects[(self.pos[0], self.pos[1])] = self.icon
 
             self.tilemap.objects = objects
 
