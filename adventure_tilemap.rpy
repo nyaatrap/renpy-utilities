@@ -245,10 +245,9 @@ init -5 python:
                 if action == None or i.pos == None or i.pos == pos:
                     if eval(i.cond):
                         events.append(i)
-                elif self.in_tilemap() and pos and i.pos == self.tilemap.map[pos[1]][pos[0]]:
+                elif self.in_tilemap() and pos and i.pos == self.get_tile(pos=pos):
                     if eval(i.cond):
                         events.append(i)
-
             if action:
                 return self.cut_events(events)
             else:
