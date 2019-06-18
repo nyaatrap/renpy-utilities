@@ -24,7 +24,7 @@ define level.field = TiledLevel("tilemap1", tilemap=tilemap1)
 ## adventure.rpy との定義の重複を避けるため別名にしていますが、
 ## ゲームスタート後は player に戻して使います。
 
-default tilemapplayer = TilemapPlayer("field", pos=(0,0), turn=0)
+default tilemapplayer = TilemapPlayer("field", pos=(0,0), turn=0, icon = Text("P"))
 
 
 ## タイルマップ上のイベントを定義します。
@@ -96,6 +96,7 @@ label adventure_tilemap:
     # Update event list in the current level
     $ player.update_events()
     $ player.action = "stay"
+    $ player.update_tilemap()
 
     # Play music
     if player.music:
@@ -105,7 +106,6 @@ label adventure_tilemap:
     # Show background
     if player.image:
         scene black with Dissolve(.25)
-        $ player.add_objects()
         show expression player.image at topleft
         with Dissolve(.25)
 
@@ -146,6 +146,7 @@ label adventure_tilemap_loop:
         else:
             $ player.action = "move"
             $ player.move_pos(_return)
+            $ player.update_tilemap()
 
 
 ##############################################################################
@@ -159,7 +160,7 @@ screen tilemap_navigator(player):
         width = tilemap.tile_width
         height = tilemap.tile_height
 
-    on "show" action [Function(player.add_objects), SetField(tilemap, "show_cursor", True)]
+    on "show" action SetField(tilemap, "show_cursor", True)
     on "hide" action SetField(tilemap, "show_cursor", False)
 
     # When outside of map is clicked.
@@ -207,12 +208,14 @@ init -5 python:
         Expanded Player Class that stores various methods and data for tilemap exploring.
         """
 
-        def __init__(self, level=None, pos=None, **kwargs):
+        def __init__(self, level=None, pos=None, icon=None, **kwargs):
 
             super(TilemapPlayer, self).__init__(level, pos, **kwargs)
 
             self.replaced_tiles = {}
             self.seen_tiles = {}
+            self.icon = icon
+            self.mask_tilemap = False
 
 
         @property
@@ -308,6 +311,15 @@ init -5 python:
                             pass
 
 
+        def add_mask(self):
+
+            if not self.in_tilemap():
+                return
+
+            if self.level in self.seen_tiles.keys():
+                self.tilemap.mask = self.seen_tiles[self.level]
+
+
         def add_objects(self):
 
             if not self.in_tilemap():
@@ -318,16 +330,10 @@ init -5 python:
                 if i.image and isinstance(i.pos, tuple):
                     objects[i.pos] = i.image
 
+            if self.icon and self.pos:
+                objects[self.pos] = self.icon
+
             self.tilemap.objects = objects
-
-
-        def add_mask(self):
-
-            if not self.in_tilemap():
-                return
-
-            self.tilemap.mask = self.seen_tiles[self.level]
-
 
 
         def add_replaced_tiles(self):
@@ -335,7 +341,18 @@ init -5 python:
             if not self.in_tilemap():
                 return
 
-            self.tilemap.replaced_tiles = self.replaced_tiles[self.level]
+            if self.level in self.replaced_tiles.keys():
+                self.tilemap.replaced_tiles = self.replaced_tiles[self.level]
+
+
+        def update_tilemap(self):
+
+            self.add_objects()
+            self.add_replaced_tiles()
+
+            if self.mask_tilemap:
+                self.set_seen_tile()
+                self.add_mask()
 
 
 
