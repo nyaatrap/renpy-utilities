@@ -9,13 +9,13 @@
 
 
 ## まずタイルマップを作成します。
-# tilemap = Tilemap(map1, tileset, 32, 32)
+# tilemap1 = Tilemap(map1, tileset, 32, 32)
 
-## 次にそれを使ってレベルを TiledLevel(image, music) で定義します。
-## image は画像ではなく、タイルマップオブジェクトを文字列にしたものです。
+## 次にそれを使ってレベルを TiledLevel(image, music, tilemap) で定義します。
+## image はタイルマップから定義した画像、　tilemap は元のタイルマップオブジェクトです。
 ## ここでは、tilemap.rpy で定義した tilemap を使うため、init offset を設定しています。
 init offset = 1
-define level.field = TiledLevel("map", tilemap=tilemap)
+define level.field = TiledLevel("tilemap1", tilemap=tilemap1)
 
 
 ## それから冒険者を TilemapPlayer(level, pos) を使って default で定義します。
@@ -136,7 +136,6 @@ label adventure_tilemap_loop:
 
         # show eventmap or tilemap navigator
         if player.in_tilemap():
-            # redraw
             call screen tilemap_navigator(player)
         else:
             call screen eventmap_navigator(player)
