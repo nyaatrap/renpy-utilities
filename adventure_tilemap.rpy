@@ -141,8 +141,8 @@ label adventure_tilemap_loop:
         else:
             call screen eventmap_navigator(player)
 
-        if _return == "click":
-            $player.action = "click"
+        if isinstance(_return, basestring):
+            $ player.action = _return
 
         else:
             $ player.action = "move"

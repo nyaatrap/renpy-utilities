@@ -96,6 +96,7 @@ label turn:
     $ player.turn += 1
     return
 
+## eventmap_screen に文字列が戻り値となるボタンを追加すると、その文字列を trigger として使用できます。
 
 ## start ラベルから adventure へジャンプすると探索を開始します。
 
@@ -153,12 +154,13 @@ label adventure_loop:
         # show eventmap navigator
         call screen eventmap_navigator(player)
 
-        if _return == "click":
-            $player.action = "click"
+        if isinstance(_return, basestring):
+            $ player.action = _return
 
         else:
             $ player.action = "move"
             $ player.move_pos(_return)
+
 
 
 label after_load():
