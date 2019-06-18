@@ -36,23 +36,25 @@ init python:
         [1,1,1,1,1,1,1,2,2,2,1,1,1,1,1,1,1],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
         [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         ]
 
     ## テキストファイルで定義したマップを次の関数で読み込むことも出来ます。
     ## numeral を True にすると、文字列を整数に変換して読み込みます。
     # map1 = read_spreadsheet("cave.tsv", separator=",", numeral=False)
 
-    ## 最後にタイルマップを Tilemap(map, tileset, tile_width, tile_height) の形で定義します。
+    ## 最後にタイルマップを Tilemap(map, tileset, tile_width, tile_height, cursor) の形で定義します。
     ## map, tileset は上で定義したもので、tile_width, tile_height は各タイルのサイズです。
+    ## cursor が与えられると、マウスの下にその画像が表示されます。
+    ## cursor の表示は show_cursor = True/False でコントロールできます。
 
     ## isometric を True にすると斜め見下ろしの視点で描画します。
 
-    tilemap = Tilemap(map1, tileset, 32, 32, cursor = Solid("#faa6", xysize=(32,32)))
+    tilemap1 = Tilemap(map1, tileset, 32, 32, cursor = Solid("#faa6", xysize=(32,32)))
 
 
 # Tilemap は displayable です。show 文で使う場合は画像タグに関連付けてから使います。
-image map = tilemap
+image tilemap1 = tilemap1
 
 
 ## ゲームがスタートしたら jump sample_tilemap でここに飛んでください。
@@ -60,17 +62,17 @@ image map = tilemap
 label sample_tilemap:
 
     ## イメージで定義したマップ画像を表示します。
-    show map at truecenter
+    show tilemap1 at truecenter
 
     ## tilemap.area を None 以外にすると、その範囲のみ描画します。
-    $ tilemap.area = (64,64,256,256)
+    $ tilemap1.area = (64,64,256,256)
     pause
 
     ## tilemap.area を None にすると、画像全てを描画します。
-    $ tilemap.area = None
+    $ tilemap1.area = None
 
     ## また tilemap.coordinate にはマウスがホバーしているタイルの座標が格納されています。
-    call screen track_coordinate(tilemap)
+    call screen track_coordinate(tilemap1)
     "[_return]"
 
     return
@@ -108,13 +110,16 @@ init -10 python:
         isometric - if true, isometric tile is used.
         area - (x,y,w,h) tuple to render. If it's None, default, it renders all tiles.
         mask - 2- dimensional list of 0 or 1. If it's 0, tile will not be rendered.
-        cursor - If not NOne, it's a displayable that is shown under mouse.
+        cursor - If not None, it's a displayable that is shown under mouse.
+        show_cursor - if True, show cursor
+        objects - if dict {(x,y): image} is given, this image is shown on the (x,y) tile.
         interact - If True, default, it restarts interaction when mouse is moved to another tile.
         coordinate - (x, y) coordinate of a tile where mouse is hovering.
         """
 
         def __init__(self, map, tileset, tile_width, tile_height = None, tile_offset = (0,0),
-            isometric = False, area = None, mask = None, cursor = None, interact = True, **properties):
+            isometric = False, area = None, mask = None, cursor = None, interact = True,
+            objects = None, object_offset = (0,0), **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
@@ -126,7 +131,10 @@ init -10 python:
             self.area = area
             self.mask = mask
             self.cursor = cursor
+            self.show_cursor = True
             self.interact = interact
+            self.objects = objects
+            self.object_offset = object_offset
             self.coordinate = None
 
 
@@ -143,6 +151,7 @@ init -10 python:
 
                         # render
                         self._render(render, st, at, x, y)
+
 
                 # Adjust the render size.
                 if self.isometric:
@@ -209,10 +218,15 @@ init -10 python:
             render.blit(renpy.render(self.tileset[tile], self.tile_width, self.tile_height, st, at), tile_pos)
 
             # show cursor
-            if self.cursor and self.coordinate:
+            if self.cursor and self.show_cursor and self.coordinate:
                 if self.coordinate == (x, y):
                     render.blit(renpy.render(self.cursor, self.tile_width, self.tile_height, st, at), tile_pos)
 
+            # show object
+            if self.objects:
+                if (x, y) in self.objects.keys():
+                    tile_pos = (tile_pos[0]+self.object_offset[0], tile_pos[1]+self.object_offset[1])
+                    render.blit(renpy.render(self.objects[(x,y)], self.tile_width, self.tile_height, st, at), tile_pos)
 
 
         def event(self, ev, x, y, st):

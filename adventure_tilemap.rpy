@@ -11,22 +11,20 @@
 ## まずタイルマップを作成します。
 # tilemap = Tilemap(map1, tileset, 32, 32)
 
-## 次にそれを使ってレベルを Level(image, music) で定義します。
-## image は画像ではなく、タイルマップオブジェクトです。
+## 次にそれを使ってレベルを TiledLevel(image, music) で定義します。
+## image は画像ではなく、タイルマップオブジェクトを文字列にしたものです。
 ## ここでは、tilemap.rpy で定義した tilemap を使うため、init offset を設定しています。
 init offset = 1
-define level.field = Level(tilemap)
+define level.field = TiledLevel("map", tilemap=tilemap)
 
 
-## それから冒険者を TilemapPlayer(level, pos, cursor) を使って default で定義します。
+## それから冒険者を TilemapPlayer(level, pos) を使って default で定義します。
 ## level はゲームをスタートするレベル、pos はそのタイルの座標です。
 ## 通常の adventure と異なり整数のペア(x,y)で与えます。
-## cursor はマウスの乗っているタイルを色変えする画像です。
 ## adventure.rpy との定義の重複を避けるため別名にしていますが、
 ## ゲームスタート後は player に戻して使います。
 
-default tilemapplayer = TilemapPlayer("field", pos=(0,0),
-    cursor = Transform(Solid("#f66", xysize=(32,32)), alpha=0.5), turn=0)
+default tilemapplayer = TilemapPlayer("field", pos=(0,0), turn=0)
 
 
 ## タイルマップ上のイベントを定義します。
@@ -107,6 +105,7 @@ label adventure_tilemap:
     # Show background
     if player.image:
         scene black with Dissolve(.25)
+        $ player.add_objects()
         show expression player.image at topleft
         with Dissolve(.25)
 
@@ -137,6 +136,7 @@ label adventure_tilemap_loop:
 
         # show eventmap or tilemap navigator
         if player.in_tilemap():
+            # redraw
             call screen tilemap_navigator(player)
         else:
             call screen eventmap_navigator(player)
@@ -154,16 +154,20 @@ label adventure_tilemap_loop:
 
 screen tilemap_navigator(player):
 
+    # show coordinate
+    python:
+        tilemap = player.tilemap
+        width = tilemap.tile_width
+        height = tilemap.tile_height
+
+    on "show" action [Function(player.add_objects), SetField(tilemap, "show_cursor", True)]
+    on "hide" action SetField(tilemap, "show_cursor", False)
+
     # When outside of map is clicked.
     button:
         xysize (config.screen_width, config.screen_height)
         action Return("click")
 
-    # show coordinate
-    python:
-        tilemap = player.image
-        width = tilemap.tile_width
-        height = tilemap.tile_height
 
     if tilemap.coordinate:
 
@@ -171,36 +175,26 @@ screen tilemap_navigator(player):
         $ x, y = tilemap.coordinate
         text "([x], [y])"
 
-        ## show cursor
-        if player.cursor:
-            add player.cursor:
-                if tilemap.isometric:
-                    xoffset (x-y)*width/2
-                    yoffset (x+y)*height/2
-                    xpos (len(tilemap.map) -1)*width/2
-                else:
-                    xoffset x*width
-                    yoffset y*height
-
         ## returns coordinate of tiles
         key "button_select" action Return((x, y))
 
 
-    ## show events
-    for i in player.get_events():
-        button:
-            if i.image and isinstance(i.pos, tuple):
-                xysize (width, height)
-                if tilemap.isometric:
-                    xoffset (i.pos[0]-i.pos[1])*width/2 - tilemap.tile_offset[0]
-                    yoffset (i.pos[0]+i.pos[1])*height/2 - tilemap.tile_offset[1]
-                    xpos (len(tilemap.map) -1)*width/2
-                else:
-                    xoffset i.pos[0]*width - tilemap.tile_offset[0]
-                    yoffset i.pos[1]*height- tilemap.tile_offset[1]
 
-                add i.image
+##############################################################################
+## Dungeon class.
 
+init -5 python:
+
+    class TiledLevel(Level):
+
+        """
+        Expanded Level class.
+        """
+
+        def __init__(self, image=None, music=None, tilemap=None):
+
+            super(TiledLevel, self).__init__(image, music)
+            self.tilemap = tilemap
 
 
 ##############################################################################
@@ -214,10 +208,15 @@ init -5 python:
         Expanded Player Class that stores various methods and data for tilemap exploring.
         """
 
+        @property
+        def tilemap(self):
+            return self.get_level(self.level).tilemap
+
+
         def in_tilemap(self):
             # returns true if player is in tilemap
 
-            return isinstance(self.image, Tilemap)
+            return isinstance(self.tilemap, Tilemap)
 
 
         def get_events(self, pos=None, action=None):
@@ -239,7 +238,7 @@ init -5 python:
                 if action == None or i.pos == None or i.pos == pos:
                     if eval(i.cond):
                         events.append(i)
-                elif self.in_tilemap() and pos and i.pos == self.image.map[pos[1]][pos[0]]:
+                elif self.in_tilemap() and pos and i.pos == self.tilemap.map[pos[1]][pos[0]]:
                     if eval(i.cond):
                         events.append(i)
 
@@ -247,5 +246,22 @@ init -5 python:
                 return self.cut_events(events)
             else:
                 return events
+
+
+        def add_objects(self):
+
+            if not self.in_tilemap():
+                return
+
+            objects = {}
+            for i in self.get_events():
+                if i.image and isinstance(i.pos, tuple):
+                    objects[i.pos] = i.image
+
+            self.tilemap.objects = objects
+
+
+
+
 
 
