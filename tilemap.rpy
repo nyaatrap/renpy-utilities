@@ -231,10 +231,11 @@ init -10 python:
 
             # show objects
             if self.objects:
-                if (x, y) in self.objects.keys():
-                    tile_pos = (tile_pos[0]+self.object_offset[0], tile_pos[1]+self.object_offset[1])
-                    im = renpy.displayable(self.objects[(x,y)])
-                    render.blit(renpy.render(im, self.tile_width, self.tile_height, st, at), tile_pos)
+                for pos, icon in self.objects:
+                    if pos == self.map[y][x] or (pos[0], pos[1]) == (x, y):
+                        tile_pos = (tile_pos[0]+self.object_offset[0], tile_pos[1]+self.object_offset[1])
+                        im = renpy.displayable(icon)
+                        render.blit(renpy.render(im, self.tile_width, self.tile_height, st, at), tile_pos)
 
 
         def event(self, ev, x, y, st):

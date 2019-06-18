@@ -324,13 +324,13 @@ init -9 python:
             if not self.in_tilemap():
                 return
 
-            objects = {}
+            objects = []
             for i in self.get_events():
-                if i.icon and isinstance(i.pos, tuple):
-                    objects[i.pos] = i.icon
+                if i.icon and i.pos:
+                    objects.append((i.pos, i.icon))
 
             if self.icon and self.pos:
-                objects[(self.pos[0], self.pos[1])] = self.icon
+                objects.append(((self.pos[0], self.pos[1]), self.icon))
 
             self.tilemap.objects = objects
 

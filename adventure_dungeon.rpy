@@ -65,29 +65,24 @@ define map2 =[
 ## 侵入できないタイルの種類のリストも作成しておきます。
 define collision = (0, 2, 3)
 
-## ダンジョンの画像を LayeredMap(map, tileset, tile_mapping, layers, pov) で定義します。
+## ダンジョンの画像を LayeredMap(map, tileset, layers, mirror) で定義します。
 ## map, tileset, layers は上で定義したもので、pov は最後に定義するダンジョンプレイヤークラスを文字列で与えます。
 ## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して描画します。
-define map_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, pov="dungeonplayer", mirror = "left")
+define dungeon_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, mirror = "left")
 
+## さらに ミニマップとして使うタイルマップを用意します。
 define mm_tileset = [Solid("#000", xysize=(16,16)), Solid("#633", xysize=(16,16)), Solid("#ea3", xysize=(16,16)), Solid("#f33", xysize=(16,16))]
 
-define mm_tile = Tilemap(map2, mm_tileset, 16)
+define minimap = Tilemap(map2, mm_tileset, 16)
 
-## それらを使ってレベルを Dungeon(image, music, collision) で定義します。
-define level.dungeon = Dungeon(image=map_image, tilemap = mm_tile, collision=collision)
+## それらを使ってレベルを Dungeon(image, music, tilemap, collision) で定義します。
+define level.dungeon = Dungeon(image=dungeon_image, tilemap = minimap, collision=collision)
 
 
 ## 最後に冒険者を DungeonPlayer クラスで定義します。
 ## ダンジョンの pos は (x,y,dx,dy) の組で、dx が 1 ならみぎ、-1 ならひだりを向きます。
 ## adventure.rpy との定義の重複を避けるため別名にしていますが、
 ## ゲームスタート後は player に戻して使います。
-
-image p_icon = ConditionSwitch(
-        'player.pos[3]==-1', Transform(Text("▶", size=16), rotate =270, rotate_pad=False),
-        'player.pos[2]==1', Transform(Text("▶", size=16), rotate =0, rotate_pad=False),
-        'player.pos[3]==1', Transform(Text("▶", size=16), rotate =90, rotate_pad=False),
-        'True', Transform(Text("▶", size=16), rotate =180, rotate_pad=False))
 
 default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0, icon = Text("P"))
 
@@ -106,7 +101,7 @@ default dungeonplayer = DungeonPlayer("dungeon", pos=(1,1,0,1), turn=0, icon = T
 
 
 ## パッシブイベントは、プレイヤーが pos の上下左右に移動した時に呼び出されます。
-define ev.entrance = Event("dungeon", pos=(1,1), once=True)
+define ev.entrance = Event("dungeon", pos=(1,1), trigger="stay", once=True)
 label entrance:
     "Enter point"
     return
@@ -476,8 +471,33 @@ init -5 python:
                 return events
 
 
+        def add_dungeon_objects(self):
+
+            if not self.in_dungeon():
+                return
+
+            objects = []
+            for i in self.get_events():
+                if i.image and i.pos:
+                    objects.append((i.pos, i.image))
+
+            self.image.objects = objects
+
+
+        def add_dungeon_replaced_tiles(self):
+
+            if not self.in_dungeon():
+                return
+
+            if self.level in self.replaced_tiles.keys():
+                self.image.replaced_tiles = self.replaced_tiles[self.level]
+
+
         def update_dungeonmap(self):
 
+            self.image.pov=self.pos
+            self.add_dungeon_objects()
+            self.add_dungeon_replaced_tiles()
             self.update_tilemap()
 
 
@@ -591,8 +611,6 @@ init -10 python:
             super(LayeredMap, self).__init__(**properties)
             self.map = map
             self.tileset = tileset
-            self.tile_mapping = tile_mapping
-            self.pov = pov
             self.layers = layers
             self.mirror = mirror
             self.horizon_height = horizon_height
@@ -600,6 +618,9 @@ init -10 python:
             self.first_distance = first_distance
             self.shading = shading
             self.substitution = substitution
+            self.pov = (0,0,0,0)
+            self.objects = []
+            self.replaced_tiles = {}
 
 
         def render(self, width, height, st, at):
@@ -612,14 +633,12 @@ init -10 python:
             # render background
             render.blit(renpy.render(Image(self.tileset[0]+".png"), width, height, st, at), (0,0))
 
-            # get coordinate
-            pov = getattr(store, self.pov)
 
             # depth loop
             depth = len(self.layers)
 
             for d in range(depth):
-                coord = Coordinate(*pov.pos)
+                coord = Coordinate(*self.pov)
                 for i in xrange(depth-1-d):
                     coord = coord.front()
 
@@ -643,21 +662,20 @@ init -10 python:
                     x,y = coord2.x, coord2.y
 
                     try:
-                        tile = pov.get_tile(pos = (x,y))
+                        tile = self.map[y][x]
                     except IndexError:
                         tile = 0
 
-                    if self.tile_mapping:
-                        if not tile:
-                            tile = 0
-                        else:
-                            tile = re.findall(pattern, tile)[0]
-                            for k in self.tile_mapping.keys():
-                                if tile in k.replace(" ", "").split(","):
-                                    tile = self.tile_mapping[k]
-                                    break
-                    else:
-                        tile = int(tile)
+                    # if tile is replaced
+                    if self.replaced_tiles:
+                        if (x, y) in self.replaced_tiles.keys():
+                            tile = self.replaced_tiles[(x,y)]
+
+                    # change value to integer
+                    if not tile:
+                        tile = 0
+                    elif isinstance(tile, basestring):
+                        tile = int(re.findall(pattern, tile)[0])
 
                     # blit image if tile is not None
                     if tile:
@@ -677,19 +695,24 @@ init -10 python:
                         render.blit(renpy.render(image, width, height, st, at), (0,0))
 
                     # blit image over tile
-                    for sprite in pov.current_events:
-                        if sprite.image and sprite.pos and sprite.pos[0] == x and sprite.pos[1] == y:
-                            zoom = (self.first_distance)/(depth-d+self.first_distance - 1.0)
-                            if b<center:
-                                xpos = 0.5 - self.tile_length*zoom*(center-b)
-                            else:
-                                xpos = 0.5 + self.tile_length*zoom*(b-center)
-                            image = Fixed(
-                                Transform(sprite.image, zoom=zoom, xanchor=0.5, xpos=xpos, yalign=self.horizon_height),
-                                )
-                            if self.shading:
-                                image = shade_image(image, alpha=float(depth-1-d)/float(depth-1), color=self.shading)
-                            render.blit(renpy.render(image, width, height, st, at), (0, 0))
+                    if self.objects:
+                        for pos, im in self.objects:
+                            try:
+                                if pos == self.map[y][x] or isinstance(pos, tuple) and (pos[0], pos[1]) == (x,y):
+                                    zoom = (self.first_distance)/(depth-d+self.first_distance - 1.0)
+                                    if b<center:
+                                        xpos = 0.5 - self.tile_length*zoom*(center-b)
+                                    else:
+                                        xpos = 0.5 + self.tile_length*zoom*(b-center)
+                                    im = renpy.displayable(im)
+                                    im = Fixed(
+                                        Transform(im, zoom=zoom, xanchor=0.5, xpos=xpos, yalign=self.horizon_height),
+                                        )
+                                    if self.shading:
+                                        im = shade_image(im, alpha=float(depth-1-d)/float(depth-1), color=self.shading)
+                                    render.blit(renpy.render(im, width, height, st, at), (0, 0))
+                            except IndexError:
+                                pass
 
             # Redraw regularly
             # renpy.redraw(self, 1.0/30)
