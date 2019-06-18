@@ -12,7 +12,7 @@
 # tilemap1 = Tilemap(map1, tileset, 32, 32)
 
 ## 次にそれを使ってレベルを TiledLevel(image, music, tilemap) で定義します。
-## image はタイルマップから定義した画像、　tilemap は元のタイルマップオブジェクトです。
+## image はタイルマップから定義した画像、 tilemap は元のタイルマップオブジェクトです。
 ## ここでは、tilemap.rpy で定義した tilemap を使うため、init offset を設定しています。
 init offset = 1
 define level.field = TiledLevel("tilemap1", tilemap=tilemap1)
@@ -207,6 +207,14 @@ init -5 python:
         Expanded Player Class that stores various methods and data for tilemap exploring.
         """
 
+        def __init__(self, level=None, pos=None, **kwargs):
+
+            super(TilemapPlayer, self).__init__(level, pos, **kwargs)
+
+            self.replaced_tiles = {}
+            self.seen_tiles = {}
+
+
         @property
         def tilemap(self):
             return self.get_level(self.level).tilemap
@@ -247,6 +255,60 @@ init -5 python:
                 return events
 
 
+        def get_tile(self, level=None, pos=None, numeric=False):
+            # returns tile from current or given pos
+
+            import re
+            pattern = "[0-9]+"
+
+            if not self.in_tilemap():
+                return
+
+            level = level or self.level
+            pos = pos or self.pos
+
+            if (pos[0], pos[1]) in self.replaced_tiles.get(level, ()):
+                tile = level.replaced_tiles[level][(pos[0], pos[1])]
+            else:
+                tile = self.get_level(level).tilemap.map[pos[1]][pos[0]]
+
+            if tile and numeric and isinstance(tile, basestring):
+                tile = int(re.findall(pattern, tile)[0])
+
+            return tile
+
+
+        def set_tile(self, tile, level=None, pos=None):
+
+            if not self.in_tilemap():
+                return
+
+            level = level or self.level
+            pos = pos or self.pos
+
+            self.replaced_tiles.setdefault("level", {})
+            self.replaced_tiles[level].setdefault((pos[0], pos[1]), tile)
+
+
+        def set_seen_tile(self, level=None, pos=None, around=1):
+
+            if not self.in_tilemap():
+                return
+
+            level = level or self.level
+            pos = pos or self.pos
+
+            if not level in self.seen_tiles.keys():
+                self.seen_tiles[level] = [[0 for j in xrange(len(self.tilemap.map[0]))] for i in xrange(len(self.tilemap.map))]
+            for x in xrange(-around, 1+around):
+                for y in xrange(-around, 1+around):
+                    if pos[1]+y >= 0 and pos[0]+x >=0:
+                        try:
+                            self.seen_tiles[level][pos[1]+y][pos[0]+x]=1
+                        except IndexError:
+                            pass
+
+
         def add_objects(self):
 
             if not self.in_tilemap():
@@ -260,6 +322,21 @@ init -5 python:
             self.tilemap.objects = objects
 
 
+        def add_mask(self):
+
+            if not self.in_tilemap():
+                return
+
+            self.tilemap.mask = self.seen_tiles[self.level]
+
+
+
+        def add_replaced_tiles(self):
+
+            if not self.in_tilemap():
+                return
+
+            self.tilemap.replaced_tiles = self.replaced_tiles[self.level]
 
 
 

@@ -113,13 +113,14 @@ init -10 python:
         cursor - If not None, it's a displayable that is shown under mouse.
         show_cursor - if True, show cursor
         objects - if dict {(x,y): image} is given, this image is shown on the (x,y) tile.
+        replaced_tiles - if dict {(x,y): value} is given, its coordinate's value is replaced.
         interact - If True, default, it restarts interaction when mouse is moved to another tile.
         coordinate - (x, y) coordinate of a tile where mouse is hovering.
         """
 
         def __init__(self, map, tileset, tile_width, tile_height = None, tile_offset = (0,0),
             isometric = False, area = None, mask = None, cursor = None, interact = True,
-            objects = None, object_offset = (0,0), **properties):
+            objects = None, object_offset = (0,0), replaced_tiles = None, **properties):
 
             super(Tilemap, self).__init__(**properties)
             self.map = map
@@ -135,6 +136,7 @@ init -10 python:
             self.interact = interact
             self.objects = objects
             self.object_offset = object_offset
+            self.replaced_tiles = replaced_tiles
             self.coordinate = None
 
 
@@ -201,11 +203,16 @@ init -10 python:
 
             # Get index of tileset
             tile = self.map[y][x]
+
+            # if tile is replaced
+            if self.replaced_tiles:
+                if (x, y) in self.replaced_tiles.keys():
+                    tile = self.replaced_tiles[(x,y)]
+
+            # change value to integer
             if not tile:
                 tile = 0
-            elif isinstance(tile, int):
-                tile = int(tile)
-            else:
+            elif isinstance(tile, basestring):
                 tile = int(re.findall(pattern, tile)[0])
 
             # Get tile position
@@ -222,7 +229,7 @@ init -10 python:
                 if self.coordinate == (x, y):
                     render.blit(renpy.render(self.cursor, self.tile_width, self.tile_height, st, at), tile_pos)
 
-            # show object
+            # show objects
             if self.objects:
                 if (x, y) in self.objects.keys():
                     tile_pos = (tile_pos[0]+self.object_offset[0], tile_pos[1]+self.object_offset[1])
