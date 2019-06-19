@@ -193,6 +193,7 @@ label adventure_dungeon:
     $ player.update_events()
     $ player.action = "stay"
     $ player.update_dungeonmap()
+    $ player.automove=False
 
     # Play music
     if player.music:
@@ -244,6 +245,7 @@ label adventure_dungeon_loop:
             if player.get_tile(pos = _return) in player.collision:
                 $ player.action = "collide"
                 $ player.next_pos = _return
+                $ player.automove = False
 
             elif player.compare(_return):
                 $ player.action = "rotate"
@@ -269,7 +271,7 @@ label adventure_dungeon_loop:
 
 screen dungeon_navigator(player):
 
-    on "show" action Show("blocking_screen")
+    on "show" action Show("blocking_screen", player=player)
 
     # When outside of navigation is clicked
     button:
@@ -278,58 +280,87 @@ screen dungeon_navigator(player):
 
 
     # move buttons
-    fixed style_prefix "move":
-        textbutton "W" action Return(player.front_pos)  xcenter .5 ycenter .85
-        textbutton "S" action Return(player.back_pos)  xcenter .5 ycenter .95
-        textbutton "E" action Return(player.turnright_pos)  xcenter .58 ycenter .90
-        textbutton "Q" action Return(player.turnleft_pos)   xcenter .42 ycenter .90
-        textbutton "D" action Return(player.right_pos) xcenter .65 ycenter .95
-        textbutton "A" action Return(player.left_pos)  xcenter .35 ycenter .95
-
+    fixed fit_first True style_prefix "move" align 0.02, 0.97:
+        grid 3 4:
+            null
+            textbutton "2" action [SetField(player, "automove", True), Return(player.front_pos)]
+            null
+            textbutton "Q" action Return(player.turnleft_pos)
+            textbutton "W" action Return(player.front_pos)
+            textbutton "E" action Return(player.turnright_pos)
+            textbutton "A" action Return(player.left_pos)
+            textbutton "S" action Return(player.back_pos)
+            textbutton "D" action Return(player.right_pos)
+            null
+            textbutton "X" action Return(player.turnback_pos)
+            null
 
     # move keys
-        for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
+        for i in ["repeat_2","2", "toggle_skip"]:
+            key i action [SetField(player, "automove", True), Return(player.front_pos)]
+        for i in ["repeat_w", "w","focus_up"]:
             key i action Return(player.front_pos)
-        for i in ["repeat_s", "s","repeat_S","S", "focus_down"]:
+        for i in ["repeat_s", "s","focus_down"]:
             key i action Return(player.back_pos)
-        for i in ["repeat_d","d", "repeat_D","D", "rollforward"]:
+        for i in ["repeat_d","d", "rollforward"]:
             key i action Return(player.right_pos)
-        for i in ["repeat_a","a", "repeat_A","A", "rollback"]:
+        for i in ["repeat_a","a", "rollback"]:
             key i action Return(player.left_pos)
-        for i in ["repeat_q", "q","repeat_Q","Q", "focus_left"]:
+        for i in ["repeat_q", "q", "focus_left"]:
             key i action Return(player.turnleft_pos)
-        for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
+        for i in ["repeat_e", "e", "focus_right"]:
             key i action Return(player.turnright_pos)
+        for i in ["repeat_x", "x",]:
+            key i action Return(player.turnback_pos)
 
         # override rollforward/rollback
-        key  'mousedown_4' action Return(player.front_pos)
-        key  'mousedown_5' action Return(player.back_pos)
+        key 'mousedown_4' action [SetField(player, "automove", True), Return(player.front_pos)]
+        key 'mousedown_5' action Return(player.back_pos)
 
+
+    # add minimap
     add player.tilemap align 0.98, 0.97
 
 
 style move_button_text:
-    size 50
+    size 60
+
+style move_button:
+    xysize (60, 60)
+
+init python:
+    import pygame
+    config.keymap['self_voicing'].remove('v')
+    # config.keymap['toggle_fullscreen'].remove('f')
+    config.keymap['screenshot'].remove('s')
+    # config.keymap['hide_windows'].remove('h')
+    config.keymap['accessibility'].remove('K_a')
+    config.keymap['director'].remove('d')
 
 
-screen blocking_screen():
+screen blocking_screen(player):
     zorder 1000
+
+    if player.automove:
+        timer 0.02 action [Hide("blocking_screen"), Return(player.front_pos)]
+    else:
+        timer 0.025 action Hide("blocking_screen")
 
     for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
         key i action NullAction()
     for i in ["repeat_s", "s","repeat_S","S", "focus_down"]:
-        key i action NullAction()
+        key i action [SetField(player, "automove", False)]
     for i in ["repeat_d","d", "repeat_D","D", "rollforward"]:
-        key i action NullAction()
+        key i action [SetField(player, "automove", False)]
     for i in ["repeat_a","a", "repeat_A","A", "rollback"]:
-        key i action NullAction()
+        key i action [SetField(player, "automove", False)]
     for i in ["repeat_q", "q","repeat_Q","Q", "focus_left"]:
-        key i action NullAction()
+        key i action [SetField(player, "automove", False)]
     for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
-        key i action NullAction()
-
-    timer 0.025 action Hide("blocking_screen")
-
+        key i action [SetField(player, "automove", False)]
+    for i in ["dismiss", "game_menu", "hide_windows","toggle_skip","stop_skipping"]:
+        key i action [SetField(player, "automove", False)]
+    key 'mousedown_4' action NullAction()
 
 ##############################################################################
 ## Dungeon class.
@@ -363,7 +394,7 @@ init -5 python:
             super(DungeonPlayer, self).__init__(level, pos, icon, **kwargs)
 
             self.next_pos = self.pos
-
+            self.automove = False
 
         @property
         def collision(self):
