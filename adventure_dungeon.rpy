@@ -242,7 +242,7 @@ label adventure_dungeon_loop:
 
         elif isinstance(_return, tuple):
 
-            if player.get_tile(pos = _return) in player.collision:
+            if player.get_tile(pos = _return, numeric=True) in player.collision:
                 $ player.action = "collide"
                 $ player.next_pos = _return
                 $ player.automove = False
@@ -319,7 +319,7 @@ screen dungeon_navigator(player):
 
 
     # add minimap
-    add player.tilemap align 0.98, 0.97
+    add player.minimap(area=(270,270)) align 0.98, 0.97
 
 
 style move_button_text:
@@ -336,6 +336,9 @@ init python:
     config.keymap['accessibility'].remove('K_a')
     config.keymap['director'].remove('d')
 
+
+##############################################################################
+## Blocking screen
 
 screen blocking_screen(player):
     zorder 1000
@@ -360,6 +363,21 @@ screen blocking_screen(player):
     for i in ["dismiss", "game_menu", "hide_windows", "skip", "toggle_skip","stop_skipping"]:
         key i action [SetField(player, "automove", False)]
     key 'mousedown_4' action NullAction()
+
+
+##############################################################################
+## Fullmap screen
+
+screen fullmap(player=player):
+
+    tag menu
+
+    use game_menu("Map"):
+
+        if player and player.in_dungeon():
+            $ player.tilemap.area = None
+            add player.tilemap
+
 
 ##############################################################################
 ## Dungeon class.
@@ -388,9 +406,9 @@ init -5 python:
         """
 
 
-        def __init__(self, level=None, pos=None, icon=None, **kwargs):
+        def __init__(self, level=None, pos=None, icon=None, mask_tilemap=False, **kwargs):
 
-            super(DungeonPlayer, self).__init__(level, pos, icon, **kwargs)
+            super(DungeonPlayer, self).__init__(level, pos, icon, mask_tilemap, **kwargs)
 
             self.next_pos = self.pos
             self.automove = False
@@ -398,10 +416,6 @@ init -5 python:
         @property
         def collision(self):
             return self.get_level(self.level).collision
-
-        @property
-        def changed_tiles(self):
-            return self.get_level(self.level).changed_tiles
 
         @property
         def turnback_pos(self):
@@ -455,6 +469,8 @@ init -5 python:
 
         def get_events(self, pos = None, action= None):
             # returns event list that happens in the given pos.
+
+            pos = pos or self.pos
 
             actions = ["stay"]
             if action == "click":
@@ -530,8 +546,18 @@ init -5 python:
             self.add_dungeon_replaced_tiles()
             self.update_tilemap()
 
+        def minimap(self, area):
+
+            w = self.tilemap.tile_width
+            h = self.tilemap.tile_height
+
+            xpos = (area[0]-w)/2
+            ypos = (area[1]-h)/2
+
+            self.tilemap.area=(self.pos[0]*w - xpos, player.pos[1]*h - ypos, area[0], area[1])
 
 
+            return self.tilemap
 
 ##############################################################################
 ## Coordinate class
@@ -634,8 +660,8 @@ init -10 python:
         """
 
 
-        def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, mirror=None,
-            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, substitution = Null(), filetype = "png",
+        def __init__(self, map, tileset, layers = None, mirror=None,
+            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, object_offset = (0,0), substitution = Null(), filetype = "png",
             **properties):
 
             super(LayeredMap, self).__init__(**properties)
@@ -650,6 +676,7 @@ init -10 python:
             self.substitution = substitution
             self.pov = (0,0,0,0)
             self.objects = []
+            self.object_offset = object_offset
             self.replaced_tiles = {}
             self.filetype = filetype
 
@@ -737,11 +764,11 @@ init -10 python:
                                         xpos = 0.5 + self.tile_length*zoom*(b-center)
                                     im = renpy.displayable(im)
                                     im = Fixed(
-                                        Transform(im, zoom=zoom, xanchor=0.5, xpos=xpos, yalign=self.horizon_height),
+                                        Transform(im, zoom=zoom, anchor=(0.5, 0.5), xpos=xpos, ypos=self.horizon_height),
                                         )
                                     if self.shading:
                                         im = shade_image(im, alpha=float(depth-1-d)/float(depth-1), color=self.shading)
-                                    render.blit(renpy.render(im, width, height, st, at), (0, 0))
+                                    render.blit(renpy.render(im, width, height, st, at), self.object_offset)
                             except IndexError:
                                 pass
 

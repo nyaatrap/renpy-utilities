@@ -207,14 +207,14 @@ init -9 python:
         Expanded Player Class that stores various methods and data for tilemap exploring.
         """
 
-        def __init__(self, level=None, pos=None, icon=None, **kwargs):
+        def __init__(self, level=None, pos=None, icon=None, mask_tilemap=False, **kwargs):
 
             super(TilemapPlayer, self).__init__(level, pos, **kwargs)
 
             self.replaced_tiles = {}
             self.seen_tiles = {}
             self.icon = icon
-            self.mask_tilemap = True
+            self.mask_tilemap = False
 
 
         @property
@@ -232,6 +232,8 @@ init -9 python:
             # returns event list that happens in the given pos.
             # this overwrites the same method in player class.
 
+            pos = pos or self.pos
+
             actions = ["stay"]
             if action == "move":
                 actions += ["move"]
@@ -247,7 +249,7 @@ init -9 python:
                 if action == None or i.pos == None or i.pos == pos:
                     if eval(i.cond):
                         events.append(i)
-                elif self.in_tilemap() and pos and i.pos == self.get_tile(pos=pos):
+                elif self.in_tilemap() and i.pos == self.get_tile(pos=pos):
                     if eval(i.cond):
                         events.append(i)
             if action:
