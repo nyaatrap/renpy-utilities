@@ -329,7 +329,6 @@ style move_button:
     xysize (60, 60)
 
 init python:
-    import pygame
     config.keymap['self_voicing'].remove('v')
     # config.keymap['toggle_fullscreen'].remove('f')
     config.keymap['screenshot'].remove('s')
@@ -358,7 +357,7 @@ screen blocking_screen(player):
         key i action [SetField(player, "automove", False)]
     for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
         key i action [SetField(player, "automove", False)]
-    for i in ["dismiss", "game_menu", "hide_windows","toggle_skip","stop_skipping"]:
+    for i in ["dismiss", "game_menu", "hide_windows", "skip", "toggle_skip","stop_skipping"]:
         key i action [SetField(player, "automove", False)]
     key 'mousedown_4' action NullAction()
 
@@ -636,7 +635,7 @@ init -10 python:
 
 
         def __init__(self, map, tileset, tile_mapping = None, layers = None, pov = None, mirror=None,
-            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, substitution = Null(),
+            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, substitution = Null(), filetype = "png",
             **properties):
 
             super(LayeredMap, self).__init__(**properties)
@@ -652,6 +651,7 @@ init -10 python:
             self.pov = (0,0,0,0)
             self.objects = []
             self.replaced_tiles = {}
+            self.filetype = filetype
 
 
         def render(self, width, height, st, at):
@@ -662,7 +662,7 @@ init -10 python:
             render = renpy.Render(width, height)
 
             # render background
-            render.blit(renpy.render(Image(self.tileset[0]+".png"), width, height, st, at), (0,0))
+            render.blit(renpy.render(Image(self.tileset[0]+"."+self.filetype), width, height, st, at), (0,0))
 
 
             # depth loop
@@ -719,7 +719,7 @@ init -10 python:
                         else:
                             surfix=self.layers[d][b]
                             flip=False
-                        im_name = self.tileset[tile]+"_"+surfix+".png"
+                        im_name = self.tileset[tile]+"_"+surfix+"."+self.filetype
                         image = Image(im_name) if renpy.loadable(im_name) else self.substitution
                         if flip:
                             image = Transform(image, xzoom=-1)

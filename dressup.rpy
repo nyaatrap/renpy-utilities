@@ -202,7 +202,7 @@ init -5 python:
         _layers = ["base", "feet", "bottom", "top", "face"]
 
 
-        def __init__(self, image = "",folder="", poses = None, layers = None, pose = None, substitution = None,
+        def __init__(self, image = "",folder="", poses = None, layers = None, pose = None, substitution = None, filetype = "png",
             equip_types = None, namespace = None, items=None, **kwargs):
 
             self.image = image
@@ -212,6 +212,7 @@ init -5 python:
             self.default_pose = pose or self.default_poses[0]
             self.pose = self.default_pose
             self.substitution = None
+            self.filetype = filetype
 
             self.equip_types = equip_types or None
             self.equipment = Inventory(item_types=equip_types, namespace = namespace, items=items) if equip_types else None
@@ -232,7 +233,7 @@ init -5 python:
             for i in renpy.list_files():
                 for j in self.layers:
                     if self.folder and i.startswith(self.folder+"/"+j):
-                        self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace(".png", ""))
+                        self.images[j].append(i.replace(self.folder+"/"+j+"/", "").replace("."+self.filetype, ""))
 
             self.update_layers()
 
