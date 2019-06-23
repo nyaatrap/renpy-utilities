@@ -18,9 +18,10 @@ init offset = 1
 define level.field = TiledLevel("tilemap1", tilemap=tilemap1)
 
 
-## それから冒険者を TilemapPlayer(level, pos) を使って default で定義します。
+## それから冒険者を TilemapPlayer(level, pos, icon) を使って default で定義します。
 ## level はゲームをスタートするレベル、pos はそのタイルの座標です。
 ## 通常の adventure と異なり整数のペア(x,y)で与えます。
+## icon は現在冒険者がいるタイルに表示する画像です。
 ## adventure.rpy との定義の重複を避けるため別名にしていますが、
 ## ゲームスタート後は player に戻して使います。
 
@@ -188,7 +189,7 @@ init -9 python:
     class TiledLevel(Level):
 
         """
-        Expanded Level class.
+        Expanded Level class that hols tilemap object.
         """
 
         def __init__(self, image=None, music=None, tilemap=None):
@@ -205,6 +206,9 @@ init -9 python:
 
         """
         Expanded Player Class that stores various methods and data for tilemap exploring.
+
+        icon - an image that is shown on the coordinate of the player
+        mask_tilemap - if True, only seen_tiles is shown
         """
 
         def __init__(self, level=None, pos=None, icon=None, mask_tilemap=False, **kwargs):
@@ -282,6 +286,7 @@ init -9 python:
 
 
         def set_tile(self, tile, level=None, pos=None):
+            # changes tile value on given pos
 
             if not self.in_tilemap():
                 return
@@ -294,6 +299,8 @@ init -9 python:
 
 
         def set_seen_tile(self, level=None, pos=None, around=1):
+            # set tiles as seen around given pos.
+            # if around is 1, nine tiles around given tile is set.
 
             if not self.in_tilemap():
                 return
@@ -313,6 +320,7 @@ init -9 python:
 
 
         def add_mask(self):
+            # for updating tilemap
 
             if not self.in_tilemap():
                 return
@@ -322,6 +330,7 @@ init -9 python:
 
 
         def add_objects(self):
+            # for updating tilemap
 
             if not self.in_tilemap():
                 return
@@ -338,6 +347,7 @@ init -9 python:
 
 
         def add_replaced_tiles(self):
+            # for updating tilemap
 
             if not self.in_tilemap():
                 return
@@ -347,6 +357,8 @@ init -9 python:
 
 
         def update_tilemap(self):
+            # add objects, replaced tiles, and mask on tilemap
+            # it should be called every time before tilemap is shown.
 
             self.add_objects()
             self.add_replaced_tiles()

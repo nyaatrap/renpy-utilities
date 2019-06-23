@@ -1,9 +1,9 @@
 ## This file adds pseudo-3D dungeon crawling function into adventurer framework.
-## This framework requires adventure.rpy.
+## This framework requires adventure.rpy, tilemap.rpy, and adventure_tilemap.rpy.
 ## To play the sample game, download the dungeon folder then place it in the game directory.
 ## To show sample dungeon correctly, set screen size 800x600.
 ## adventure に疑似３Dダンジョン探索機能を追加するファイルです。
-## adventure.rpy が必要になります。
+## adventure.rpy, tilemap.rpy, adventure_tilemap.rpy が必要になります。
 ## サンプルを実行するには dungeon フォルダーの画像をダウンロードして game ディレクトリに配置する必要があります。
 ## サンプルを正しく表示するには、スクリーンサイズを 800x600 に設定する必要があります。
 
@@ -15,7 +15,7 @@
 ## 文字列は表示する画像ファイルの接頭辞になります
 ## リストの一番最初はどのレイヤーでも共通で表示する背景画像になります。
 
-define dungeonset = ["dungeon/base", "dungeon/floor", "dungeon/wall", "dungeon/door"]
+define dungeonset = ["base", "floor", "wall", "door"]
 
 ## 次にダンジョンに表示する壁などの画像の数や重なりを2次元配列で定義します。
 ## この例では、一番遠くに９つ、一番近くに３つの画像を表示できるようにしています。
@@ -33,9 +33,9 @@ define dungeon_layers = [
     ]
 
 ## 上で定義した接頭辞と接尾辞の組み合わせで作る画像を用意します。
-## "dungeon/floor_lll6.png" など
+## "floor_lll6.png" など
 ## 背景画像のみ最初で定義したリストの一番目と同じ名前にします。
-## "dungeon/base.png"
+## "base.png"
 
 
 ## 描画したいマップを整数の二次元配列で表現します。
@@ -65,10 +65,10 @@ define map2 =[
 ## 侵入できないタイルの種類のリストも作成しておきます。
 define collision = (0, 2, 3)
 
-## ダンジョンの画像を LayeredMap(map, tileset, layers, mirror) で定義します。
-## map, tileset, layers は上で定義したもので、pov は最後に定義するダンジョンプレイヤークラスを文字列で与えます。
+## ダンジョンの画像を LayeredMap(map, tileset, layers, imagefolder, filetype, mirror) で定義します。
+## map, tileset, layers は上で定義したもので、imagefolder は画像のあるパス、filetype は拡張子です。
 ## mirror を "left" か "right" にすると、指定した側の画像を反対側の画像を反転して描画します。
-define dungeon_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, mirror = "left")
+define dungeon_image = LayeredMap(map2, dungeonset, layers=dungeon_layers, imagefolder="dungeon", mirror = "left")
 
 ## さらに ミニマップとして使うタイルマップを用意します。
 define mm_tileset = [Solid("#000", xysize=(16,16)), Solid("#633", xysize=(16,16)), Solid("#ea3", xysize=(16,16)), Solid("#f33", xysize=(16,16))]
@@ -158,9 +158,9 @@ label exit:
 
 
 ## イベントに image を与えると、ダンジョンのタイル上に表示できます。
-image sp = Solid("#4a3", xysize=(16,16))
-image sp2 = "dungeon/sprite.png"
-define ev.sprite = Event("dungeon", pos=(1, 8), trigger = "click", icon = "sp", image="sp2")
+image sprite_icon = Solid("#4a3", xysize=(16,16))
+image sprite_image = "dungeon/sprite.png"
+define ev.sprite = Event("dungeon", pos=(1, 8), trigger = "click", icon = "sprite_icon", image="sprite_image")
 label sprite:
     "Hello"
     return
@@ -271,7 +271,7 @@ label adventure_dungeon_loop:
 
 screen dungeon_navigator(player):
 
-    on "show" action Show("blocking_screen", player=player)
+    on "show" action Show("automove_screen", player=player)
 
     # When outside of navigation is clicked
     button:
@@ -328,25 +328,18 @@ style move_button_text:
 style move_button:
     xysize (60, 60)
 
-init python:
-    config.keymap['self_voicing'].remove('v')
-    # config.keymap['toggle_fullscreen'].remove('f')
-    config.keymap['screenshot'].remove('s')
-    # config.keymap['hide_windows'].remove('h')
-    config.keymap['accessibility'].remove('K_a')
-    config.keymap['director'].remove('d')
-
 
 ##############################################################################
-## Blocking screen
+## Automove screen
+## this screen delays key clicks on dungeon navigator, and returns front_pos
 
-screen blocking_screen(player):
+screen automove_screen(player):
     zorder 1000
 
     if player.automove:
-        timer 0.02 action [Hide("blocking_screen"), Return(player.front_pos)]
+        timer 0.02 action [Hide("automove_screen"), Return(player.front_pos)]
     else:
-        timer 0.025 action Hide("blocking_screen")
+        timer 0.025 action Hide("automove_screen")
 
     for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
         key i action NullAction()
@@ -364,20 +357,15 @@ screen blocking_screen(player):
         key i action [SetField(player, "automove", False)]
     key 'mousedown_4' action NullAction()
 
+init python:
 
-##############################################################################
-## Fullmap screen
+    # when dialogue is shown, disable auto move
+    def disable_automove(event, interact=True, **kwargs):
+        if interact and event == "begin":
+            if getattr(store, "player", None) and isinstance(player, DungeonPlayer):
+                player.automove = False
 
-screen fullmap(player=player):
-
-    tag menu
-
-    use game_menu("Map"):
-
-        if player and player.in_dungeon():
-            $ player.tilemap.area = None
-            add player.tilemap
-
+    config.all_character_callbacks.append(disable_automove)
 
 ##############################################################################
 ## Dungeon class.
@@ -518,6 +506,7 @@ init -5 python:
 
 
         def add_dungeon_objects(self):
+            # for updating dungeon image
 
             if not self.in_dungeon():
                 return
@@ -531,6 +520,7 @@ init -5 python:
 
 
         def add_dungeon_replaced_tiles(self):
+            # for updating dungeon image
 
             if not self.in_dungeon():
                 return
@@ -540,13 +530,17 @@ init -5 python:
 
 
         def update_dungeonmap(self):
+            # update LayeredMap and Tilemap.
+            # it should be called every time before dungeon image is shown.
 
             self.image.pov=self.pos
             self.add_dungeon_objects()
             self.add_dungeon_replaced_tiles()
             self.update_tilemap()
 
+
         def minimap(self, area):
+            # it returns tilemap displayable around player.
 
             w = self.tilemap.tile_width
             h = self.tilemap.tile_height
@@ -558,6 +552,7 @@ init -5 python:
 
 
             return self.tilemap
+
 
 ##############################################################################
 ## Coordinate class
@@ -645,40 +640,48 @@ init -10 python:
         This creates a displayable by layering other displayables. It has the following field values.
 
         map -  A 2-dimensional list of strings that represent index of a tileset.
-        tileset -  A list of displayables that is used as a tile of tilemap.
-        tile_mapping - a dictionary that maps string of map to index of tileset.
-            If None, each coordinate of map should be integer.
+        tileset -  A list of image prefix that is used as a tile of tilemap.
         layers - 2-dimensional list of strings to be shown in the perspective view. The first list is farthest layers,
             from left to right. the last list is the nearest layers. this string is used as suffix of displayable.
-        pov - string that represents dungeonplayer class. it determines point of view
+        imagefolder - folder path that contains llayer images
+        filetype - file extention of tha image
         mirror - if "left" or "right", it uses flipped images from the other side.
+        substitution - if {index:("condition", "image prefix")} is given, and condision is satisfied, tileset[index] uses "image_prefix".
+            if {index:(None, "image prefix")} is given, and image is not found, tileset[index] uses "image_prefix".
         horizon_height - height of horizon relative to screen.
         tile_length - length of the nearest tile relative to screen.
         first_distance - distance to the first object. this determines focal length.
         shading - if color is given, it will blend the color over sprites.
-        substitution - displayable that is used when proper image is not found.
+        object_offset - xyoffset added on every objects.
         """
 
 
-        def __init__(self, map, tileset, layers = None, mirror=None,
-            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, object_offset = (0,0), substitution = Null(), filetype = "png",
+        def __init__(self, map, tileset, layers = None, imagefolder = "", filetype = "png", mirror=None, substitution = None,
+            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, object_offset = (0,0),
             **properties):
 
             super(LayeredMap, self).__init__(**properties)
             self.map = map
             self.tileset = tileset
             self.layers = layers
+            self.imagefolder = imagefolder
+            self.filetype = filetype
             self.mirror = mirror
+            self.substitution = substitution
             self.horizon_height = horizon_height
             self.tile_length = tile_length
             self.first_distance = first_distance
             self.shading = shading
-            self.substitution = substitution
             self.pov = (0,0,0,0)
             self.objects = []
             self.object_offset = object_offset
             self.replaced_tiles = {}
-            self.filetype = filetype
+
+            self.images = []
+            for prefix in self.tileset:
+                for i in self.layers:
+                    for surfix in i:
+                        self.images.append(Image("{}/{}_{}.{}".format(self.imagefolder, prefix, surfix, self.filetype)))
 
 
         def render(self, width, height, st, at):
@@ -689,7 +692,7 @@ init -10 python:
             render = renpy.Render(width, height)
 
             # render background
-            render.blit(renpy.render(Image(self.tileset[0]+"."+self.filetype), width, height, st, at), (0,0))
+            render.blit(renpy.render(Image("{}/{}.{}".format(self.imagefolder, self.tileset[0], self.filetype)), width, height, st, at), (0,0))
 
 
             # depth loop
@@ -746,8 +749,14 @@ init -10 python:
                         else:
                             surfix=self.layers[d][b]
                             flip=False
-                        im_name = self.tileset[tile]+"_"+surfix+"."+self.filetype
-                        image = Image(im_name) if renpy.loadable(im_name) else self.substitution
+                        prefix = self.tileset[tile]
+                        if self.substitution and tile in self.substitution.keys():
+                            if self.substitution[tile][0] is None and renpy.loadable("{}/{}_{}.{}".format(self.imagefolder, prefix, surfix, self.filetype)):
+                                prefix = self.substitution[tile][1]
+                            if eval(self.substitution[tile][0]):
+                                prefix = self.substitution[tile][1]
+                        im_name = "{}/{}_{}.{}".format(self.imagefolder, prefix, surfix, self.filetype)
+                        image = Image(im_name) if renpy.loadable(im_name) else Null()
                         if flip:
                             image = Transform(image, xzoom=-1)
                         render.blit(renpy.render(image, width, height, st, at), (0,0))
@@ -784,10 +793,10 @@ init -10 python:
             renpy.redraw(self, 0)
 
         ## TODO
-        #def visit(self):
+        def visit(self):
 
            # If the displayable has child displayables, this method should be overridden to return a list of those displayables.
-           #return
+           return self.images
 
 
 # transform that shades displayable
