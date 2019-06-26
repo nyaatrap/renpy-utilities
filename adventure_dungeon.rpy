@@ -203,7 +203,7 @@ label adventure_dungeon:
     # Show background
     if player.image:
         scene black with Dissolve(.25)
-        scene expression player.image at topleft
+        scene expression player.image
         with Dissolve(.25)
 
     jump adventure_dungeon_loop
@@ -258,7 +258,7 @@ label adventure_dungeon_loop:
             # Show background
             if player.image:
                 $ player.update_dungeonmap()
-                scene expression player.image at topleft
+                scene expression player.image as bg
 
         else:
             $ player.action = "move"
@@ -676,6 +676,8 @@ init -10 python:
             self.objects = []
             self.object_offset = object_offset
             self.replaced_tiles = {}
+            self.width = 0
+            self.height = 0
 
             self.images = []
             for prefix in self.tileset:
@@ -689,10 +691,12 @@ init -10 python:
             import re
             pattern = "[0-9]+"
 
-            render = renpy.Render(width, height)
 
             # render background
-            render.blit(renpy.render(Image("{}/{}.{}".format(self.imagefolder, self.tileset[0], self.filetype)), width, height, st, at), (0,0))
+            child_render = renpy.render(Image("{}/{}.{}".format(self.imagefolder, self.tileset[0], self.filetype)), width, height, st, at)
+            self.width, self.height = child_render.get_size()
+            render = renpy.Render(self.width, self.height)
+            render.blit(child_render, (0,0))
 
 
             # depth loop
@@ -759,7 +763,7 @@ init -10 python:
                         image = Image(im_name) if renpy.loadable(im_name) else Null()
                         if flip:
                             image = Transform(image, xzoom=-1)
-                        render.blit(renpy.render(image, width, height, st, at), (0,0))
+                        render.blit(renpy.render(image, self.width, self.height, st, at), (0,0))
 
                     # blit image over tile
                     if self.objects:
@@ -776,8 +780,9 @@ init -10 python:
                                         Transform(im, zoom=zoom, anchor=(0.5, 0.5), xpos=xpos, ypos=self.horizon_height),
                                         )
                                     if self.shading:
-                                        im = shade_image(im, alpha=float(depth-1-d)/float(depth-1), color=self.shading)
-                                    render.blit(renpy.render(im, width, height, st, at), self.object_offset)
+                                        overlay = Solid(self.shading)
+                                        im = AlphaBlend(Transform(im, alpha = float(depth-1-d)/float(depth-1)), im, overlay)
+                                    render.blit(renpy.render(im, self.width, self.height, st, at), self.object_offset)
                             except IndexError:
                                 pass
 
@@ -792,13 +797,10 @@ init -10 python:
             # Redraw per interact.
             renpy.redraw(self, 0)
 
-        ## TODO
+
         def visit(self):
 
            # If the displayable has child displayables, this method should be overridden to return a list of those displayables.
            return self.images
 
 
-# transform that shades displayable
-    def shade_image(d, alpha = 0.5, color="#000"):
-        return AlphaBlend(Transform(d, alpha = alpha), d, Solid(color, xysize=(config.screen_width, config.screen_height)), True)

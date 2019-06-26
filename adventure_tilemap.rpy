@@ -107,7 +107,7 @@ label adventure_tilemap:
     # Show background
     if player.image:
         scene black with Dissolve(.25)
-        show expression player.image at topleft
+        show expression player.image
         with Dissolve(.25)
 
     jump adventure_tilemap_loop
