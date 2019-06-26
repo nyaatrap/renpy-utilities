@@ -258,7 +258,7 @@ label adventure_dungeon_loop:
             # Show background
             if player.image:
                 $ player.update_dungeonmap()
-                scene expression player.image as bg
+                scene expression player.image
 
         else:
             $ player.action = "move"
@@ -683,7 +683,9 @@ init -10 python:
             for prefix in self.tileset:
                 for i in self.layers:
                     for surfix in i:
-                        self.images.append(Image("{}/{}_{}.{}".format(self.imagefolder, prefix, surfix, self.filetype)))
+                        im_name = "{}/{}_{}.{}".format(self.imagefolder, prefix, surfix, self.filetype)
+                        if renpy.loadable(im_name):
+                            self.images.append(Image(im_name))
 
 
         def render(self, width, height, st, at):
