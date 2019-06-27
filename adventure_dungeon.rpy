@@ -546,8 +546,13 @@ init -5 python:
             self.update_tilemap()
 
 
-        def minimap(self, area):
+        def minimap(self, level=None, pos=None, area=None):
             # it returns tilemap displayable around player.
+
+            level = level or self.level
+            pos = pos or self.pos
+
+            tm = self.get_level(level).tilemap
 
             w = self.tilemap.tile_width
             h = self.tilemap.tile_height
@@ -555,10 +560,9 @@ init -5 python:
             xpos = (area[0]-w)/2
             ypos = (area[1]-h)/2
 
-            self.tilemap.area=(self.pos[0]*w - xpos, player.pos[1]*h - ypos, area[0], area[1])
+            tm.area=(pos[0]*w - xpos, pos[1]*h - ypos, area[0], area[1])
 
-
-            return self.tilemap
+            return tm
 
 
 ##############################################################################
