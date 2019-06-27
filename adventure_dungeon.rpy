@@ -281,41 +281,38 @@ screen dungeon_navigator(player):
 
     # move buttons
     fixed fit_first True style_prefix "move" align 0.02, 0.97:
-        grid 3 4:
+        grid 3 3:
+            textbutton "Q" action NullAction() alternate [SetField(player, "automove", True), SetField(player, "move_dir", "turnleft_pos"), Return(player.turnleft_pos)]
+            textbutton "W" action NullAction() alternate [SetField(player, "automove", True), SetField(player, "move_dir", "front_pos"), Return(player.front_pos)]
+            textbutton "E" action NullAction() alternate [SetField(player, "automove", True), SetField(player, "move_dir", "turnright_pos"), Return(player.turnright_pos)]
+            textbutton "A" action NullAction() alternate [SetField(player, "automove", True), SetField(player, "move_dir", "left_pos"), Return(player.left_pos)]
+            textbutton "S" action NullAction() alternate [SetField(player, "automove", True), SetField(player, "move_dir", "back_pos"), Return(player.back_pos)]
+            textbutton "D" action NullAction() alternate [SetField(player, "automove", True), SetField(player, "move_dir", "right_pos"), Return(player.right_pos)]
             null
-            textbutton "2" action [SetField(player, "automove", True), Return(player.front_pos)]
-            null
-            textbutton "Q" action Return(player.turnleft_pos)
-            textbutton "W" action Return(player.front_pos)
-            textbutton "E" action Return(player.turnright_pos)
-            textbutton "A" action Return(player.left_pos)
-            textbutton "S" action Return(player.back_pos)
-            textbutton "D" action Return(player.right_pos)
-            null
-            textbutton "X" action Return(player.turnback_pos)
+            textbutton "X" action NullAction() alternate [SetField(player, "automove", True), SetField(player, "move_dir", "turnback_pos"),Return(player.turnback_pos)]
             null
 
     # move keys
-        for i in ["repeat_2","2", "toggle_skip"]:
-            key i action [SetField(player, "automove", True), Return(player.front_pos)]
-        for i in ["repeat_w", "w","focus_up"]:
-            key i action Return(player.front_pos)
-        for i in ["repeat_s", "s","focus_down"]:
-            key i action Return(player.back_pos)
-        for i in ["repeat_d","d", "rollforward"]:
-            key i action Return(player.right_pos)
-        for i in ["repeat_a","a", "rollback"]:
-            key i action Return(player.left_pos)
-        for i in ["repeat_q", "q", "focus_left"]:
-            key i action Return(player.turnleft_pos)
-        for i in ["repeat_e", "e", "focus_right"]:
-            key i action Return(player.turnright_pos)
-        for i in ["repeat_x", "x",]:
-            key i action Return(player.turnback_pos)
+    for i in ["repeat_2","2", "toggle_skip"]:
+        key i action [SetField(player, "automove", True), SetField(player, "move_dir", "front_pos"), Return(player.front_pos)]
+    for i in ["repeat_w", "w","focus_up"]:
+        key i action Return(player.front_pos)
+    for i in ["repeat_s", "s","focus_down"]:
+        key i action Return(player.back_pos)
+    for i in ["repeat_d","d", "rollforward"]:
+        key i action Return(player.right_pos)
+    for i in ["repeat_a","a", "rollback"]:
+        key i action Return(player.left_pos)
+    for i in ["repeat_q", "q", "focus_left"]:
+        key i action Return(player.turnleft_pos)
+    for i in ["repeat_e", "e", "focus_right"]:
+        key i action Return(player.turnright_pos)
+    for i in ["repeat_x", "x",]:
+        key i action Return(player.turnback_pos)
 
-        # override rollforward/rollback
-        key 'mousedown_4' action [SetField(player, "automove", True), Return(player.front_pos)]
-        key 'mousedown_5' action Return(player.back_pos)
+    # override rollforward/rollback
+    key 'mousedown_4' action Return(player.turnleft_pos)
+    key 'mousedown_5' action Return(player.turnright_pos)
 
 
     # add minimap
@@ -329,6 +326,11 @@ style move_button:
     xysize (60, 60)
 
 
+init 2 python:
+    config.keymap['button_alternate'].append('mousedown_1')
+    config.keymap['button_ignore'].remove('mousedown_1')
+
+
 ##############################################################################
 ## Automove screen
 ## this screen delays key clicks on dungeon navigator, and returns front_pos
@@ -337,12 +339,15 @@ screen automove_screen(player):
     zorder 1000
 
     if player.automove:
-        timer 0.02 action [Hide("automove_screen"), Return(player.front_pos)]
+        if player.automove == True:
+            timer 0.25 action [SetField(player, "automove", "fast"), Hide("automove_screen"), Return(getattr(player, player.move_dir))]
+        else:
+            timer 0.025 action [Hide("automove_screen"), Return(getattr(player, player.move_dir))]
     else:
         timer 0.025 action Hide("automove_screen")
 
     for i in ["repeat_w", "w","repeat_W","W", "focus_up"]:
-        key i action NullAction()
+        key i action [SetField(player, "automove", False)]
     for i in ["repeat_s", "s","repeat_S","S", "focus_down"]:
         key i action [SetField(player, "automove", False)]
     for i in ["repeat_d","d", "repeat_D","D", "rollforward"]:
@@ -353,9 +358,8 @@ screen automove_screen(player):
         key i action [SetField(player, "automove", False)]
     for i in ["repeat_e", "e","repeat_E","E", "focus_right"]:
         key i action [SetField(player, "automove", False)]
-    for i in ["dismiss", "game_menu", "hide_windows", "skip", "toggle_skip","stop_skipping"]:
+    for i in ["mouseup_1", "dismiss", "game_menu", "hide_windows", "skip", "toggle_skip","stop_skipping"]:
         key i action [SetField(player, "automove", False)]
-    key 'mousedown_4' action NullAction()
 
 init python:
 
@@ -400,6 +404,7 @@ init -5 python:
 
             self.next_pos = self.pos
             self.automove = False
+            self.move_dir =None
 
         @property
         def collision(self):
@@ -485,6 +490,7 @@ init -5 python:
                     if action == None or i.pos == None or i.pos == pos:
                         if eval(i.cond):
                             events.append(i)
+                            break
                     elif self.in_dungeon() and (i.pos == self.get_tile(pos=pos) or Coordinate(*pos).compare(i.pos)):
                         if i.trigger in ("clickto", "faceto") and not Coordinate(*player.front_pos).compare(pos):
                             continue
@@ -498,6 +504,7 @@ init -5 python:
                             continue
                         elif eval(i.cond):
                             events.append(i)
+                            break
 
             if action:
                 return self.cut_events(events)
@@ -653,11 +660,12 @@ init -10 python:
         first_distance - distance to the first object. this determines focal length.
         shading - if color is given, it will blend the color over sprites.
         object_offset - xyoffset added on every objects.
+        preload - if True, default, it loads all textures before it's shown.
         """
 
 
         def __init__(self, map, tileset, layers = None, imagefolder = "", filetype = "png", mirror=None, substitution = None,
-            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, object_offset = (0,0),
+            horizon_height = 0.5, tile_length = 1.0, first_distance = 1.0, shading = None, object_offset = (0,0), preload=True,
             **properties):
 
             super(LayeredMap, self).__init__(**properties)
@@ -680,12 +688,13 @@ init -10 python:
             self.height = 0
 
             self.images = []
-            for prefix in self.tileset:
-                for i in self.layers:
-                    for surfix in i:
-                        im_name = "{}/{}_{}.{}".format(self.imagefolder, prefix, surfix, self.filetype)
-                        if renpy.loadable(im_name):
-                            self.images.append(Image(im_name))
+            if preload:
+                for prefix in self.tileset:
+                    for i in self.layers:
+                        for surfix in i:
+                            im_name = "{}/{}_{}.{}".format(self.imagefolder, prefix, surfix, self.filetype)
+                            if renpy.loadable(im_name):
+                                self.images.append(Image(im_name))
 
 
         def render(self, width, height, st, at):
